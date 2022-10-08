@@ -1,5 +1,5 @@
 # wwwhisper - web access control.
-# Copyright (C) 2012-2018 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
 
 from wwwhisper_auth.models import Site
 from wwwhisper_auth.tests.utils import HttpTestCase
@@ -49,8 +49,8 @@ class UserTest(AdminViewTestCase):
         parsed_response_body = json.loads(response.content)
         user_uuid = extract_uuid(parsed_response_body['id'])
 
-        self.assertRegexpMatches(parsed_response_body['id'],
-                                 '^urn:uuid:%s$' % uid_regexp())
+        self.assertRegex(parsed_response_body['id'],
+                         '^urn:uuid:%s$' % uid_regexp())
         self.assertEqual(TEST_USER_EMAIL, parsed_response_body['email'])
         self_url = '%s/wwwhisper/admin/api/users/%s/' % (TEST_SITE, user_uuid)
         self.assertEqual(self_url, parsed_response_body['self'])
@@ -85,26 +85,26 @@ class UserTest(AdminViewTestCase):
 
         users = parsed_response_body['users']
         self.assertEqual(3, len(users))
-        self.assertItemsEqual(['foo@bar.org', 'baz@bar.org', 'boo@bar.org'],
+        self.assertCountEqual(['foo@bar.org', 'baz@bar.org', 'boo@bar.org'],
                               [item['email'] for item in users])
 
     def test_get_not_existing_user(self):
         response = self.get('/wwwhisper/admin/api/users/%s/' % FAKE_UUID)
         self.assertEqual(404, response.status_code)
-        self.assertRegexpMatches(response.content, 'User not found')
+        self.assertEqual(response.content, b'User not found')
 
     def test_add_user_invalid_email(self):
         response = self.post('/wwwhisper/admin/api/users/',
                              {'email' : 'foo.bar'})
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content, 'Invalid email format')
+        self.assertEqual(response.content, b'Invalid email format.')
 
     def test_add_existing_user(self):
         self.add_user()
         response = self.post('/wwwhisper/admin/api/users/',
                              {'email' : TEST_USER_EMAIL})
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content, 'User already exists')
+        self.assertEqual(response.content, b'User already exists.')
 
     def test_delete_user_twice(self):
         user_url = self.add_user()['self']
@@ -113,7 +113,7 @@ class UserTest(AdminViewTestCase):
 
         response = self.delete(user_url)
         self.assertEqual(404, response.status_code)
-        self.assertRegexpMatches(response.content, 'User not found')
+        self.assertEqual(response.content, b'User not found')
 
     def test_users_limit(self):
         limit = 8
@@ -128,7 +128,7 @@ class UserTest(AdminViewTestCase):
         response = self.post('/wwwhisper/admin/api/users/',
                              {'email' : email})
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content, 'Users limit exceeded')
+        self.assertEqual(response.content, b'Users limit exceeded')
 
 class LocationTest(AdminViewTestCase):
 
@@ -140,8 +140,8 @@ class LocationTest(AdminViewTestCase):
         parsed_response_body = json.loads(response.content)
         location_uuid = extract_uuid(parsed_response_body['id'])
 
-        self.assertRegexpMatches(parsed_response_body['id'],
-                                 '^urn:uuid:%s$' % uid_regexp())
+        self.assertRegex(parsed_response_body['id'],
+                         '^urn:uuid:%s$' % uid_regexp())
         self.assertEqual(TEST_LOCATION, parsed_response_body['path'])
         self.assertTrue('openAccess' not in parsed_response_body)
         self_url = '{0}/wwwhisper/admin/api/locations/{1}/'.format(
@@ -223,32 +223,32 @@ class LocationTest(AdminViewTestCase):
         response = self.get('/wwwhisper/admin/api/locations/')
         self.assertEqual(200, response.status_code)
         parsed_response_body = json.loads(response.content)
-        self.assertEquals('%s/wwwhisper/admin/api/locations/' % TEST_SITE,
-                          parsed_response_body['self'])
+        self.assertEqual('%s/wwwhisper/admin/api/locations/' % TEST_SITE,
+                         parsed_response_body['self'])
 
         locations = parsed_response_body['locations']
         self.assertEqual(3, len(locations))
-        self.assertItemsEqual(['/foo/bar', '/baz/bar', '/boo/bar/'],
+        self.assertCountEqual(['/foo/bar', '/baz/bar', '/boo/bar/'],
                               [item['path'] for item in locations])
 
     def test_get_not_existing_location(self):
         response = self.get('/wwwhisper/admin/api/locations/%s/' % FAKE_UUID)
         self.assertEqual(404, response.status_code)
-        self.assertRegexpMatches(response.content, 'Location not found')
+        self.assertEqual(response.content, b'Location not found')
 
     def test_add_location_invalid_path(self):
         response = self.post('/wwwhisper/admin/api/locations/',
                              {'path' : '/foo/../bar'})
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content,
-                                 'Path should be absolute and normalized')
+        self.assertRegex(response.content,
+                         b'Path should be absolute and normalized')
 
     def test_add_existing_location(self):
         self.add_location()
         response = self.post('/wwwhisper/admin/api/locations/',
                              {'path' : TEST_LOCATION})
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content, 'Location already exists')
+        self.assertEqual(response.content, b'Location already exists.')
 
     def test_delete_location_twice(self):
         location_url = self.add_location()['self']
@@ -257,7 +257,7 @@ class LocationTest(AdminViewTestCase):
 
         response = self.delete(location_url)
         self.assertEqual(404, response.status_code)
-        self.assertRegexpMatches(response.content, 'Location not found')
+        self.assertEqual(response.content, b'Location not found')
 
     def test_locations_limit(self):
         limit = 7
@@ -270,7 +270,7 @@ class LocationTest(AdminViewTestCase):
         path = '%s%d' % (TEST_LOCATION, limit)
         response = self.post('/wwwhisper/admin/api/locations/', {'path' : path})
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content, 'Locations limit exceeded')
+        self.assertEqual(response.content, b'Locations limit exceeded')
 
 class AccessControlTest(AdminViewTestCase):
 
@@ -343,9 +343,9 @@ class AccessControlTest(AdminViewTestCase):
         parsed_response_body = json.loads(response.content)
         allowed_users = parsed_response_body['allowedUsers']
         self.assertEqual(2, len(allowed_users))
-        self.assertItemsEqual(['user1@acme.com', 'user2@acme.com'],
+        self.assertCountEqual(['user1@acme.com', 'user2@acme.com'],
                               [item['email'] for item in allowed_users])
-        self.assertItemsEqual([user1_urn, user2_urn],
+        self.assertCountEqual([user1_urn, user2_urn],
                               [item['id'] for item in allowed_users])
 
     def test_grant_access_to_not_existing_location(self):
@@ -354,7 +354,7 @@ class AccessControlTest(AdminViewTestCase):
 
         response = self.put(location_url + 'allowed-users/' + user_uuid + '/')
         self.assertEqual(404, response.status_code)
-        self.assertRegexpMatches(response.content, 'Location not found')
+        self.assertEqual(response.content, b'Location not found.')
 
     def test_grant_access_for_not_existing_user(self):
         location_url = self.add_location()['self']
@@ -362,7 +362,7 @@ class AccessControlTest(AdminViewTestCase):
 
         response = self.put(location_url + 'allowed-users/' + user_uuid + '/')
         self.assertEqual(404, response.status_code)
-        self.assertRegexpMatches(response.content, 'User not found')
+        self.assertEqual(response.content, b'User not found')
 
     # PUT should be indempontent, granting access for the second time
     # should not return an error.
@@ -402,8 +402,7 @@ class AccessControlTest(AdminViewTestCase):
         response = self.delete(
             location_url + 'allowed-users/' + user_uuid + "/")
         self.assertEqual(404, response.status_code)
-        self.assertRegexpMatches(response.content,
-                                 'User can not access location.')
+        self.assertEqual(response.content, b'User can not access location.')
 
         self.assertFalse(self.can_access(location_url, user_uuid))
 
@@ -418,8 +417,8 @@ class AliasTest(AdminViewTestCase):
         parsed_response_body = json.loads(response.content)
         alias_uuid = extract_uuid(parsed_response_body['id'])
 
-        self.assertRegexpMatches(parsed_response_body['id'],
-                                 '^urn:uuid:%s$' % uid_regexp())
+        self.assertRegex(parsed_response_body['id'],
+                         '^urn:uuid:%s$' % uid_regexp())
         self.assertEqual(TEST_ALIAS, parsed_response_body['url'])
         self_url = '{0}/wwwhisper/admin/api/aliases/{1}/'.format(
             TEST_SITE, alias_uuid)
@@ -454,7 +453,7 @@ class AliasTest(AdminViewTestCase):
         aliases = parsed_response_body['aliases']
         # Two created aliases + the original one.
         self.assertEqual(3, len(aliases))
-        self.assertItemsEqual(['http://foo.org', 'http://bar.org',
+        self.assertCountEqual(['http://foo.org', 'http://bar.org',
                                'https://foo.example.org:8080'],
                               [item['url'] for item in aliases])
 
@@ -466,7 +465,7 @@ class SkinTest(AdminViewTestCase):
         skin = json.loads(response.content)
         self.assertEqual('wwwhisper: Web Access Control', skin['title'])
         self.assertEqual('Protected site', skin['header'])
-        self.assertRegexpMatches(skin['message'], 'Access to this site is')
+        self.assertRegex(skin['message'], 'Access to this site is')
         self.assertTrue(skin['branding'])
 
     def test_put_skin(self):
@@ -479,7 +478,7 @@ class SkinTest(AdminViewTestCase):
         skin = json.loads(response.content)
         self.assertEqual('xyz', skin['title'])
         self.assertEqual('foo', skin['header'])
-        self.assertRegexpMatches('bar', skin['message'])
+        self.assertRegex('bar', skin['message'])
         self.assertFalse(skin['branding'])
 
     def test_put_invalid_skin(self):
@@ -489,5 +488,5 @@ class SkinTest(AdminViewTestCase):
                              'message': '',
                              'branding': False})
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content,
-                                 'Failed to update login page')
+        self.assertRegex(response.content,
+                         b'Failed to update login page')

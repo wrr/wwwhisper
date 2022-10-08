@@ -1,5 +1,5 @@
 # wwwhisper - web access control.
-# Copyright (C) 2012-2017 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
 
 """Data model for the site access control rules.
 
@@ -132,12 +132,12 @@ class Site(ValidatedModel):
         """Dictionary with settings that configure the site's login page."""
         # Dict comprehensions not used to support python 2.6.
         result = dict([(attr, getattr(self, attr) or self._default_skin[attr])
-                       for attr in self._default_skin.iterkeys()])
+                       for attr in self._default_skin.keys()])
         result['branding'] = self.branding
         return result
 
     def update_skin(self, title, header, message, branding):
-        for attr in self._default_skin.iterkeys():
+        for attr in self._default_skin.keys():
             arg = locals()[attr].strip()
             if arg == self._default_skin[attr]:
                 arg = ''
@@ -395,7 +395,7 @@ class Location(ValidatedModel):
         # but this involves a single DB query per allowed user, going
         # through cached site.users involves no queries.
         return [self.site.users.find_item_by_pk(user_id)
-                for user_id in self.permissions().iterkeys()]
+                for user_id in self.permissions().keys()]
 
     def attributes_dict(self, site_url):
         """Returns externally visible attributes of the location resource."""
@@ -513,12 +513,7 @@ class Collection(object):
         Returns:
            The item or None if not found.
         """
-        result = filter(filter_fun, self.all())
-        count = len(result)
-        assert count <= 1
-        if count == 0:
-            return None
-        return result[0]
+        return next((x for x in self.all() if filter_fun(x)), None)
 
     def find_item(self, uuid):
         return self.get_unique(lambda item: item.uuid == uuid)
@@ -555,7 +550,7 @@ class Collection(object):
             # violations are not detected by Django in which case
             # IntegrityError is raised by the DB engine (translated to
             # ValidationError for consistency).
-            raise ValidationError(e.message)
+            raise ValidationError(str(e))
         item.site = self.site
         return item
 

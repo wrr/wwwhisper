@@ -1,11 +1,11 @@
 # wwwhisper - web access control.
-# Copyright (C) 2012-2018 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
 
 """Urls exposed by the wwwhisper_admin application."""
 
 from django.conf.urls import url
-from views import CollectionView, ItemView, SkinView
-from views import OpenAccessView, AllowedUsersView
+from wwwhisper_admin.views import CollectionView, ItemView, SkinView
+from wwwhisper_admin.views import OpenAccessView, AllowedUsersView
 
 urlpatterns = [
     url(r'^users/$',

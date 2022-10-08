@@ -1,12 +1,12 @@
 # wwwhisper - web access control.
-# Copyright (C) 2012 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
 
 """Functions that operate on an HTTP resource path."""
 
 import posixpath
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import re
-import urlparse
+import urllib.parse
 
 def strip_query(path):
     """Strips query from a path."""
@@ -17,7 +17,7 @@ def strip_query(path):
 
 def decode(path):
     """Decodes URL encoded characters in path."""
-    return urllib.unquote_plus(path)
+    return urllib.parse.unquote_plus(path)
 
 def collapse_slashes(path):
     """Replaces repeated path separators ('/') with a single one."""
@@ -68,7 +68,7 @@ def validate_redirection_target(path):
     """
     if len(path) > REDIRECTION_PATH_LIMIT:
         return False
-    parsed_url = urlparse.urlparse(path)
+    parsed_url = urllib.parse.urlparse(path)
     for attr in ['scheme', 'netloc', 'username', 'password']:
         val = getattr(parsed_url, attr, None)
         if  val is not None and val != '':
@@ -79,7 +79,7 @@ def validate_redirection_target(path):
             not '\n' in path)
 
 def validate_site_url(url):
-    parsed_url = urlparse.urlparse(url)
+    parsed_url = urllib.parse.urlparse(url)
     if parsed_url.scheme == '':
         return (False, 'missing scheme (http:// or https://)')
     if parsed_url.scheme not in ('http', 'https'):

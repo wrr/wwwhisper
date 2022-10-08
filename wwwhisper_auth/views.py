@@ -1,5 +1,5 @@
 # wwwhisper - web access control.
-# Copyright (C) 2012-2017 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
 
 """Views that handle user authentication and authorization."""
 
@@ -19,7 +19,7 @@ from wwwhisper_auth import url_utils
 from wwwhisper_auth.backend import AuthenticationError
 
 import logging
-import urllib
+import urllib.request, urllib.parse, urllib.error
 
 logger = logging.getLogger(__name__)
 
@@ -273,7 +273,7 @@ class SendToken(http.RestView):
         token = login_token.generate_login_token(
             request.site, site_url=request.site_url, email=email)
 
-        params = urllib.urlencode(dict(next=path, token=token))
+        params = urllib.parse.urlencode(dict(next=path, token=token))
         url = '{0}{1}?{2}'.format(request.site_url, reverse('login'), params)
         subject = '{0} access token'.format(request.site_url)
         body = (

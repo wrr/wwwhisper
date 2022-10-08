@@ -1,4 +1,4 @@
-print "Using testing configuration."
+print('Using testing configuration.')
 
 SECRET_KEY = 'RVh*fxg-hH2vJaTxbmXOvYn@iasPr5yKSE=tLckE5!fzEKj@NU'
 

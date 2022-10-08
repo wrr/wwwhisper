@@ -1,5 +1,5 @@
 # wwwhisper - web access control.
-# Copyright (C) 2012 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
 
 from django.test import TestCase
 from wwwhisper_auth.url_utils import collapse_slashes
@@ -90,7 +90,7 @@ class SiteUrlTest(TestCase):
 
     def assertInvalid(self, result, errorRegexp):
         self.assertEqual(False, result[0])
-        self.assertRegexpMatches(result[1], errorRegexp)
+        self.assertRegex(result[1], errorRegexp)
 
     def assertValid(self, result):
         self.assertEqual((True, None), result)

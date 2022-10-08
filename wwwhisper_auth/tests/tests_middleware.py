@@ -1,5 +1,5 @@
 # wwwhisper - web access control.
-# Copyright (C) 2012-2015 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
 
 from django.http import HttpRequest
 from django.test import TestCase
@@ -75,27 +75,26 @@ class SiteUrlMiddlewareTest(TestCase):
         response = self.middleware.process_request(request)
         self.assertIsNotNone(response)
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content, 'Invalid request URL')
+        self.assertRegex(response.content, b'Invalid request URL')
 
     def test_not_allowed_site_url2(self):
         request = self.get('https://foo.example.com:80')
         response = self.middleware.process_request(request)
         self.assertIsNotNone(response)
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content, 'Invalid request URL')
+        self.assertRegex(response.content, b'Invalid request URL')
 
     def test_missing_site_url(self):
         request = self.get(None)
         response = self.middleware.process_request(request)
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content, 'Missing Site-Url header')
+        self.assertEqual(response.content, b'Missing Site-Url header')
 
     def test_invalid_site_url(self):
         request = self.get('foo.example.org')
         response = self.middleware.process_request(request)
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content,
-                                 'Site-Url has incorrect format')
+        self.assertEqual(response.content, b'Site-Url has incorrect format')
 
     def test_allowed_site_with_explicit_port(self):
         # Request with correct explicit port should be accepted, port

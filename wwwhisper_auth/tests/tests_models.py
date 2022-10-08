@@ -76,10 +76,10 @@ class SitesTest(ModelTestCase):
         self.assertIsNotNone(self.site.users.site)
 
     def test_create_site_twice(self):
-        self.assertRaisesRegexp(ValidationError,
-                                'Site .* already exists.',
-                                self.sites.create_item,
-                                TEST_SITE)
+        self.assertRaisesRegex(ValidationError,
+                               'Site .* already exists.',
+                               self.sites.create_item,
+                               TEST_SITE)
 
     def test_find_site(self):
         site2 = self.sites.find_item(TEST_SITE)
@@ -94,7 +94,7 @@ class SitesTest(ModelTestCase):
         skin = self.site.skin()
         self.assertEqual('wwwhisper: Web Access Control', skin['title'])
         self.assertEqual('Protected site', skin['header'])
-        self.assertRegexpMatches(skin['message'], 'Access to this site is')
+        self.assertRegex(skin['message'], 'Access to this site is')
         self.assertTrue(skin['branding'])
 
     def test_update_skin(self):
@@ -178,19 +178,19 @@ class UsersCollectionTest(ModelTestCase):
         # it impossible to run any other query within the same
         # test. transaction.atomic() blocks fix this issue.
         with transaction.atomic():
-            self.assertRaisesRegexp(ValidationError,
-                                    'User already exists',
-                                    self.users.create_item,
-                                    TEST_USER_EMAIL)
+            self.assertRaisesRegex(ValidationError,
+                                   'User already exists',
+                                   self.users.create_item,
+                                   TEST_USER_EMAIL)
 
         # Make sure user lookup is case insensitive.
         with transaction.atomic():
             self.users.create_item('uSeR@bar.com')
         with transaction.atomic():
             with self.assert_site_not_modified(self.site):
-                self.assertRaisesRegexp(ValidationError,
-                                        'User already exists',
-                                        self.users.create_item,
+                self.assertRaisesRegex(ValidationError,
+                                       'User already exists',
+                                       self.users.create_item,
                                        'UsEr@bar.com')
 
     def test_create_user_twice_for_different_sites(self):
@@ -216,11 +216,11 @@ class UsersCollectionTest(ModelTestCase):
         self.assertEqual(2, self.users.count())
         self.assertEqual(1, self.site2.users.count())
         with self.assert_site_not_modified(self.site):
-            self.assertItemsEqual(
+            self.assertCountEqual(
                 ['foo@example.com', 'bar@example.com'],
                 [u.email for u in self.users.all()])
         self.users.delete_item(user1.uuid)
-        self.assertItemsEqual(
+        self.assertCountEqual(
             ['bar@example.com'],
             [u.email for u in self.users.all()])
         self.assertEqual(1, self.users.count())
@@ -240,36 +240,36 @@ class UsersCollectionTest(ModelTestCase):
                 r'x#!v$we*df+.|{}@y132.wp.a-s.012'))
 
         with self.assert_site_not_modified(self.site):
-            self.assertRaisesRegexp(ValidationError,
-                                    'Invalid email format',
-                                    self.users.create_item,
-                                    'x')
-            self.assertRaisesRegexp(ValidationError,
-                                    'Invalid email format',
-                                    self.users.create_item,
-                                    'x@y')
-            self.assertRaisesRegexp(ValidationError,
-                                    'Invalid email format',
-                                    self.users.create_item,
-                                    '@y.z')
-            self.assertRaisesRegexp(ValidationError,
-                                    'Invalid email format',
-                                    self.users.create_item,
-                                    'z@y.z@y.z')
-            self.assertRaisesRegexp(ValidationError,
-                                    'Invalid email format',
-                                    self.users.create_item,
-                                    '')
+            self.assertRaisesRegex(ValidationError,
+                                   'Invalid email format',
+                                   self.users.create_item,
+                                   'x')
+            self.assertRaisesRegex(ValidationError,
+                                   'Invalid email format',
+                                   self.users.create_item,
+                                   'x@y')
+            self.assertRaisesRegex(ValidationError,
+                                   'Invalid email format',
+                                   self.users.create_item,
+                                   '@y.z')
+            self.assertRaisesRegex(ValidationError,
+                                   'Invalid email format',
+                                   self.users.create_item,
+                                   'z@y.z@y.z')
+            self.assertRaisesRegex(ValidationError,
+                                   'Invalid email format',
+                                   self.users.create_item,
+                                   '')
             # Invalid tricky character.
-            self.assertRaisesRegexp(ValidationError,
-                                    'Invalid email format',
-                                    self.users.create_item,
-                                    r'a\b@b.c.d')
+            self.assertRaisesRegex(ValidationError,
+                                   'Invalid email format',
+                                   self.users.create_item,
+                                   r'a\b@b.c.d')
             # Too long.
-            self.assertRaisesRegexp(ValidationError,
-                                    'Invalid email format',
-                                    self.users.create_item,
-                                    'foo@bar.com.' + ('z' * 100) )
+            self.assertRaisesRegex(ValidationError,
+                                   'Invalid email format',
+                                   self.users.create_item,
+                                   'foo@bar.com.' + ('z' * 100) )
 
     def test_email_normalization(self):
         email = self.users.create_item('x@y.z').email
@@ -283,10 +283,10 @@ class UsersCollectionTest(ModelTestCase):
         self.site.users_limit = limit
         for i in range(0, limit):
             self.users.create_item('foo%d@bar.com' % (i))
-        self.assertRaisesRegexp(LimitExceeded,
-                                'Users limit exceeded',
-                                self.users.create_item,
-                                'foo10@bar.com')
+        self.assertRaisesRegex(LimitExceeded,
+                               'Users limit exceeded',
+                               self.users.create_item,
+                               'foo10@bar.com')
 
     def test_login_user(self):
         user = self.users.create_item(TEST_USER_EMAIL)
@@ -334,10 +334,10 @@ class LocationsCollectionTest(ModelTestCase):
     def test_create_location_twice(self):
         self.locations.create_item(TEST_LOCATION)
         with self.assert_site_not_modified(self.site):
-            self.assertRaisesRegexp(ValidationError,
-                                    'Location already exists',
-                                    self.locations.create_item,
-                                    TEST_LOCATION)
+            self.assertRaisesRegex(ValidationError,
+                                   'Location already exists',
+                                   self.locations.create_item,
+                                   TEST_LOCATION)
 
     def test_create_location_twice_for_different_sites(self):
         self.locations.create_item(TEST_LOCATION)
@@ -357,11 +357,11 @@ class LocationsCollectionTest(ModelTestCase):
         self.assertEqual(2, self.locations.count())
         self.assertEqual(1, self.site2.locations.count())
         with self.assert_site_not_modified(self.site):
-            self.assertItemsEqual(['/foo/bar', '/foo'],
+            self.assertCountEqual(['/foo/bar', '/foo'],
                                   [l.path for l
                                    in self.locations.all()])
         self.locations.delete_item(location1.uuid)
-        self.assertItemsEqual(['/foo/bar'],
+        self.assertCountEqual(['/foo/bar'],
                               [l.path for l
                                in self.locations.all()])
         self.assertEqual(1, self.locations.count())
@@ -383,19 +383,19 @@ class LocationsCollectionTest(ModelTestCase):
 
     def test_grant_access_for_not_existing_user(self):
         location = self.locations.create_item(TEST_LOCATION)
-        self.assertRaisesRegexp(LookupError,
-                                'User not found',
-                                location.grant_access,
-                                FAKE_UUID)
+        self.assertRaisesRegex(LookupError,
+                               'User not found',
+                               location.grant_access,
+                               FAKE_UUID)
 
     def test_grant_access_for_user_of_different_site(self):
         user = self.users.create_item(TEST_USER_EMAIL)
         location = self.site2.locations.create_item(TEST_LOCATION)
         self.assertFalse(location.can_access(user))
-        self.assertRaisesRegexp(LookupError,
-                                'User not found',
-                                location.grant_access,
-                                user.uuid)
+        self.assertRaisesRegex(LookupError,
+                               'User not found',
+                               location.grant_access,
+                               user.uuid)
 
     def test_grant_access_if_already_granted(self):
         location = self.locations.create_item(TEST_LOCATION)
@@ -429,20 +429,20 @@ class LocationsCollectionTest(ModelTestCase):
         location = self.locations.create_item(TEST_LOCATION)
         user = self.users.create_item(TEST_USER_EMAIL)
         with self.assert_site_not_modified(self.site):
-            self.assertRaisesRegexp(LookupError,
-                                    'User can not access location.',
-                                    location.revoke_access,
-                                    user.uuid)
+            self.assertRaisesRegex(LookupError,
+                                   'User can not access location.',
+                                   location.revoke_access,
+                                   user.uuid)
 
     def test_revoke_access_to_deleted_location(self):
         user = self.users.create_item(TEST_USER_EMAIL)
         location = self.locations.create_item(TEST_LOCATION)
         location.grant_access(user.uuid)
         self.assertTrue(self.locations.delete_item(location.uuid))
-        self.assertRaisesRegexp(LookupError,
-                                'User can not access location.',
-                                location.revoke_access,
-                                user.uuid)
+        self.assertRaisesRegex(LookupError,
+                               'User can not access location.',
+                               location.revoke_access,
+                               user.uuid)
 
     def test_deleting_user_revokes_access(self):
         user = self.users.create_item(TEST_USER_EMAIL)
@@ -464,27 +464,27 @@ class LocationsCollectionTest(ModelTestCase):
 
     def test_revoke_access_for_not_existing_user(self):
         location = self.locations.create_item(TEST_LOCATION)
-        self.assertRaisesRegexp(LookupError,
-                                'User not found',
-                                location.revoke_access,
-                                FAKE_UUID)
+        self.assertRaisesRegex(LookupError,
+                               'User not found',
+                               location.revoke_access,
+                               FAKE_UUID)
 
     def test_get_permission(self):
         location = self.locations.create_item(TEST_LOCATION)
         user1 = self.users.create_item(TEST_USER_EMAIL)
-        self.assertRaisesRegexp(LookupError,
-                                'User can not access',
-                                location.get_permission,
-                                user1.uuid)
+        self.assertRaisesRegex(LookupError,
+                               'User can not access',
+                               location.get_permission,
+                               user1.uuid)
         location.grant_access(user1.uuid)
         self.assertIsNotNone(location.get_permission(user1.uuid))
 
         user2 = self.site2.users.create_item(TEST_USER_EMAIL)
         # User does not belong to the site.
-        self.assertRaisesRegexp(LookupError,
-                                'User not found',
-                                location.get_permission,
-                                user2.uuid)
+        self.assertRaisesRegex(LookupError,
+                               'User not found',
+                               location.get_permission,
+                               user2.uuid)
 
     def test_find_location_by_path(self):
         location = self.locations.create_item('/foo/bar')
@@ -595,13 +595,13 @@ class LocationsCollectionTest(ModelTestCase):
         location2.grant_access(user3.uuid)
 
         with self.assert_site_not_modified(self.site):
-            self.assertItemsEqual(['foo@example.com', 'bar@example.com'],
+            self.assertCountEqual(['foo@example.com', 'bar@example.com'],
                                   [u.email for u in location1.allowed_users()])
-            self.assertItemsEqual(['baz@example.com'],
+            self.assertCountEqual(['baz@example.com'],
                                   [u.email for u in location2.allowed_users()])
 
         location1.revoke_access(user1.uuid)
-        self.assertItemsEqual(['bar@example.com'],
+        self.assertCountEqual(['bar@example.com'],
                               [u.email for u in location1.allowed_users()])
 
     def test_get_allowed_users_when_empty(self):
@@ -610,31 +610,31 @@ class LocationsCollectionTest(ModelTestCase):
 
     def test_location_path_validation(self):
         with self.assert_site_not_modified(self.site):
-            self.assertRaisesRegexp(ValidationError,
-                                    'should be absolute and normalized',
-                                    self.locations.create_item,
-                                    '/foo/../bar')
-            self.assertRaisesRegexp(ValidationError,
-                                    'should not contain parameters',
-                                    self.locations.create_item,
-                                    '/foo;bar')
-            self.assertRaisesRegexp(ValidationError,
-                                    'should not contain query',
-                                    self.locations.create_item,
-                                    '/foo?s=bar')
-            self.assertRaisesRegexp(ValidationError,
-                                    'should not contain fragment',
-                                    self.locations.create_item,
-                                    '/foo#bar')
-            self.assertRaisesRegexp(ValidationError,
-                                    'should contain only ascii',
-                                    self.locations.create_item,
-                                    u'/żbik')
-            long_path = '/a' * (self.locations.PATH_LEN_LIMIT / 2) + 'a'
-            self.assertRaisesRegexp(ValidationError,
-                                    'too long',
-                                    self.locations.create_item,
-                                    long_path)
+            self.assertRaisesRegex(ValidationError,
+                                   'should be absolute and normalized',
+                                   self.locations.create_item,
+                                   '/foo/../bar')
+            self.assertRaisesRegex(ValidationError,
+                                   'should not contain parameters',
+                                   self.locations.create_item,
+                                   '/foo;bar')
+            self.assertRaisesRegex(ValidationError,
+                                   'should not contain query',
+                                   self.locations.create_item,
+                                   '/foo?s=bar')
+            self.assertRaisesRegex(ValidationError,
+                                   'should not contain fragment',
+                                   self.locations.create_item,
+                                   '/foo#bar')
+            self.assertRaisesRegex(ValidationError,
+                                   'should contain only ascii',
+                                   self.locations.create_item,
+                                    '/żbik')
+            long_path = '/a' * int(self.locations.PATH_LEN_LIMIT / 2) + 'a'
+            self.assertRaisesRegex(ValidationError,
+                                   'too long',
+                                   self.locations.create_item,
+                                   long_path)
 
     """Path passed to create_location is expected to be saved verbatim."""
     def test_location_path_not_encoded(self):
@@ -650,10 +650,10 @@ class LocationsCollectionTest(ModelTestCase):
         self.site.locations_limit = limit
         for i in range(0, limit):
             self.locations.create_item('/foo%d' % (i))
-        self.assertRaisesRegexp(LimitExceeded,
-                                'Locations limit exceeded',
-                                self.locations.create_item,
-                                '/foo10')
+        self.assertRaisesRegex(LimitExceeded,
+                               'Locations limit exceeded',
+                               self.locations.create_item,
+                               '/foo10')
 
 class AliasesCollectionTest(ModelTestCase):
 
@@ -665,10 +665,10 @@ class AliasesCollectionTest(ModelTestCase):
         self.assertTrue(len(alias.uuid) > 20)
 
     def test_add_alias_invalid_url(self):
-        self.assertRaisesRegexp(ValidationError,
-                                'missing scheme',
-                                self.aliases.create_item,
-                                'foo.example.com')
+        self.assertRaisesRegex(ValidationError,
+                               'missing scheme',
+                               self.aliases.create_item,
+                               'foo.example.com')
 
     def test_default_port_removed(self):
         with self.assert_site_modified(self.site):
@@ -683,10 +683,10 @@ class AliasesCollectionTest(ModelTestCase):
 
     def test_alias_must_be_unique(self):
         self.aliases.create_item('http://example.org:123')
-        self.assertRaisesRegexp(ValidationError,
-                                'already exists',
-                                self.aliases.create_item,
-                                'http://example.org:123')
+        self.assertRaisesRegex(ValidationError,
+                               'already exists',
+                               self.aliases.create_item,
+                               'http://example.org:123')
 
     def test_alias_must_be_unique_after_normalization(self):
         # There was a bug in wwwhisper that allowed to add a
@@ -695,10 +695,10 @@ class AliasesCollectionTest(ModelTestCase):
         # duplicated aliases caused later assertion failures.
         self.aliases.create_item('http://example.org')
         with self.assert_site_not_modified(self.site):
-            self.assertRaisesRegexp(ValidationError,
-                                    'already exists',
-                                    self.aliases.create_item,
-                                    'http://example.org:80')
+            self.assertRaisesRegex(ValidationError,
+                                   'already exists',
+                                   self.aliases.create_item,
+                                   'http://example.org:80')
 
     def test_alias_for_different_site_can_duplicate(self):
         alias = self.aliases.create_item('http://example.org:123')
@@ -723,14 +723,14 @@ class AliasesCollectionTest(ModelTestCase):
         self.site.aliases_limit = limit
         for i in range(0, limit):
             self.aliases.create_item('http://foo%d.org' % (i))
-        self.assertRaisesRegexp(LimitExceeded,
-                                'Aliases limit exceeded',
-                                self.aliases.create_item,
-                                'http://foo10.org')
+        self.assertRaisesRegex(LimitExceeded,
+                               'Aliases limit exceeded',
+                               self.aliases.create_item,
+                               'http://foo10.org')
 
     def test_alias_length_limit(self):
         long_url = 'https://%s.org' % ('x' * self.aliases.ALIAS_LEN_LIMIT)
-        self.assertRaisesRegexp(ValidationError,
-                                'Url too long',
-                                self.aliases.create_item,
-                                long_url)
+        self.assertRaisesRegex(ValidationError,
+                               'Url too long',
+                               self.aliases.create_item,
+                               long_url)

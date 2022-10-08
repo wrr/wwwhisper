@@ -1,5 +1,5 @@
 # wwwhisper - web access control.
-# Copyright (C) 2012-2018 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
 
 
 from django.contrib.auth.models import User
@@ -14,7 +14,7 @@ from wwwhisper_auth.tests.utils import HttpTestCase
 from wwwhisper_auth.tests.utils import TEST_SITE
 
 import json
-import urllib
+import urllib.request, urllib.parse, urllib.error
 
 class FailingEmailBackend(BaseEmailBackend):
     def send_messages(self, messages):
@@ -62,8 +62,8 @@ class AuthTest(AuthTestCase):
         self.assertTrue(response.has_header('WWW-Authenticate'))
         self.assertFalse(response.has_header('User'))
         self.assertEqual('VerifiedEmail', response['WWW-Authenticate'])
-        self.assertRegexpMatches(response['Content-Type'], "text/plain")
-        self.assertEqual('Authentication required.', response.content)
+        self.assertEqual(response['Content-Type'], "text/plain; charset=utf-8")
+        self.assertEqual(b'Authentication required.', response.content)
 
     def test_is_authorized_if_not_authorized(self):
         self.site.users.create_item('foo@example.com')
@@ -72,8 +72,8 @@ class AuthTest(AuthTestCase):
         # For an authenticated user 'User' header should be always returned.
         self.assertEqual(403, response.status_code)
         self.assertEqual('foo@example.com', response['User'])
-        self.assertRegexpMatches(response['Content-Type'], "text/plain")
-        self.assertEqual('User not authorized.', response.content)
+        self.assertEqual(response['Content-Type'], "text/plain; charset=utf-8")
+        self.assertEqual(b'User not authorized.', response.content)
 
     def test_is_authorized_if_authorized(self):
         user = self.site.users.create_item('foo@example.com')
@@ -117,13 +117,13 @@ class AuthTest(AuthTestCase):
         response = self.get(
             '/wwwhisper/auth/api/is-authorized/?path=/bar/../foo/')
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content,
-                                 'Path should be absolute and normalized')
+        self.assertRegex(response.content,
+                         b'Path should be absolute and normalized')
 
         response = self.get('/wwwhisper/auth/api/is-authorized/?path=.')
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content,
-                                 'Path should be absolute and normalized')
+        self.assertRegex(response.content,
+                         b'Path should be absolute and normalized')
 
     def test_is_authorized_decodes_path(self):
         location = self.site.locations.create_item('/f/')
@@ -166,13 +166,13 @@ class AuthTest(AuthTestCase):
         response = self.get('/wwwhisper/auth/api/is-authorized/?path=/foo/',
                             HTTP_ACCEPT='text/plain, text/html')
         self.assertEqual(401, response.status_code)
-        self.assertRegexpMatches(response['Content-Type'], 'text/html')
-        self.assertRegexpMatches(response.content, '<body')
+        self.assertEqual(response['Content-Type'], 'text/html; charset=utf-8')
+        self.assertRegex(response.content, b'<body')
 
         response = self.get('/wwwhisper/auth/api/is-authorized/?path=/foo/',
                             HTTP_ACCEPT='text/plain')
         self.assertEqual(401, response.status_code)
-        self.assertRegexpMatches(response['Content-Type'], 'text/plain')
+        self.assertEqual(response['Content-Type'], 'text/plain; charset=utf-8')
 
     def test_is_authorized_if_not_authenticated_custom_html_response(self):
         self.site.update_skin(
@@ -180,10 +180,10 @@ class AuthTest(AuthTestCase):
         response = self.get('/wwwhisper/auth/api/is-authorized/?path=/foo/',
                             HTTP_ACCEPT='*/*')
         self.assertEqual(401, response.status_code)
-        self.assertRegexpMatches(response['Content-Type'], 'text/html')
-        self.assertRegexpMatches(response.content, '<title>Foo</title>')
-        self.assertRegexpMatches(response.content, '<h1>Bar</h1>')
-        self.assertRegexpMatches(response.content, 'class="lead">Baz')
+        self.assertEqual(response['Content-Type'], 'text/html; charset=utf-8')
+        self.assertRegex(response.content, b'<title>Foo</title>')
+        self.assertRegex(response.content, b'<h1>Bar</h1>')
+        self.assertRegex(response.content, b'class="lead">Baz')
 
     def test_is_authorized_if_not_authorized_html_response(self):
         self.site.users.create_item('foo@example.com')
@@ -191,13 +191,13 @@ class AuthTest(AuthTestCase):
         response = self.get('/wwwhisper/auth/api/is-authorized/?path=/foo/',
                             HTTP_ACCEPT='*/*')
         self.assertEqual(403, response.status_code)
-        self.assertRegexpMatches(response['Content-Type'], 'text/html')
-        self.assertRegexpMatches(response.content, '<body')
+        self.assertEqual(response['Content-Type'], 'text/html; charset=utf-8')
+        self.assertRegex(response.content, b'<body')
 
         response = self.get('/wwwhisper/auth/api/is-authorized/?path=/foo/',
                             HTTP_ACCEPT='text/plain, audio/*')
         self.assertEqual(403, response.status_code)
-        self.assertRegexpMatches(response['Content-Type'], 'text/plain')
+        self.assertEqual(response['Content-Type'], 'text/plain; charset=utf-8')
 
 class LogoutTest(AuthTestCase):
     def test_authentication_requested_after_logout(self):
@@ -264,10 +264,10 @@ class SendTokenTest(AuthTestCase):
         self.assertEqual(1, len(msg.to))
         self.assertEqual('verify@wwwhisper.io', msg.from_email)
         self.assertEqual('alice@example.org', msg.to[0])
-        path = urllib.urlencode({'next': '/foo/bar'})
-        regexp = (TEST_SITE + '/wwwhisper/auth/api/login/\?token=.{60,}&' +
-                  path + '\n')
-        self.assertRegexpMatches(msg.body, regexp)
+        path = urllib.parse.urlencode({'next': '/foo/bar'})
+        regexp = (TEST_SITE + '/wwwhisper/auth/api/login/\?' + path + 
+                  '&token=.{60,}\n')
+        self.assertRegex(msg.body, regexp)
 
     def test_email_not_sent_for_unknown_user(self):
         response = self.post('/wwwhisper/auth/api/send-token/',
@@ -279,13 +279,13 @@ class SendTokenTest(AuthTestCase):
         response = self.post('/wwwhisper/auth/api/send-token/',
                              {'email': None, 'path': '/'})
         self.assertEqual(400, response.status_code)
-        self.assertEqual('Email not set.', response.content)
+        self.assertEqual(b'Email not set.', response.content)
 
     def test_email_has_invalid_format(self):
         response = self.post('/wwwhisper/auth/api/send-token/',
                              {'email': 'alice', 'path': '/'})
         self.assertEqual(400, response.status_code)
-        self.assertEqual('Email has invalid format.', response.content)
+        self.assertEqual(b'Email has invalid format.', response.content)
 
     def test_tricky_redirection_replaced(self):
         self.site.users.create_item('alice@example.org')
@@ -294,10 +294,10 @@ class SendTokenTest(AuthTestCase):
         self.assertEqual(204, response.status_code)
         msg = mail.outbox[0]
         # Login ignores '/foo/../' and redirects to '/'.
-        path = urllib.urlencode({'next': '/'})
-        regexp = (TEST_SITE + '/wwwhisper/auth/api/login/\?token=.{60,}&' +
-                  path + '\n')
-        self.assertRegexpMatches(msg.body, regexp)
+        path = urllib.parse.urlencode({'next': '/'})
+        regexp = (TEST_SITE + '/wwwhisper/auth/api/login/\?' + path + 
+                  '&token=.{60,}\n')
+        self.assertRegex(msg.body, regexp)
 
     @override_settings(
         EMAIL_BACKEND='wwwhisper_auth.tests.tests_views.FailingEmailBackend')
@@ -307,8 +307,8 @@ class SendTokenTest(AuthTestCase):
                              {'email': 'alice@example.org', 'path': '/'})
         self.assertEqual(500, response.status_code)
         self.assertEqual(
-            'Email delivery problem. ' +
-            'Check the entered address or try again in a few minutes.',
+            b'Email delivery problem. ' +
+            b'Check the entered address or try again in a few minutes.',
             response.content)
 
     @override_settings(
@@ -319,8 +319,8 @@ class SendTokenTest(AuthTestCase):
                              {'email': 'alice@example.org', 'path': '/'})
         self.assertEqual(500, response.status_code)
         self.assertEqual(
-            'Email delivery problem. ' +
-            'Check the entered address or try again in a few minutes.',
+            b'Email delivery problem. ' +
+            b'Check the entered address or try again in a few minutes.',
             response.content)
 
 class LoginTest(AuthTestCase):
@@ -330,12 +330,12 @@ class LoginTest(AuthTestCase):
     def test_login_fails_if_token_missing(self):
         response = self.get('/wwwhisper/auth/api/login/')
         self.assertEqual(400, response.status_code)
-        self.assertEqual('Token missing.', response.content)
+        self.assertEqual(b'Token missing.', response.content)
 
     def test_login_fails_if_token_invalid(self):
         response = self.get('/wwwhisper/auth/api/login/?token=xyz')
         self.assertEqual(400, response.status_code)
-        self.assertEqual('Token invalid or expired.', response.content)
+        self.assertEqual(b'Token invalid or expired.', response.content)
 
     def test_login_fails_if_token_for_different_site_url(self):
         self.site.users.create_item('foo@example.org')
@@ -343,12 +343,12 @@ class LoginTest(AuthTestCase):
             self.site, 'https://foo.com', 'foo@example.org')
         response = self.get('/wwwhisper/auth/api/login/?token=' + token)
         self.assertEqual(400, response.status_code)
-        self.assertEqual('Token invalid or expired.', response.content)
+        self.assertEqual(b'Token invalid or expired.', response.content)
 
     def test_login_succeeds_if_known_user(self):
         self.site.users.create_item('foo@example.org')
         token = generate_login_token(self.site, TEST_SITE, 'foo@example.org')
-        params = urllib.urlencode(dict(token=token, next='/foo'))
+        params = urllib.parse.urlencode(dict(token=token, next='/foo'))
         response = self.get('/wwwhisper/auth/api/login/?' + params)
         self.assertEqual(302, response.status_code)
         self.assertEqual(TEST_SITE + '/foo', response['Location'])
@@ -358,15 +358,16 @@ class LoginTest(AuthTestCase):
         response = self.get('/wwwhisper/auth/api/login/?token=' + token,
                             HTTP_ACCEPT='text/plain, text/html')
         self.assertEqual(403, response.status_code)
-        self.assertRegexpMatches(response['Content-Type'], 'text/html')
-        self.assertRegexpMatches(response.content, '<body')
+        self.assertEqual(response['Content-Type'], 'text/html; charset=utf-8')
+        self.assertRegex(response.content, b'<body')
 
     def test_tricky_redirection_replaced(self):
         # 'next' argument is not signed, so can be replaced by the
         # user. This is OK as long as all tricky paths are replaced.
         self.site.users.create_item('foo@example.org')
         token = generate_login_token(self.site, TEST_SITE, 'foo@example.org')
-        params = urllib.urlencode(dict(token=token, next='www.example.com'))
+        params = urllib.parse.urlencode(
+            dict(token=token, next='www.example.com'))
         response = self.get('/wwwhisper/auth/api/login/?' + params)
         self.assertEqual(302, response.status_code)
         # Ignore 'next' argument from the login URL
@@ -379,14 +380,14 @@ class LoginTest(AuthTestCase):
         self.assertEqual(302, response.status_code)
         response = self.get('/wwwhisper/auth/api/login/?token=' + token)
         self.assertEqual(400, response.status_code)
-        self.assertEqual('Token invalid or expired.', response.content)
+        self.assertEqual(b'Token invalid or expired.', response.content)
 
 class SessionCacheTest(AuthTestCase):
     def test_user_cached_in_session(self):
         user = self.site.users.create_item('foo@example.com')
 
         token = generate_login_token(self.site, TEST_SITE, 'foo@example.com')
-        params = urllib.urlencode(dict(token=token, next='/foo'))
+        params = urllib.parse.urlencode(dict(token=token, next='/foo'))
         response = self.get('/wwwhisper/auth/api/login/?' + params)
         self.assertEqual(302, response.status_code)
 

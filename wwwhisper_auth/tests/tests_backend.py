@@ -1,5 +1,5 @@
 # wwwhisper - web access control.
-# Copyright (C) 2016-2017 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2016-2022 Jan Wrobel <jan@mixedbit.org>
 
 from django.test import TestCase
 
@@ -28,23 +28,23 @@ class VerifiedEmailBackendTest(TestCase):
 
     def test_token_invalid(self):
         user = self.site.users.create_item(TEST_USER_EMAIL)
-        self.assertRaisesRegexp(AuthenticationError,
-                                'Token invalid or expired',
-                                self.backend.authenticate,
-                                self.site,
-                                TEST_SITE_URL,
-                                self.user_token() + 'x')
+        self.assertRaisesRegex(AuthenticationError,
+                               'Token invalid or expired',
+                               self.backend.authenticate,
+                               self.site,
+                               TEST_SITE_URL,
+                               self.user_token() + 'x')
 
     def test_token_for_different_site(self):
         user = self.site.users.create_item(TEST_USER_EMAIL)
         token = generate_login_token(
             self.site, 'http://example.com', TEST_USER_EMAIL)
-        self.assertRaisesRegexp(AuthenticationError,
-                                'Token invalid or expired',
-                                self.backend.authenticate,
-                                self.site,
-                                TEST_SITE_URL,
-                                token)
+        self.assertRaisesRegex(AuthenticationError,
+                               'Token invalid or expired',
+                               self.backend.authenticate,
+                               self.site,
+                               TEST_SITE_URL,
+                               token)
 
     def test_no_such_user(self):
         auth_user = self.backend.authenticate(

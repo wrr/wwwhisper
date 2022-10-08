@@ -1,5 +1,5 @@
 # wwwhisper - web access control.
-# Copyright (C) 2012-2018 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
 
 from django.conf import settings
 from django.conf.urls import url
@@ -39,17 +39,17 @@ class RestViewTest(HttpTestCase):
     def test_method_with_json_argument_in_body_dispatched(self):
         response = self.post('/testview/', {'ping_message' : 'hello world'})
         self.assertEqual(277, response.status_code)
-        self.assertEqual('hello world', response.content)
+        self.assertEqual(response.content, b'hello world')
 
     def test_method_with_missing_json_argument_in_body_dispatched(self):
         response = self.post('/testview/', {})
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content, 'Invalid request arguments')
+        self.assertEqual(response.content, b'Invalid request arguments')
 
     def test_method_with_incorrect_json_argument_in_body(self):
         response = self.post('/testview/', {'pong_message' : 'hello world'})
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content, 'Invalid request arguments')
+        self.assertEqual(response.content, b'Invalid request arguments')
 
     def test_method_with_incorrectly_formated_json_argument_in_body(self):
         response = self.client.post('/testview/',
@@ -58,45 +58,43 @@ class RestViewTest(HttpTestCase):
                                     HTTP_X_REQUESTED_WITH='XMLHttpRequest',
                                     HTTP_SITE_URL=TEST_SITE)
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content, 'Failed to parse the '
-                                 'request body as a json object.')
+        self.assertEqual(response.content,
+                         b'Failed to parse the request body as a json object.')
 
     def test_incorrect_method(self):
         response = self.delete('/testview/')
         self.assertEqual(405, response.status_code)
         # 'The response MUST include an Allow header containing a list
         # of valid methods for the requested resource.' (rfc2616)
-        self.assertItemsEqual(['GET', 'POST', 'HEAD', 'OPTIONS'],
+        self.assertCountEqual(['GET', 'POST', 'HEAD', 'OPTIONS'],
                               response['Allow'].split(', '))
 
     def test_method_with_argument_in_url_dispatched(self):
         response = self.get('/testview2/helloworld/')
         self.assertEqual(288, response.status_code)
-        self.assertEqual('helloworld', response.content)
+        self.assertEqual(b'helloworld', response.content)
 
 
     def test_argument_in_body_cannot_overwrite_argument_in_url(self):
         response = self.post('/testview2/helloworld/',
                              {'url_arg': 'hello-world'})
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(
-            response.content, 'Invalid argument passed in the request body.')
+        self.assertEqual(
+            response.content, b'Invalid argument passed in the request body.')
 
     def test_content_type_validation(self):
         response = self.client.post(
             '/testview/', '{"ping_message" : "hello world"}', 'text/json',
             HTTP_SITE_URL=TEST_SITE)
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content,
-                                 'Invalid Content-Type')
+        self.assertRegex(response.content, b'Invalid Content-Type')
 
         response = self.client.post(
             '/testview/', '{"ping_message" : "hello world"}',
             'application/json; charset=UTF-16',
             HTTP_SITE_URL=TEST_SITE)
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content,
-                                 'Invalid Content-Type')
+        self.assertRegex(response.content, b'Invalid Content-Type')
 
         # Content-Type header should be case-insensitive.
         response = self.client.post(
@@ -111,16 +109,14 @@ class RestViewTest(HttpTestCase):
         # No CSRF tokens.
         response = self.client.get('/testview/', HTTP_SITE_URL=TEST_SITE)
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content,
-                                 'CSRF token missing or incorrect')
+        self.assertEqual(response.content, b'CSRF token missing or incorrect.')
 
         # Too short CSRF tokens.
         self.client.cookies[settings.CSRF_COOKIE_NAME] = 'a'
         response = self.client.get('/testview/', HTTP_X_CSRFTOKEN='a',
                                    HTTP_SITE_URL=TEST_SITE)
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content,
-                                 'CSRF token missing or incorrect')
+        self.assertEqual(response.content, b'CSRF token missing or incorrect.')
 
         # Not matching CSRF tokens.
         self.client.cookies[settings.CSRF_COOKIE_NAME] = \
@@ -129,8 +125,7 @@ class RestViewTest(HttpTestCase):
             '/testview/', HTTP_X_CSRFTOKEN='xxxxxxxxxxxxxxxOxxxxxxxxxxxxxxxx',
             HTTP_SITE_URL=TEST_SITE)
         self.assertEqual(400, response.status_code)
-        self.assertRegexpMatches(response.content,
-                                 'CSRF token missing or incorrect')
+        self.assertEqual(response.content, b'CSRF token missing or incorrect.')
 
         # Matching CSRF tokens.
         self.client.cookies[settings.CSRF_COOKIE_NAME] = 64*'x'

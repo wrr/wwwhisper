@@ -1,5 +1,5 @@
 # wwwhisper - web access control.
-# Copyright (C) 2012-2015 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
 
 from django.conf import settings
 from django.core.urlresolvers import reverse
@@ -92,7 +92,7 @@ class ProtectCookiesMiddleware(object):
 
     def process_response(self, request, response):
         # response.cookies is SimpleCookie (Python 'Cookie' module).
-        for cookie in response.cookies.itervalues():
+        for cookie in response.cookies.values():
             if request.https:
                 cookie['secure'] = True
         return response
