@@ -2,8 +2,8 @@
 # Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
 
 from django.conf import settings
-from django.core.urlresolvers import reverse
 from django.shortcuts import redirect
+from django.urls import reverse
 
 from wwwhisper_auth import http
 from wwwhisper_auth.models import SINGLE_SITE_ID

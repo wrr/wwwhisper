@@ -7,8 +7,8 @@ from django.conf import settings
 from django.contrib import auth
 from django.core.cache import cache
 from django.core.mail import send_mail
-from django.core.urlresolvers import reverse
 from django.template.loader import render_to_string
+from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic import View
