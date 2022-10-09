@@ -25,11 +25,13 @@ class SetSiteMiddleware(object):
     multiple sites.
     """
 
-    def __init__(self):
+    def __init__(self, get_response):
+        self.get_response = get_response
         self.sites = wwwhisper_auth.site_cache.CachingSitesCollection()
 
-    def process_request(self, request):
+    def __call__(self, request):
         request.site = self.sites.find_item(SINGLE_SITE_ID)
+        return self.get_response(request)
 
 class SiteUrlMiddleware(object):
     """Validates and sets site_url for the request.
@@ -42,6 +44,9 @@ class SiteUrlMiddleware(object):
     Sets X-Forwarded-Host to match Site-Url. X-Forwarded-Host is used
     by Django to generate redirects.
     """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
 
     def _alias_defined(self, site, url):
         return site.aliases.find_item_by_url(url) is not None
@@ -65,7 +70,7 @@ class SiteUrlMiddleware(object):
         logger.warning(msg)
         return http.HttpResponseBadRequest(msg)
 
-    def process_request(self, request):
+    def __call__(self, request):
         url = request.META.get('HTTP_SITE_URL', None)
         if url is None:
             return http.HttpResponseBadRequest('Missing Site-Url header')
@@ -81,7 +86,7 @@ class SiteUrlMiddleware(object):
         request.META['HTTP_X_FORWARDED_HOST'] = host
         # TODO: use is_secure() instead
         request.https = (scheme == 'https')
-        return None
+        return self.get_response(request)
 
 
 class ProtectCookiesMiddleware(object):
@@ -90,7 +95,11 @@ class ProtectCookiesMiddleware(object):
     The flag prevents cookies from being sent with HTTP requests.
     """
 
-    def process_response(self, request, response):
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
         # response.cookies is SimpleCookie (Python 'Cookie' module).
         for cookie in response.cookies.values():
             if request.https:
@@ -102,7 +111,11 @@ class SecuringHeadersMiddleware(object):
     """Sets headers that impede clickjacking + content sniffing related attacks.
     """
 
-    def process_response(self, request, response):
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
         response['X-Frame-Options'] = 'SAMEORIGIN'
         response['X-Content-Type-Options'] = 'nosniff'
         return response

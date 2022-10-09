@@ -71,7 +71,7 @@ USE_X_FORWARDED_HOST = True
 # X-Forwarded-Host. Host header is not used.
 ALLOWED_HOSTS = ['*']
 
-MIDDLEWARE_CLASSES = [
+MIDDLEWARE = [
     #'wwwhisper_service.profile.ProfileMiddleware',
     # Must go before CommonMiddleware, to set a correct url to which
     # CommonMiddleware redirects.
