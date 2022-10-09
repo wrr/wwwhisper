@@ -216,7 +216,7 @@ class User(AbstractBaseUser):
         unique_together = ('site', 'email')
 
     # Site to which the user belongs.
-    site = models.ForeignKey(Site, related_name='+')
+    site = models.ForeignKey(Site, related_name='+', on_delete=models.CASCADE)
 
     # Externally visible UUID of the user. Allows to identify a REST
     # resource representing the user.
@@ -279,7 +279,7 @@ class Location(ValidatedModel):
         ('n', 'no open access'),
         ('y', 'open access'),
         )
-    site = models.ForeignKey(Site, related_name='+')
+    site = models.ForeignKey(Site, related_name='+', on_delete=models.CASCADE)
     path = models.TextField(db_index=True)
     uuid = models.CharField(max_length=36, db_index=True,
                             editable=False, unique=True)
@@ -417,9 +417,12 @@ class Permission(ValidatedModel):
         user: The user that is given access to the location.
     """
 
-    http_location = models.ForeignKey(Location, related_name='+')
-    site = models.ForeignKey(Site, related_name='+')
-    user = models.ForeignKey(User, related_name='+')
+    http_location = models.ForeignKey(Location, related_name='+',
+                                      on_delete=models.CASCADE)
+    site = models.ForeignKey(Site, related_name='+',
+                             on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name='+',
+                             on_delete=models.CASCADE)
 
     def __unicode__(self):
         return "%s, %s" % (self.http_location, self.user.email)
@@ -449,7 +452,7 @@ class Alias(ValidatedModel):
         app_label = 'wwwhisper_auth'
         unique_together = ('site', 'url')
 
-    site = models.ForeignKey(Site, related_name='+')
+    site = models.ForeignKey(Site, related_name='+', on_delete=models.CASCADE)
     url = models.TextField(db_index=True)
     uuid = models.CharField(max_length=36, db_index=True,
                             editable=False, unique=True)
