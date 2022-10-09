@@ -1,5 +1,5 @@
 # wwwhisper - web access control.
-# Copyright (C) 2013 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2013-2022 Jan Wrobel <jan@mixedbit.org>
 
 import os
 
@@ -15,7 +15,7 @@ class Asset:
 
     def __init__(self, prefix, *args):
         assert prefix is not None
-        self.body = file(os.path.join(prefix, *args)).read()
+        self.body = open(os.path.join(prefix, *args)).read()
 
 
 class StaticFileView(View):
