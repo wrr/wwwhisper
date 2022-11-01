@@ -26,6 +26,7 @@ from django.db import connection
 from django.db import models
 from django.db import IntegrityError
 from django.forms import ValidationError
+from django.urls import reverse
 from django.utils import timezone
 
 from functools import wraps
@@ -231,9 +232,8 @@ class User(AbstractBaseUser):
         """Returns externally visible attributes of the user resource."""
         return _add_common_attributes(self, site_url, {'email': self.email})
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('wwwhisper_user', (), {'uuid' : self.uuid})
+        return reverse('wwwhisper_user', kwargs={'uuid' : self.uuid})
 
     @modify_site
     def login_successful(self):
@@ -296,10 +296,9 @@ class Location(ValidatedModel):
     def __unicode__(self):
         return "%s" % (self.path)
 
-    @models.permalink
     def get_absolute_url(self):
         """Constructs URL of the location resource."""
-        return ('wwwhisper_location', (), {'uuid' : self.uuid})
+        return reverse('wwwhisper_location', kwargs={'uuid' : self.uuid})
 
     @modify_site
     def grant_open_access(self):
@@ -427,12 +426,11 @@ class Permission(ValidatedModel):
     def __unicode__(self):
         return "%s, %s" % (self.http_location, self.user.email)
 
-    @models.permalink
     def get_absolute_url(self):
         """Constructs URL of the permission resource."""
-        return ('wwwhisper_allowed_user', (),
-                {'location_uuid' : self.http_location.uuid,
-                 'user_uuid': self.user.uuid})
+        return reverse('wwwhisper_allowed_user',
+                kwargs={'location_uuid' : self.http_location.uuid,
+                        'user_uuid': self.user.uuid})
 
     def attributes_dict(self, site_url):
         """Returns externally visible attributes of the permission resource."""
@@ -458,9 +456,8 @@ class Alias(ValidatedModel):
                             editable=False, unique=True)
     force_ssl = models.BooleanField(default=False)
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('wwwhisper_alias', (), {'uuid' : self.uuid})
+        return reverse('wwwhisper_alias', kwargs={'uuid' : self.uuid})
 
     def attributes_dict(self, site_url):
         return _add_common_attributes(self, site_url, {'url': self.url})

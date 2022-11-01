@@ -1,5 +1,5 @@
 # wwwhisper - web access control.
-# Copyright (C) 2012-2017 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
 
 """Authentication backend used by wwwhisper_auth."""
 
@@ -15,7 +15,7 @@ class AuthenticationError(Exception):
 class VerifiedEmailBackend(ModelBackend):
     """"Backend that authenticates the user using verified email"""
 
-    def authenticate(self, site, site_url, token):
+    def authenticate(self, request, site, site_url, token):
         """Token was a part of a login url that proves email ownership.
 
         Returns:
