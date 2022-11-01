@@ -8,7 +8,6 @@ from django.test.client import Client
 from wwwhisper_auth.models import SitesCollection
 from wwwhisper_auth.models import SINGLE_SITE_ID
 
-import json
 
 TEST_SITE = 'https://foo.example.org:8080'
 
@@ -23,7 +22,7 @@ class HttpTestCase(TestCase):
 
     def post(self, url, args):
         return self.client.post(
-            url, json.dumps(args), 'application/json; charset=UTF-8',
+            url, args, 'application/json; charset=UTF-8',
             HTTP_SITE_URL=TEST_SITE)
 
     """ To be used for views that are not contacted via Ajax. """
@@ -37,7 +36,7 @@ class HttpTestCase(TestCase):
         if args is None:
             return self.client.put(url, HTTP_SITE_URL=TEST_SITE)
         return self.client.put(
-            url, data=json.dumps(args),
+            url, data=args,
             content_type='application/json;  charset=UTF-8',
             HTTP_SITE_URL=TEST_SITE)
 
