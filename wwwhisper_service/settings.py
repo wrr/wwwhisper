@@ -71,6 +71,8 @@ USE_X_FORWARDED_HOST = True
 # X-Forwarded-Host. Host header is not used.
 ALLOWED_HOSTS = ['*']
 
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
 MIDDLEWARE = [
     #'wwwhisper_service.profile.ProfileMiddleware',
     # Must go before CommonMiddleware, to set a correct url to which
