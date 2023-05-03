@@ -16,8 +16,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def _full_url(request):
-    return request.site_url + request.path
+def _full_path(request):
+    return request.path
 
 def set_collection(decorated_function):
     @wraps(decorated_function)
@@ -54,7 +54,7 @@ class CollectionView(http.RestView):
         except LimitExceeded as ex:
             return http.HttpResponseLimitExceeded(str(ex))
 
-        attributes_dict = created_item.attributes_dict(request.site_url)
+        attributes_dict = created_item.attributes_dict()
         response = http.HttpResponseCreated(attributes_dict)
         response['Location'] = attributes_dict['self']
         response['Content-Location'] = attributes_dict['self']
@@ -63,10 +63,10 @@ class CollectionView(http.RestView):
     @set_collection
     def get(self, request):
         """Returns json representation of all resources in the collection."""
-        items_list = [item.attributes_dict(request.site_url)
+        items_list = [item.attributes_dict()
                       for item in self.collection.all()]
         return http.HttpResponseOKJson({
-                'self' : _full_url(request),
+                'self' : _full_path(request),
                 self.collection_name: items_list
                 })
 
@@ -90,7 +90,7 @@ class ItemView(http.RestView):
         if item is None:
             return http.HttpResponseNotFound(
                 '%s not found' % self.collection.item_name.capitalize())
-        return http.HttpResponseOKJson(item.attributes_dict(request.site_url))
+        return http.HttpResponseOKJson(item.attributes_dict())
 
     @set_collection
     def delete(self, request, uuid):
@@ -111,7 +111,7 @@ class OpenAccessView(http.RestView):
     def _attributes_dict(request):
         """Attributes representing a resource to which a request is related."""
         return {
-            'self' : _full_url(request)
+            'self' : _full_path(request)
         }
 
     def put(self, request, location_uuid):
@@ -125,7 +125,7 @@ class OpenAccessView(http.RestView):
 
         location.grant_open_access()
         response =  http.HttpResponseCreated(self._attributes_dict(request))
-        response['Location'] = _full_url(request)
+        response['Location'] = _full_path(request)
         return response
 
     def get(self, request, location_uuid):
@@ -165,7 +165,7 @@ class AllowedUsersView(http.RestView):
             return http.HttpResponseNotFound('Location not found.')
         try:
             (permission, created) = location.grant_access(user_uuid)
-            attributes_dict = permission.attributes_dict(request.site_url)
+            attributes_dict = permission.attributes_dict()
             if created:
                 response =  http.HttpResponseCreated(attributes_dict)
                 response['Location'] = attributes_dict['self']
@@ -187,8 +187,7 @@ class AllowedUsersView(http.RestView):
             return http.HttpResponseNotFound('Location not found.')
         try:
             permission = location.get_permission(user_uuid)
-            return http.HttpResponseOKJson(
-                permission.attributes_dict(request.site_url))
+            return http.HttpResponseOKJson(permission.attributes_dict())
         except LookupError as ex:
             return http.HttpResponseNotFound(str(ex))
 

@@ -3,7 +3,6 @@
 
 from wwwhisper_auth.models import Site
 from wwwhisper_auth.tests.utils import HttpTestCase
-from wwwhisper_auth.tests.utils import TEST_SITE
 
 import json
 
@@ -52,7 +51,7 @@ class UserTest(AdminViewTestCase):
         self.assertRegex(parsed_response_body['id'],
                          '^urn:uuid:%s$' % uid_regexp())
         self.assertEqual(TEST_USER_EMAIL, parsed_response_body['email'])
-        self_url = '%s/wwwhisper/admin/api/users/%s/' % (TEST_SITE, user_uuid)
+        self_url = f'/wwwhisper/admin/api/users/{user_uuid}/'
         self.assertEqual(self_url, parsed_response_body['self'])
         self.assertEqual(self_url, response['Location'])
         self.assertEqual(self_url, response['Content-Location'])
@@ -80,7 +79,7 @@ class UserTest(AdminViewTestCase):
         response = self.get('/wwwhisper/admin/api/users/')
         self.assertEqual(200, response.status_code)
         parsed_response_body = json.loads(response.content)
-        self.assertEqual('%s/wwwhisper/admin/api/users/' % TEST_SITE,
+        self.assertEqual('/wwwhisper/admin/api/users/',
                          parsed_response_body['self'])
 
         users = parsed_response_body['users']
@@ -144,8 +143,7 @@ class LocationTest(AdminViewTestCase):
                          '^urn:uuid:%s$' % uid_regexp())
         self.assertEqual(TEST_LOCATION, parsed_response_body['path'])
         self.assertTrue('openAccess' not in parsed_response_body)
-        self_url = '{0}/wwwhisper/admin/api/locations/{1}/'.format(
-            TEST_SITE, location_uuid)
+        self_url = f'/wwwhisper/admin/api/locations/{location_uuid}/'
         self.assertEqual(self_url, parsed_response_body['self'])
         self.assertEqual(self_url, response['Location'])
         self.assertEqual(self_url, response['Content-Location'])
@@ -223,7 +221,7 @@ class LocationTest(AdminViewTestCase):
         response = self.get('/wwwhisper/admin/api/locations/')
         self.assertEqual(200, response.status_code)
         parsed_response_body = json.loads(response.content)
-        self.assertEqual('%s/wwwhisper/admin/api/locations/' % TEST_SITE,
+        self.assertEqual('/wwwhisper/admin/api/locations/',
                          parsed_response_body['self'])
 
         locations = parsed_response_body['locations']
@@ -420,8 +418,7 @@ class AliasTest(AdminViewTestCase):
         self.assertRegex(parsed_response_body['id'],
                          '^urn:uuid:%s$' % uid_regexp())
         self.assertEqual(TEST_ALIAS, parsed_response_body['url'])
-        self_url = '{0}/wwwhisper/admin/api/aliases/{1}/'.format(
-            TEST_SITE, alias_uuid)
+        self_url = f'/wwwhisper/admin/api/aliases/{alias_uuid}/'
         self.assertEqual(self_url, parsed_response_body['self'])
         self.assertEqual(self_url, response['Location'])
         self.assertEqual(self_url, response['Content-Location'])
@@ -447,7 +444,7 @@ class AliasTest(AdminViewTestCase):
         response = self.get('/wwwhisper/admin/api/aliases/')
         self.assertEqual(200, response.status_code)
         parsed_response_body = json.loads(response.content)
-        self.assertEqual('%s/wwwhisper/admin/api/aliases/' % TEST_SITE,
+        self.assertEqual('/wwwhisper/admin/api/aliases/',
                          parsed_response_body['self'])
 
         aliases = parsed_response_body['aliases']

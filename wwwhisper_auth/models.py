@@ -228,9 +228,9 @@ class User(AbstractBaseUser):
     USERNAME_FIELD = 'uuid'
     REQUIRED_FIELDS = ['email', 'site']
 
-    def attributes_dict(self, site_url):
+    def attributes_dict(self):
         """Returns externally visible attributes of the user resource."""
-        return _add_common_attributes(self, site_url, {'email': self.email})
+        return _add_common_attributes(self, {'email': self.email})
 
     def get_absolute_url(self):
         return reverse('wwwhisper_user', kwargs={'uuid' : self.uuid})
@@ -396,17 +396,17 @@ class Location(ValidatedModel):
         return [self.site.users.find_item_by_pk(user_id)
                 for user_id in self.permissions().keys()]
 
-    def attributes_dict(self, site_url):
+    def attributes_dict(self):
         """Returns externally visible attributes of the location resource."""
         result = {
             'path': self.path,
             'allowedUsers': [
-                user.attributes_dict(site_url) for user in self.allowed_users()
+                user.attributes_dict() for user in self.allowed_users()
                 ],
             }
         if self.open_access_granted():
             result['openAccess'] = True
-        return _add_common_attributes(self, site_url, result)
+        return _add_common_attributes(self, result)
 
 class Permission(ValidatedModel):
     """Connects a location with a user that can access the location.
@@ -432,10 +432,10 @@ class Permission(ValidatedModel):
                 kwargs={'location_uuid' : self.http_location.uuid,
                         'user_uuid': self.user.uuid})
 
-    def attributes_dict(self, site_url):
+    def attributes_dict(self):
         """Returns externally visible attributes of the permission resource."""
         return _add_common_attributes(
-            self, site_url, {'user': self.user.attributes_dict(site_url)})
+            self, {'user': self.user.attributes_dict()})
 
 class Alias(ValidatedModel):
     """One of urls that can be used to access the site.
@@ -459,8 +459,8 @@ class Alias(ValidatedModel):
     def get_absolute_url(self):
         return reverse('wwwhisper_alias', kwargs={'uuid' : self.uuid})
 
-    def attributes_dict(self, site_url):
-        return _add_common_attributes(self, site_url, {'url': self.url})
+    def attributes_dict(self):
+        return _add_common_attributes(self, {'url': self.url})
 
 
 class Collection(object):
@@ -736,13 +736,13 @@ class AliasesCollection(Collection):
 def _uuid2urn(uuid):
     return 'urn:uuid:' + uuid
 
-def _add_common_attributes(item, site_url, attributes_dict):
+def _add_common_attributes(item, attributes_dict):
     """Inserts common attributes of an item to a given dict.
 
     Attributes that are common for different resource types are a
     'self' link and an 'id' field.
     """
-    attributes_dict['self'] = site_url + item.get_absolute_url()
+    attributes_dict['self'] = item.get_absolute_url()
     if hasattr(item, 'uuid'):
         attributes_dict['id'] = _uuid2urn(item.uuid)
     return attributes_dict
