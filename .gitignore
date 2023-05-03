@@ -8,5 +8,7 @@ src/*.egg-info
 bin
 lib
 local
-include
 virtualenv
+venv
+.ackrc
+sites
