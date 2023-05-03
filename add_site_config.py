@@ -17,7 +17,7 @@ import sys
 import random
 import subprocess
 
-from urlparse import urlparse
+from urllib.parse import urlparse
 
 SITES_DIR = 'sites'
 DJANGO_CONFIG_DIR = 'django'
@@ -33,11 +33,11 @@ DEFAULT_INITIAL_LOCATIONS = ['/', '/wwwhisper/admin/']
 
 def err_quit(errmsg):
     """Prints an error message and quits."""
-    print >> sys.stderr, errmsg
+    print(errmsg, file=sys.stderr)
     sys.exit(1)
 
 def usage():
-    print """
+    print("""
 
 Generates site-specific configuration files and initializes wwwhisper database.
 
@@ -60,7 +60,7 @@ Usage:
       -o, --output-dir A directory to store configuration (defaults to
             '%(config-dir)s' in the wwwhisper directory).
       -n, --no-supervisor Do not generate config file for supervisord.
-""" % {'prog': sys.argv[0], 'config-dir': SITES_DIR}
+""" % {'prog': sys.argv[0], 'config-dir': SITES_DIR})
     sys.exit(1)
 
 def generate_secret_key():
@@ -86,8 +86,8 @@ def generate_secret_key():
         # filled manually.
         message = ('Your system does not allow to automatically '
                    'generate secure secret keys.')
-        print >> sys.stderr, ('WARNING: You need to edit configuration file '
-                              'manually. ' + message)
+        print(('WARNING: You need to edit configuration file '
+               'manually. ' + message), file=sys.stderr)
         return ('\'---' + message + ' Replace this text with a long, '
                 'unpredictable secret string (at least 50 characters).')
 
@@ -222,8 +222,8 @@ def main():
              'no-supervisor',
              'help'])
 
-    except getopt.GetoptError, ex:
-        print 'Arguments parsing error: ', ex,
+    except getopt.GetoptError as ex:
+        print('Arguments parsing error: ', ex)
         usage()
 
     for opt, arg in optlist:
@@ -264,9 +264,9 @@ def main():
     supervisor_config_path = os.path.join(
         site_config_path, SUPERVISOR_CONFIG_DIR)
     try:
-        os.umask(067)
-        os.makedirs(site_config_path, 0710)
-        os.umask(077)
+        os.umask(0o067)
+        os.makedirs(site_config_path, 0o710)
+        os.umask(0o077)
         os.makedirs(django_config_path)
         os.makedirs(db_path)
         if need_supervisor:
@@ -291,7 +291,7 @@ def main():
     if exit_status != 0:
         err_quit('Failed to initialize wwwhisper database.');
 
-    print 'Site configuration successfully created.'
+    print('Site configuration successfully created.')
 
 if __name__ == '__main__':
     main()
