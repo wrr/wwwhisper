@@ -22,8 +22,8 @@
     cd ~/local;
     git clone https://github.com/wrr/wwwhisper.git; cd wwwhisper;
      # Create and activate virtual environment.
-    virtualenv virtualenv;
-    source virtualenv/bin/activate;
+    virtualenv venv;
+    source venv/bin/activate;
      # Install required packages in the virtual environment.
     pip install -r ./requirements.txt;
      # Generate configurations files for a site to protect. You need to
@@ -50,7 +50,7 @@ directives.
 
 ### Start nginx and wwwhisper.
     ~/local/bin/nginx;
-    cd ~/local/wwwhisper; source virtualenv/bin/activate;
+    cd ~/local/wwwhisper; source venv/bin/activate;
     ./run_wwwhisper_for_site.sh -d sites/http[s].your.domain.port
 
 Point your browser to http[s]://your.domain[:port]/admin, you should

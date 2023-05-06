@@ -26,8 +26,8 @@
      # Clone wwwhisper project to the wwwhisper home dir.
     git clone https://github.com/wrr/wwwhisper.git .;
      # Create and activate virtual environment.
-    virtualenv virtualenv;
-    source virtualenv/bin/activate;
+    virtualenv venv;
+    source venv/bin/activate;
      # Install required packages in the virtual environment.
     pip install -r ./requirements.txt;
      # Generate configurations files for a site to protect. You need to

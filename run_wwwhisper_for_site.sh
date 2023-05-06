@@ -46,8 +46,8 @@ if [[ -z ${SITE_DIR} ]]; then
     exit 1
 fi
 
-if [[ -z ${VIRTUALENV_DIR} ]]; then
-    VIRTUALENV_DIR=${SCRIPT_DIR}/virtualenv
+if [[ -z ${VENV_DIR} ]]; then
+    VIRTUALENV_DIR=${SCRIPT_DIR}/venv
 fi
 
 assert_dir_exists ${SITE_DIR}
