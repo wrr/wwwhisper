@@ -1,5 +1,5 @@
 # wwwhisper - web access control.
-# Copyright (C) 2016 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2016-2023 Jan Wrobel <jan@mixedbit.org>
 
 import datetime
 
@@ -17,7 +17,7 @@ def _datetime_to_timestamp(datetime_arg):
 # TODO: tokens can no longer be generated for not existing users,
 # update these functions to avoid duplicated users lookups.
 
-def generate_login_token(site, site_url, email):
+def generate_login_token(site, email):
     """Returns a signed token to login a user with a given email.
 
     The token should be emailed to the user to verify that the user
@@ -35,27 +35,29 @@ def generate_login_token(site, site_url, email):
         # Successul login changes user.last_login, which invalidates
         # all tokens generated for the user.
         timestamp = _datetime_to_timestamp(user.last_login)
+    site_id = site.site_id
     token_data = {
-        'site': site_url,
+        'site': site_id,
         'email': email,
         'timestamp': timestamp
     }
-    return signing.dumps(token_data, salt=site_url, compress=True)
+    return signing.dumps(token_data, salt=site_id, compress=True)
 
-def load_login_token(site, site_url, token):
+def load_login_token(site, token):
     """Verifies the login token.
 
     Returns email encoded in the token if the token is valid, None
     otherwise.
     """
     try:
+        site_id= site.site_id
         token_data = signing.loads(
-            token, salt=site_url, max_age=settings.AUTH_TOKEN_SECONDS_VALID)
-        # site_url in the token seems like an overkill. site_url is
+            token, salt=site_id, max_age=settings.AUTH_TOKEN_SECONDS_VALID)
+        # site_id in the token seems like an overkill. site_id is
         # already used as salt which should give adequate protection
         # against using a token for sites different than the one for
         # which the token was generated.
-        if token_data['site'] != site_url:
+        if token_data['site'] != site_id:
             return None
         email = token_data['email']
         timestamp = token_data['timestamp']

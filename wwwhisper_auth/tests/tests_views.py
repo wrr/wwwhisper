@@ -1,5 +1,5 @@
 # wwwhisper - web access control.
-# Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2012-2023 Jan Wrobel <jan@mixedbit.org>
 
 
 from django.contrib.auth.models import User
@@ -38,9 +38,8 @@ class AuthTestCase(HttpTestCase):
     def login(self, email, site=None):
         if site is None:
             site = self.site
-        token = generate_login_token(site, TEST_SITE, email)
-        self.assertTrue(self.client.login(
-            site=site, site_url=TEST_SITE, token=token))
+        token = generate_login_token(site, email)
+        self.assertTrue(self.client.login(site=site, token=token))
         # Login needs to set user_id in session.
         user = site.users.find_item_by_email(email)
         self.assertIsNotNone(user)
@@ -231,11 +230,11 @@ class WhoAmITest(AuthTestCase):
         self.assertEqual('foo@example.com', parsed_response_body['email'])
 
     def test_whoami_for_user_of_differen_site(self):
-        site2 = self.sites.create_item('somesite')
-        site2.users.create_item('foo@example.com')
-        self.login('foo@example.com', site2)
+        other_site = self.sites.create_item('othersite')
+        other_site.users.create_item('foo@example.com')
+        self.login('foo@example.com', other_site)
         # Not authorized.
-        # Request is run for TEST_SITE, but user belongs to site2_id.
+        # Request is run for self.site, but user belongs to other_site.
         response = self.get('/wwwhisper/auth/api/whoami/')
         self.assertEqual(401, response.status_code)
 
@@ -337,24 +336,25 @@ class LoginTest(AuthTestCase):
         self.assertEqual(400, response.status_code)
         self.assertEqual(b'Token invalid or expired.', response.content)
 
-    def test_login_fails_if_token_for_different_site_url(self):
+    def test_login_fails_if_token_for_different_site(self):
+        other_site = self.sites.create_item('othersite')
+        other_site.users.create_item('foo@example.org')
         self.site.users.create_item('foo@example.org')
-        token = generate_login_token(
-            self.site, 'https://foo.com', 'foo@example.org')
+        token = generate_login_token(other_site, 'foo@example.org')
         response = self.get('/wwwhisper/auth/api/login/?token=' + token)
         self.assertEqual(400, response.status_code)
         self.assertEqual(b'Token invalid or expired.', response.content)
 
     def test_login_succeeds_if_known_user(self):
         self.site.users.create_item('foo@example.org')
-        token = generate_login_token(self.site, TEST_SITE, 'foo@example.org')
+        token = generate_login_token(self.site, 'foo@example.org')
         params = urllib.parse.urlencode(dict(token=token, next='/foo'))
         response = self.get('/wwwhisper/auth/api/login/?' + params)
         self.assertEqual(302, response.status_code)
         self.assertEqual(TEST_SITE + '/foo', response['Location'])
 
     def test_login_fails_if_unknown_user(self):
-        token = generate_login_token(self.site, TEST_SITE, 'foo@example.org')
+        token = generate_login_token(self.site, 'foo@example.org')
         response = self.get('/wwwhisper/auth/api/login/?token=' + token,
                             HTTP_ACCEPT='text/plain, text/html')
         self.assertEqual(403, response.status_code)
@@ -365,7 +365,7 @@ class LoginTest(AuthTestCase):
         # 'next' argument is not signed, so can be replaced by the
         # user. This is OK as long as all tricky paths are replaced.
         self.site.users.create_item('foo@example.org')
-        token = generate_login_token(self.site, TEST_SITE, 'foo@example.org')
+        token = generate_login_token(self.site, 'foo@example.org')
         params = urllib.parse.urlencode(
             dict(token=token, next='www.example.com'))
         response = self.get('/wwwhisper/auth/api/login/?' + params)
@@ -375,7 +375,7 @@ class LoginTest(AuthTestCase):
 
     def test_successful_login_invalidates_token(self):
         self.site.users.create_item('foo@example.org')
-        token = generate_login_token(self.site, TEST_SITE, 'foo@example.org')
+        token = generate_login_token(self.site, 'foo@example.org')
         response = self.get('/wwwhisper/auth/api/login/?token=' + token)
         self.assertEqual(302, response.status_code)
         response = self.get('/wwwhisper/auth/api/login/?token=' + token)
@@ -386,7 +386,7 @@ class SessionCacheTest(AuthTestCase):
     def test_user_cached_in_session(self):
         user = self.site.users.create_item('foo@example.com')
 
-        token = generate_login_token(self.site, TEST_SITE, 'foo@example.com')
+        token = generate_login_token(self.site, 'foo@example.com')
         params = urllib.parse.urlencode(dict(token=token, next='/foo'))
         response = self.get('/wwwhisper/auth/api/login/?' + params)
         self.assertEqual(302, response.status_code)

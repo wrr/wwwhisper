@@ -1,5 +1,5 @@
 # wwwhisper - web access control.
-# Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2012-2023 Jan Wrobel <jan@mixedbit.org>
 
 """Views that handle user authentication and authorization."""
 
@@ -211,7 +211,6 @@ class Login(View):
             return http.HttpResponseBadRequest('Token missing.')
         try:
             user = auth.authenticate(site=request.site,
-                                     site_url=request.site_url,
                                      token=token)
         except AuthenticationError as ex:
             logger.debug('Token verification failed.')
@@ -270,8 +269,7 @@ class SendToken(http.RestView):
             # response timing.
             return http.HttpResponseNoContent();
 
-        token = login_token.generate_login_token(
-            request.site, site_url=request.site_url, email=email)
+        token = login_token.generate_login_token(request.site, email=email)
 
         params = urllib.parse.urlencode(dict(next=path, token=token))
         url = '{0}{1}?{2}'.format(request.site_url, reverse('login'), params)
