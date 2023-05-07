@@ -6,8 +6,8 @@
   var net = new wwwhisper.Net();
 
   /**
-   * Sends an assertion from a BrowserID sign-in window to the
-   * authentication back-end. Reloads the page if login succeeded.
+   * Requests a login token to be send to the user provided email
+   * address.
    */
   function login(email) {
     $('.entered-email').text(email);

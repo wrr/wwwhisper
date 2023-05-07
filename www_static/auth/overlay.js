@@ -10,13 +10,17 @@
   'use strict';
   var net = new wwwhisper.Net(), MAX_EMAIL_LENGTH = 30;
 
+  function getById(id) {
+    return document.getElementById(id);
+  }
+
   /**
    * Removes the overlay. Keeping overlay hidden is not enough,
    * because all content below the iframe does not receive
    * user's input (e.g. links are non-clickable).
    */
   function removeOverlay() {
-    $('#wwwhisper-iframe', window.parent.document).remove();
+    window.parent.document.getElementById('wwwhisper-iframe').remove();
   }
 
   function logoutSucceeded() {
@@ -34,9 +38,9 @@
       // the iframe.
       emailToDisplay = result.email.substr(0, MAX_EMAIL_LENGTH) + '[...]';
     }
-    $('#email').text(emailToDisplay);
-    $('#wwwhisper-overlay').removeClass('hide');
-    $('#logout').click(logout);
+    getById('email').innerText = emailToDisplay;
+    getById('wwwhisper-overlay').classList.remove('hide');
+    getById('logout').addEventListener('click', logout);
   }
 
   net.ajax('GET', '/wwwhisper/auth/api/whoami/', null,
