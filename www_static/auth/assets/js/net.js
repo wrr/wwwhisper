@@ -10,7 +10,7 @@
    * cross site request forgery protection cookie. Serializes requests
    * parameters to JSON.
    */
-  function Stub() {
+  function Net() {
     var errorHandler = null, that = this;
 
     function error(errorHandlerArg, message, status, isTextPlain) {
@@ -168,5 +168,5 @@
   if (typeof(window.wwwhisper) === 'undefined'){
     window.wwwhisper = {};
   }
-  window.wwwhisper.Stub = Stub;
+  window.wwwhisper.Net = Net;
 }());

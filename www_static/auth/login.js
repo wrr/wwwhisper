@@ -3,7 +3,7 @@
  */
 (function () {
   'use strict';
-  var stub = new wwwhisper.Stub();
+  var net = new wwwhisper.Net();
 
   /**
    * Sends an assertion from a BrowserID sign-in window to the
@@ -11,20 +11,20 @@
    */
   function login(email) {
     $('.entered-email').text(email);
-    stub.ajax('POST', '/wwwhisper/auth/api/send-token/',
-              {
-                'email' : email,
-                'path': window.location.pathname
-              },
-              function() {
-                $('#intro').addClass('hide');
-                $('#login-form').addClass('hide');
-                $('#token-send-success').removeClass('hide');
-              },
-              function(errorMessage, errorStatus) {
-                $('#token-send-error-message').text(errorMessage);
-                $('#token-send-error').removeClass('hide');
-              });
+    net.ajax('POST', '/wwwhisper/auth/api/send-token/',
+             {
+               'email' : email,
+               'path': window.location.pathname
+             },
+             function() {
+               $('#intro').addClass('hide');
+               $('#login-form').addClass('hide');
+               $('#token-send-success').removeClass('hide');
+             },
+             function(errorMessage, errorStatus) {
+               $('#token-send-error-message').text(errorMessage);
+               $('#token-send-error').removeClass('hide');
+             });
   }
 
   $('#login-required').removeClass('hide');

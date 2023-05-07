@@ -1,6 +1,6 @@
 /*!
  * wwwhisper - web access control.
- * Copyright (C) 2012-2017 Jan Wrobel
+ * Copyright (C) 2012-2023 Jan Wrobel
  */
 /*jslint browser: true, white: true, indent: 2 */
 /*global  $ */
@@ -157,7 +157,7 @@
    * and users, grant/revoke access to a location). Requests UI
    * updates when data to be displayed changes.
    */
-  function Controller(ui, stub) {
+  function Controller(ui, net) {
     var that = this;
 
     this.aliases = [];
@@ -231,25 +231,25 @@
      * successfully done.
      */
     this.getUsers = function(successCallback) {
-      stub.ajax('GET', 'api/users/', null, function(result) {
+      net.ajax('GET', 'api/users/', null, function(result) {
         that.users = result.users;
         successCallback();
       });
     };
     this.getLocations = function(successCallback) {
-      stub.ajax('GET', 'api/locations/', null, function(result) {
+      net.ajax('GET', 'api/locations/', null, function(result) {
         that.locations = result.locations;
         successCallback();
       });
     };
     this.getAliases = function(successCallback) {
-      stub.ajax('GET', 'api/aliases/', null, function(result) {
+      net.ajax('GET', 'api/aliases/', null, function(result) {
         that.aliases = result.aliases;
         successCallback();
       });
     };
     this.getSkin = function(successCallback) {
-      stub.ajax('GET', 'api/skin/', null, function(result) {
+      net.ajax('GET', 'api/skin/', null, function(result) {
         that.skin = result;
         successCallback();
       });
@@ -264,21 +264,21 @@
     this.getAdminUser = function(successCallback) {
       // Do not use the default error handler, display a more
       // meaningful error message.
-      stub.ajax('GET', '/wwwhisper/auth/api/whoami/', null,
-                function(result) {
-                  that.adminUserEmail = result.email;
-                  successCallback();
-                },
-                function(errorMessage, errorStatus, isTextPlain) {
-                  if (errorStatus === 401) {
-                    that.errorHandler(
-                      'wwwhisper likely misconfigured: Admin application can ' +
-                        'be accessed without authentication!');
-                    successCallback();
-                  } else {
-                    that.errorHandler(errorMessage, errorStatus, isTextPlain);
-                  }
-                });
+      net.ajax('GET', '/wwwhisper/auth/api/whoami/', null,
+               function(result) {
+                 that.adminUserEmail = result.email;
+                 successCallback();
+               },
+               function(errorMessage, errorStatus, isTextPlain) {
+                 if (errorStatus === 401) {
+                   that.errorHandler(
+                     'wwwhisper likely misconfigured: Admin application can ' +
+                       'be accessed without authentication!');
+                   successCallback();
+                 } else {
+                   that.errorHandler(errorMessage, errorStatus, isTextPlain);
+                 }
+               });
     };
 
     /**
@@ -313,20 +313,20 @@
      * used to access the site.
      */
     this.addAlias = function(urlArg) {
-      stub.ajax('POST', 'api/aliases/', {url: urlArg},
-                function(alias) {
-                  that.aliases.push(alias);
-                  ui.refresh();
-                });
+      net.ajax('POST', 'api/aliases/', {url: urlArg},
+               function(alias) {
+                 that.aliases.push(alias);
+                 ui.refresh();
+               });
     };
 
     this.removeAlias = function(alias, failureHandler) {
-      stub.ajax('DELETE', alias.self, null,
-                function() {
-                  utils.removeFromArray(alias, that.aliases);
-                  ui.refresh();
-                },
-                failureHandler);
+      net.ajax('DELETE', alias.self, null,
+               function() {
+                 utils.removeFromArray(alias, that.aliases);
+                 ui.refresh();
+               },
+               failureHandler);
     };
 
     /**
@@ -344,44 +344,44 @@
             '(It could easily cut off access to the admin application).');
         return;
       }
-      stub.ajax('POST', 'api/locations/', {path: locationPath},
-                function(newLocation) {
-                  that.locations.push(newLocation);
-                  ui.refresh(newLocation);
-                });
+      net.ajax('POST', 'api/locations/', {path: locationPath},
+               function(newLocation) {
+                 that.locations.push(newLocation);
+                 ui.refresh(newLocation);
+               });
     };
 
     this.removeLocation = function(location, failureHandler) {
-      stub.ajax('DELETE', location.self, null,
-                function() {
-                  utils.removeFromArray(location, that.locations);
-                  ui.refresh();
-                },
-                failureHandler);
+      net.ajax('DELETE', location.self, null,
+               function() {
+                 utils.removeFromArray(location, that.locations);
+                 ui.refresh();
+               },
+               failureHandler);
     };
 
     /**
      * Adds a user with a given email. Invokes a callback on success.
      */
     this.addUser = function(emailArg, successCallback) {
-      stub.ajax('POST', 'api/users/', {email: emailArg},
-                function(user) {
-                  that.users.push(user);
-                  successCallback(user);
-                });
+      net.ajax('POST', 'api/users/', {email: emailArg},
+               function(user) {
+                 that.users.push(user);
+                 successCallback(user);
+               });
     };
 
     this.removeUser = function(user, failureHandler) {
-      stub.ajax('DELETE', user.self, null,
-                function() {
-                  utils.each(that.locations, function(location) {
-                    if (that.canAccess(user, location)) {
-                      that.removeAllowedUser(user, location);
-                    }
-                  });
-                  utils.removeFromArray(user, that.users);
-                  ui.refresh();
-                },
+      net.ajax('DELETE', user.self, null,
+               function() {
+                 utils.each(that.locations, function(location) {
+                   if (that.canAccess(user, location)) {
+                     that.removeAllowedUser(user, location);
+                   }
+                 });
+                 utils.removeFromArray(user, that.users);
+                 ui.refresh();
+               },
                failureHandler);
     };
 
@@ -389,7 +389,7 @@
      * Allows everyone access to a location.
      */
     this.grantOpenAccess = function(location) {
-      stub.ajax(
+      net.ajax(
         'PUT',
         location.self + 'open-access/',
         null,
@@ -408,7 +408,7 @@
       if (!location.hasOwnProperty('openAccess')) {
         return;
       }
-      stub.ajax(
+      net.ajax(
         'DELETE',
         location.self + 'open-access/',
         null,
@@ -438,7 +438,7 @@
       }
 
       grantPermissionCallback = function(userArg) {
-        stub.ajax(
+        net.ajax(
           'PUT',
           location.self + 'allowed-users/' + utils.urn2uuid(userArg.id) + '/',
           null,
@@ -466,7 +466,7 @@
      * Revokes access to a given location by a given user.
      */
     this.revokeAccess = function(user, location, failureHandler) {
-      stub.ajax(
+      net.ajax(
         'DELETE',
         location.self + 'allowed-users/' + utils.urn2uuid(user.id) + '/',
         null,
@@ -478,11 +478,11 @@
     };
 
     this.updateSkin = function(newSkin) {
-      stub.ajax('PUT', 'api/skin/', newSkin,
-                function(result) {
-                  that.skin = result;
-                  ui.refresh();
-                });
+      net.ajax('PUT', 'api/skin/', newSkin,
+               function(result) {
+                 that.skin = result;
+                 ui.refresh();
+               });
     };
 
     /**
@@ -492,7 +492,7 @@
     this.activate = function() {
       that.adminPath = utils.stripTrailingIndexHtmlAndSlash(
         window.location.pathname);
-      stub.setErrorHandler(that.errorHandler);
+      net.setErrorHandler(that.errorHandler);
       that.asyncExecuteAll([that.getLocations,
                             that.getUsers,
                             that.getAliases,
@@ -1301,11 +1301,11 @@
   }
 
   function initialize() {
-    var ui, stub, controller;
+    var ui, net, controller;
     // UI depends on controller, but can be created without it.
     ui = new UI();
-    stub = new wwwhisper.Stub(ui);
-    controller = new Controller(ui, stub);
+    net = new wwwhisper.Net(ui);
+    controller = new Controller(ui, net);
     ui.setController(controller);
     controller.activate();
   }

@@ -1,13 +1,13 @@
 /*!
  * wwwhisper - web access control.
- * Copyright (C) 2012-2017 Jan Wrobel
+ * Copyright (C) 2012-2023 Jan Wrobel
  */
 (function() {
   'use strict';
 
-  var mock_stub, mock_ui, controller;
+  var mock_net, mock_ui, controller;
 
-  function MockStub() {
+  function MockNet() {
     var expectedCalls = [];
 
     this.ajax = function(method, resource, params, successCallback) {
@@ -51,9 +51,9 @@
   }
 
   QUnit.testStart = function() {
-    mock_stub = new MockStub();
+    mock_net = new MockNet();
     mock_ui = new MockUI();
-    controller = new Controller(mock_ui, mock_stub);
+    controller = new Controller(mock_ui, mock_net);
   };
 
   module('Utility functions');
@@ -379,24 +379,24 @@
         }
       ]
     };
-    mock_stub.expectAjaxCall('GET', 'api/locations/', null, ajaxCallResult);
+    mock_net.expectAjaxCall('GET', 'api/locations/', null, ajaxCallResult);
     callbackCalled = false;
     controller.getLocations(function() {
       callbackCalled = true;
     });
     deepEqual(controller.locations, ajaxCallResult.locations);
     ok(callbackCalled);
-    mock_stub.verify();
+    mock_net.verify();
   });
 
   test('addLocation', function() {
     deepEqual(controller.locations, []);
     var newLocation = {id: '13', path: '/foo', allowedUsers: []};
-    mock_stub.expectAjaxCall('POST', 'api/locations/', {path: '/foo'},
+    mock_net.expectAjaxCall('POST', 'api/locations/', {path: '/foo'},
                              newLocation);
     controller.addLocation('/foo');
     deepEqual(controller.locations, [newLocation]);
-    mock_stub.verify();
+    mock_net.verify();
   });
 
   test('handledByAdmin', function() {
@@ -414,7 +414,7 @@
     deepEqual(controller.locations, []);
     ok(utils.startsWith(mock_ui.lastError,
                         'Adding sublocations to admin is not supported'))
-    mock_stub.verify();
+    mock_net.verify();
   });
 
   test('removeLocation', function() {
@@ -424,11 +424,11 @@
       self: 'example.com/locations/13/',
       allowedUsers: []
     }];
-    mock_stub.expectAjaxCall(
+    mock_net.expectAjaxCall(
       'DELETE', controller.locations[0].self, null, null);
     controller.removeLocation(controller.locations[0]);
     deepEqual(controller.locations, []);
-    mock_stub.verify();
+    mock_net.verify();
   });
 
   test('getUsers', function() {
@@ -446,13 +446,13 @@
       ]
     };
     callbackCalled = false;
-    mock_stub.expectAjaxCall('GET', 'api/users/', null, ajaxCallResult);
+    mock_net.expectAjaxCall('GET', 'api/users/', null, ajaxCallResult);
     controller.getUsers(function() {
       callbackCalled = true;
     });
     deepEqual(controller.users, ajaxCallResult.users);
     ok(callbackCalled);
-    mock_stub.verify();
+    mock_net.verify();
   });
 
   test('addUser', function() {
@@ -460,7 +460,7 @@
     deepEqual(controller.users, []);
     nextCallbackInvoked = false;
     newUser = {id: '13', email: 'foo@example.com'};
-    mock_stub.expectAjaxCall('POST', 'api/users/', {email: 'foo@example.com'},
+    mock_net.expectAjaxCall('POST', 'api/users/', {email: 'foo@example.com'},
                              newUser);
     controller.addUser('foo@example.com',
                       function(userArg) {
@@ -469,7 +469,7 @@
                       });
     ok(nextCallbackInvoked);
     deepEqual(controller.users, [newUser]);
-    mock_stub.verify();
+    mock_net.verify();
   });
 
   test('removeUser', function() {
@@ -478,10 +478,10 @@
       email: 'foo@example.com',
       self: 'example.com/users/13/'
     }];
-    mock_stub.expectAjaxCall('DELETE', controller.users[0].self, null, null);
+    mock_net.expectAjaxCall('DELETE', controller.users[0].self, null, null);
     controller.removeUser(controller.users[0]);
     deepEqual(controller.users, []);
-    mock_stub.verify();
+    mock_net.verify();
   });
 
   test('removeUser removes from location.allowedUsers list.', function() {
@@ -499,14 +499,14 @@
     };
     controller.users.push(user);
     controller.locations.push(location);
-    mock_stub.expectAjaxCall('DELETE', controller.users[0].self, null, null);
+    mock_net.expectAjaxCall('DELETE', controller.users[0].self, null, null);
 
     ok(controller.canAccess(user, location));
     controller.removeUser(controller.users[0]);
     ok(!controller.canAccess(user, location));
 
     deepEqual(location.allowedUsers, []);
-    mock_stub.verify();
+    mock_net.verify();
   });
 
   test('grantAccess when user exists', function() {
@@ -524,7 +524,7 @@
     };
     controller.users.push(user);
     controller.locations.push(location);
-    mock_stub.expectAjaxCall(
+    mock_net.expectAjaxCall(
       'PUT', location.self + 'allowed-users/17/', null, user);
 
     ok(!controller.canAccess(user, location));
@@ -532,7 +532,7 @@
     ok(controller.canAccess(user, location));
 
     deepEqual(controller.locations[0].allowedUsers, [user]);
-    mock_stub.verify();
+    mock_net.verify();
   });
 
   test('grantAccess when user does not exist', function() {
@@ -550,9 +550,9 @@
     };
     controller.locations.push(location);
     // User should first be added.
-    mock_stub.expectAjaxCall(
+    mock_net.expectAjaxCall(
       'POST', 'api/users/', {email: 'foo@example.com'}, user);
-    mock_stub.expectAjaxCall(
+    mock_net.expectAjaxCall(
       'PUT', location.self + 'allowed-users/17/', null, user);
 
     ok(!controller.canAccess(user, location));
@@ -561,7 +561,7 @@
 
     deepEqual(controller.locations[0].allowedUsers, [user]);
     deepEqual(controller.users, [user]);
-    mock_stub.verify();
+    mock_net.verify();
   });
 
   test('grantAccess when user already can access location', function() {
@@ -584,7 +584,7 @@
     controller.grantAccess(user.email, location);
     ok(controller.canAccess(user, location));
 
-    mock_stub.verify();
+    mock_net.verify();
   });
 
   test('revokeAccess', function() {
@@ -603,7 +603,7 @@
     controller.users.push(user);
     controller.locations.push(location);
 
-    mock_stub.expectAjaxCall(
+    mock_net.expectAjaxCall(
       'DELETE', location.self + 'allowed-users/17/', null, null);
 
     ok(controller.canAccess(user, location));
@@ -611,7 +611,7 @@
     ok(!controller.canAccess(user, location));
 
     deepEqual(controller.locations[0].allowedUsers, []);
-    mock_stub.verify();
+    mock_net.verify();
   });
 
   test('grantOpenAccess.', function() {
@@ -623,12 +623,12 @@
       allowedUsers: []
     };
     controller.locations.push(location);
-    mock_stub.expectAjaxCall(
+    mock_net.expectAjaxCall(
       'PUT', location.self + 'open-access/', null, true);
 
     controller.grantOpenAccess(location);
     deepEqual(location.openAccess, true);
-    mock_stub.verify();
+    mock_net.verify();
   });
 
   test('canAccess for open location.', function() {
@@ -647,13 +647,13 @@
     controller.users.push(user);
     controller.locations.push(location);
 
-    mock_stub.expectAjaxCall(
+    mock_net.expectAjaxCall(
       'PUT', location.self + 'open-access/', null, null);
 
     ok(!controller.canAccess(user, location));
     controller.grantOpenAccess(location);
     ok(controller.canAccess(user, location));
-    mock_stub.verify();
+    mock_net.verify();
   });
 
   test('revokeOpenAccess.', function() {
@@ -668,12 +668,12 @@
       allowedUsers: []
     };
     controller.locations.push(location);
-    mock_stub.expectAjaxCall(
+    mock_net.expectAjaxCall(
       'DELETE', location.self + 'open-access/', null, null);
 
     controller.revokeOpenAccess(location);
     ok(!('openAccess' in location));
-    mock_stub.verify();
+    mock_net.verify();
   });
 
   test('getAdminUser', function() {
@@ -683,14 +683,14 @@
     };
     callbackCalled = false;
     ok(controller.adminUserEmail === null);
-    mock_stub.expectAjaxCall(
+    mock_net.expectAjaxCall(
       'GET', '/wwwhisper/auth/api/whoami/', null, ajaxCallResult);
     controller.getAdminUser(function() {
       callbackCalled = true;
     });
     deepEqual(controller.adminUserEmail, ajaxCallResult.email);
     ok(callbackCalled);
-    mock_stub.verify();
+    mock_net.verify();
   });
 
   test('getAliases', function() {
@@ -708,23 +708,23 @@
       ]
     };
     callbackCalled = false;
-    mock_stub.expectAjaxCall('GET', 'api/aliases/', null, ajaxCallResult);
+    mock_net.expectAjaxCall('GET', 'api/aliases/', null, ajaxCallResult);
     controller.getAliases(function() {
       callbackCalled = true;
     });
     deepEqual(controller.aliases, ajaxCallResult.aliases);
     ok(callbackCalled);
-    mock_stub.verify();
+    mock_net.verify();
   });
 
   test('addAlias', function() {
     deepEqual(controller.aliases, []);
     var newAlias = {id: '13', url: 'https://example.org'};
-    mock_stub.expectAjaxCall(
+    mock_net.expectAjaxCall(
       'POST', 'api/aliases/', {url: 'https://example.org'}, newAlias);
     controller.addAlias('https://example.org');
     deepEqual(controller.aliases, [newAlias]);
-    mock_stub.verify();
+    mock_net.verify();
   });
 
   test('removeAlias', function() {
@@ -733,10 +733,10 @@
       url: 'http://example.com',
       self: 'example.com/aliases/13/'
     }];
-    mock_stub.expectAjaxCall('DELETE', controller.aliases[0].self, null, null);
+    mock_net.expectAjaxCall('DELETE', controller.aliases[0].self, null, null);
     controller.removeAlias(controller.aliases[0]);
     deepEqual(controller.aliases, []);
-    mock_stub.verify();
+    mock_net.verify();
   });
 
   test('getSkin', function() {
@@ -748,13 +748,13 @@
       'branding': false
     };
     callbackCalled = false;
-    mock_stub.expectAjaxCall('GET', 'api/skin/', null, ajaxCallResult);
+    mock_net.expectAjaxCall('GET', 'api/skin/', null, ajaxCallResult);
     controller.getSkin(function() {
       callbackCalled = true;
     });
     deepEqual(controller.skin, ajaxCallResult);
     ok(callbackCalled);
-    mock_stub.verify();
+    mock_net.verify();
   });
 
   test('updateSkin', function() {
@@ -764,10 +764,10 @@
       'message': 'Baz',
       'branding': false
     };
-    mock_stub.expectAjaxCall('PUT', 'api/skin/', newSkin, newSkin);
+    mock_net.expectAjaxCall('PUT', 'api/skin/', newSkin, newSkin);
     controller.updateSkin(newSkin)
     deepEqual(controller.skin, newSkin);
-    mock_stub.verify();
+    mock_net.verify();
   });
 
 }());

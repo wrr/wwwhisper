@@ -8,7 +8,7 @@
  */
 (function () {
   'use strict';
-  var stub = new wwwhisper.Stub(), MAX_EMAIL_LENGTH = 30;
+  var net = new wwwhisper.Net(), MAX_EMAIL_LENGTH = 30;
 
   /**
    * Removes the overlay. Keeping overlay hidden is not enough,
@@ -24,7 +24,7 @@
   }
 
   function logout() {
-    stub.ajax('POST', '/wwwhisper/auth/api/logout/', {}, logoutSucceeded);
+    net.ajax('POST', '/wwwhisper/auth/api/logout/', {}, logoutSucceeded);
   }
 
   function authenticated(result) {
@@ -39,9 +39,9 @@
     $('#logout').click(logout);
   }
 
-  stub.ajax('GET', '/wwwhisper/auth/api/whoami/', null,
-            // User is authenticated.
-            authenticated,
-            // User is not authenticated or some other error occurred.
-            removeOverlay);
+  net.ajax('GET', '/wwwhisper/auth/api/whoami/', null,
+           // User is authenticated.
+           authenticated,
+           // User is not authenticated or some other error occurred.
+           removeOverlay);
 }());
