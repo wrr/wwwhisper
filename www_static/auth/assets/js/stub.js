@@ -1,6 +1,6 @@
 /*!
  * wwwhisper - web access control.
- * Copyright (C) 2012-2016 Jan Wrobel
+ * Copyright (C) 2012-2023 Jan Wrobel
  */
 (function () {
   'use strict';
@@ -19,8 +19,11 @@
       } else if (errorHandler !== null) {
         errorHandler(message, status, isTextPlain);
       } else {
-        // No error handler. Fatal error:
-        $('html').html(message);
+        // No error handler. Fatal error.
+        if (!isTextPlain) {
+          message = 'Error.';
+        }
+        document.getElementsByTagName('html')[0].innerText = message;
       }
     }
 
@@ -31,29 +34,53 @@
      */
     function ajaxCommon(method, resource, params, headersDict,
                         successCallback, errorHandlerArg) {
-      var settings = {
-        url: resource,
-        type: method,
-        headers: headersDict,
-        success: successCallback,
-        // This is ugly (appends ?_=timestamp to all GET requests) and
-        // should not be needed because all ajax responses return
-        // correct cache disabling headers. Unfortunatelly, Chrome
-        // ignores the headers during back button navigation, and
-        // returns ajax responses from cache:
-        cache: false,
-        error: function(jqXHR) {
+      var request = new XMLHttpRequest(), header, data = null;
+
+      function onLoad() {
+        var responseType, isTextResponse, isJsonResponse, responseData = null;
+        responseType = (request.getResponseHeader('content-type') || '');
+
+        if (200 <= request.status && request.status < 300) {
+          isJsonResponse = (responseType.indexOf('application/json') !== -1);
+          if (isJsonResponse) {
+            responseData = JSON.parse(request.response);
+          }
+          successCallback(responseData);
+        } else {
+          isTextResponse = (responseType.indexOf('text/plain') !== -1);
           error(errorHandlerArg,
-                jqXHR.responseText,
-                jqXHR.status,
-                /text\/plain/.test(jqXHR.getResponseHeader('Content-Type')));
+                request.responseText,
+                request.status,
+                isTextResponse);
         }
-      };
-      if (params !== null) {
-        settings['data'] = JSON.stringify(params);
-        settings['contentType'] = 'application/json; charset=utf-8';
       }
-      $.ajax(settings);
+
+      function onError() {
+        error(errorHandlerArg, 'Failed to connect to the server', undefined,
+              true);
+      }
+
+      function onAbort() {
+        error(errorHandlerArg, 'Connection aborted', undefined, true);
+      }
+
+      request.open(method, resource, true);
+
+      request.addEventListener('load', onLoad);
+      request.addEventListener('error', onError);
+      request.addEventListener('abort', onAbort);
+
+      for (header in headersDict) {
+        if (headersDict.hasOwnProperty(header)) {
+          request.setRequestHeader(header, headersDict[header]);
+        }
+      }
+      if (params !== null) {
+        request.setRequestHeader('Content-Type',
+                                 'application/json; charset=utf-8');
+        data = JSON.stringify(params);
+      }
+      request.send(data);
     }
 
     function strip(str) {
@@ -94,7 +121,8 @@
                        nextCallback(token);
                      } else {
                        // This can happen if cookies are disabled.
-                       error(errorHandlerArg, 'Failed to establish csrf token');
+                       error(errorHandlerArg, 'Failed to establish CSRF token',
+                             undefined, true);
                      }
                    }, errorHandlerArg);
       }
