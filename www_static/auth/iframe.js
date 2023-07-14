@@ -9,10 +9,14 @@
   'use strict';
 
   function createIframe() {
+    if (window.innerWidth < 300) {
+      // Screen too narrow.
+      return;
+    }
     var iframe = document.createElement('iframe');
     iframe.id = 'wwwhisper-iframe';
     iframe.src = '/wwwhisper/auth/overlay.html';
-    iframe.width = 340;
+    iframe.width = Math.min(window.innerWidth, 340);
     iframe.height = 30;
     iframe.allowTransparency = 'true';
     iframe.frameBorder = '0';
@@ -30,6 +34,6 @@
   // Do nothing if the current window is not the top level window (to
   // avoid having several overlays on the screen).
   if (window.parent === window) {
-    createIframe();
+    window.addEventListener('load', createIframe());
   }
 }());
