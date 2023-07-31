@@ -454,7 +454,6 @@ class Alias(ValidatedModel):
     url = models.TextField(db_index=True)
     uuid = models.CharField(max_length=36, db_index=True,
                             editable=False, unique=True)
-    force_ssl = models.BooleanField(default=False)
 
     def get_absolute_url(self):
         return reverse('wwwhisper_alias', kwargs={'uuid' : self.uuid})

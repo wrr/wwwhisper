@@ -661,7 +661,6 @@ class AliasesCollectionTest(ModelTestCase):
         with self.assert_site_modified(self.site):
             alias = self.aliases.create_item(TEST_SITE)
         self.assertEqual(TEST_SITE, alias.url)
-        self.assertFalse(alias.force_ssl)
         self.assertTrue(len(alias.uuid) > 20)
 
     def test_add_alias_invalid_url(self):
