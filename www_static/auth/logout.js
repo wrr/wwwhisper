@@ -5,13 +5,17 @@
   'use strict';
   var net = new wwwhisper.Net();
 
+  function getById(id) {
+    return document.getElementById(id);
+  }
+
   // Make sure a user is authenticated.
   net.ajax('GET', '/wwwhisper/auth/api/whoami/', null,
            function(result) {
              // Logged in.
-             $('#email').text(result.email);
-             $('#authenticated').removeClass('hide');
-             $('#logout').click(function() {
+             getById('email').innerText = result.email;
+             getById('authenticated').classList.remove('hide');
+             getById('logout').addEventListener('click', function() {
                net.ajax(
                  'POST', '/wwwhisper/auth/api/logout/', {}, function() {
                    window.top.location = '/wwwhisper/auth/goodbye.html';
@@ -21,11 +25,12 @@
            },
            function(errorMessage, errorStatus) {
              if (errorStatus === 401) {
-               $('#authenticated').addClass('hide');
-               $('#not-authenticated').removeClass('hide');
+               getById('authenticated').classList.add('hide');
+               getById('not-authenticated').classList.remove('hide');
              } else {
                // Other error.
-               $('body').html(errorMessage);
+               document.getElementsByTagName('html')[0].innerText =
+                 errorMessage;
              }
            });
 }());
