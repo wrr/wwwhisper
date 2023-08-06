@@ -33,7 +33,7 @@ if settings.WWWHISPER_STATIC is not None:
         _url('admin/$', HtmlFileView.as_view(asset=admin)),
         _url('auth/overlay.html$', HtmlFileView.as_view(asset=overlay)),
         _url('auth/iframe.js$', JsFileView.as_view(asset=iframe)),
-        _url('auth/logout/$', HtmlFileView.as_view(asset=logout)),
+        _url('auth/logout$', HtmlFileView.as_view(asset=logout)),
         _url('auth/logout.html$', HtmlFileView.as_view(asset=logout)),
         _url('auth/goodbye.html$', HtmlFileView.as_view(asset=goodbye))
     ]
