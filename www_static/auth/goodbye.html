@@ -4,18 +4,80 @@
     <meta charset="utf-8">
     <title>wwwhisper: Web Access Control</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="/wwwhisper/auth/assets/css/bootstrap.min.css"
-          rel="stylesheet" type="text/css">
+    <style>
+      body {
+        margin:0;
+        font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+        font-size:14px;
+        line-height:20px;
+        color:#333;
+        background-color:#fff;
+      }
+      .container {
+        margin-top: 50px;
+        width: 60%;
+        min-width: 250px;
+        margin-right:auto;
+        margin-left:auto;
+      }
+      h1 {
+        margin:10px 0;
+        font-weight:bold;
+        line-height:40px;
+        font-size:38.5px;
+        text-rendering:optimizeLegibility;
+      }
+      p {
+        margin:0 0 10px;
+      }
+      .lead {
+        margin-bottom:20px;
+        font-size:21px;
+        font-weight:200;
+        line-height:30px;
+      }
+      a {
+        color: #08c;
+        text-decoration: none;
+      }
+      a:hover,a:focus {
+        color:#005580;
+        text-decoration:underline;
+      }
+      .hide {
+        display: none;
+      }
+    </style>
   </head>
 
   <body>
    <div class="container">
-     <div id="logged-out">
-       <h1>Goodbye</h1>
-       <p class="lead">
-         Signed out successfully.
-       </p>
-     </div>
+     <h1>Goodbye</h1>
+     <p class="lead">
+       Signed out successfully. <span class="hide"><a id="sign-back">Sign back in.</a></span>
+     </p>
    </div>
+
+    <script>
+      (function() {
+         const BACK_ARG = 'back='
+         if (window.location.hash) {
+           const argList = window.location.hash.substring(1).split('&');
+           for (let arg of argList) {
+             if (arg.startsWith(BACK_ARG)) {
+               const path = decodeURI(arg.substring(BACK_ARG.length));
+               if (!path.startsWith('/') || path.startsWith('//')) {
+                 continue;
+               }
+               const link = document.getElementById('sign-back');
+               link.href = path;
+               link.parentElement.classList.remove('hide');
+               return;
+             }
+           }
+         }
+       }());
+    </script>
+
   </body>
 </html>

@@ -18,7 +18,7 @@
              getById('logout').addEventListener('click', function() {
                net.ajax(
                  'POST', '/wwwhisper/auth/api/logout/', {}, function() {
-                   window.top.location = '/wwwhisper/auth/goodbye.html';
+                   window.top.location = '/wwwhisper/auth/goodbye';
                  });
                return false;
              });

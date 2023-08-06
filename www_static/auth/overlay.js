@@ -8,7 +8,7 @@
  */
 (function () {
   'use strict';
-  var net = new wwwhisper.Net(), MAX_EMAIL_LENGTH = 30;
+  const net = new wwwhisper.Net(), MAX_EMAIL_LENGTH = 30;
 
   function getById(id) {
     return document.getElementById(id);
@@ -24,7 +24,12 @@
   }
 
   function logoutSucceeded() {
-    window.top.location = '/wwwhisper/auth/goodbye.html';
+    const location = window.top.location;
+    // Only pathname because login token doesn't preserve search and hash
+    // URL parts (also passing hash would result in two hashes in the URL unless
+    // the second hash is encoded).
+    const back = location.pathname;
+    window.top.location = '/wwwhisper/auth/goodbye#back=' + encodeURI(back);
   }
 
   function logout() {
@@ -32,7 +37,7 @@
   }
 
   function authenticated(result) {
-    var emailToDisplay = result.email;
+    const emailToDisplay = result.email;
     if (emailToDisplay.length > MAX_EMAIL_LENGTH) {
       // Trim very long emails so 'sign out' button fits in
       // the iframe.
