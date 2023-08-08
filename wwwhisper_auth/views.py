@@ -154,7 +154,9 @@ class Auth(View):
             return http.HttpResponseOK('Access granted.')
         logger.debug('%s: user not authenticated.' % (debug_msg))
         return http.HttpResponseNotAuthenticated(
-            _html_or_none(request, 'login.html', request.site.skin()))
+            _html_or_none(request,
+                          'login_enter_email.html',
+                          request.site.skin()))
 
     @staticmethod
     def _extract_encoded_path_argument(request):
