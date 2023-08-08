@@ -60,21 +60,13 @@
 
     <script>
       (function() {
-         const BACK_ARG = 'back='
-         if (window.location.hash) {
-           const argList = window.location.hash.substring(1).split('&');
-           for (let arg of argList) {
-             if (arg.startsWith(BACK_ARG)) {
-               const path = decodeURI(arg.substring(BACK_ARG.length));
-               if (!path.startsWith('/') || path.startsWith('//')) {
-                 continue;
-               }
-               const link = document.getElementById('sign-back');
-               link.href = path;
-               link.parentElement.classList.remove('hide');
-               return;
-             }
-           }
+         const hashParams = new URLSearchParams(
+           window.location.hash.substring(1));
+         const path = hashParams.get('back');
+         if (path && path.startsWith('/') && !path.startsWith('//')) {
+           const link = document.getElementById('sign-back');
+           link.href = path;
+           link.parentElement.classList.remove('hide');
          }
        }());
     </script>
