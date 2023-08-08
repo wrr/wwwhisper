@@ -7,7 +7,7 @@ TEMPLATE_DEBUG = DEBUG
 # If WWWHISPER_STATIC is set, wwwhisper serves static html resources
 # needed for login and for the admin application (this is not needed
 # if these resources are served directly by a frontend server).
-WWWHISPER_STATIC = None
+WWWHISPER_STATIC = 'www_static'
 # Serve all wwwhisper resources from /wwwhisper/ prefix (/wwwhisper/auth/,
 # /wwwhisper/admin/)
 WWWHISPER_PATH_PREFIX = 'wwwhisper/'

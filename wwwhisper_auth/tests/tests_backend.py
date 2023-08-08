@@ -48,6 +48,10 @@ class VerifiedEmailBackendTest(TestCase):
                                token)
 
     def test_no_such_user(self):
-        auth_user = self.backend.authenticate(
-            HttpRequest(), self.site, self.user_token())
-        self.assertIsNone(auth_user)
+        self.assertRaisesRegex(AuthenticationError,
+                               'Token invalid or expired',
+                               self.backend.authenticate,
+                               HttpRequest(),
+                               self.site,
+                               self.user_token())
+

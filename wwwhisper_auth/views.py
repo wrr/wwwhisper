@@ -193,22 +193,16 @@ class CsrfToken(View):
         return http.HttpResponseNoContent()
 
 
-class Login(View):
+class Login(http.RestView):
     """Allows a user to authenticates with a token."""
 
     @http.never_ever_cache
-    def get(self, request):
+    def post(self, request, token):
         """Logs a user in (establishes a session cookie).
 
         Verifies a token and check that a user with an email encoded
         in the token is known.
-
-        On success redirects to path passed in the 'next' url
-        argument.
         """
-        # TODO(jw): should this first check if the user is already
-        # logged in and redirect to '/' if this is the case?
-        token = request.GET.get('token')
         if token == None:
             return http.HttpResponseBadRequest('Token missing.')
         try:
@@ -217,26 +211,15 @@ class Login(View):
         except AuthenticationError as ex:
             logger.debug('Token verification failed.')
             return http.HttpResponseBadRequest(str(ex))
-        if user is not None:
-            auth.login(request, user)
-            user.login_successful()
+        assert(user is not None)
+        auth.login(request, user)
+        user.login_successful()
 
-            # Store all user data needed by Auth view in session, this
-            # way, user table does not need to be queried during the
-            # performance critical request (sessions are cached).
-            request.session['user_id'] = user.id
-            logger.debug('%s successfully logged.' % (user.email))
-            redirect_to = request.GET.get('next')
-            if (redirect_to is None or
-                not url_utils.validate_redirection_target(redirect_to)):
-                redirect_to = '/'
-
-            return http.HttpResponseRedirect(request.site_url + redirect_to)
-
-        # Return not authorized because request was well formed (400
-        # doesn't seem appropriate).
-        return http.HttpResponseNotAuthorized(
-            _html_or_none(request, 'nothing_accessible.html'))
+        # Store all user data needed by Auth view in session, this
+        # way, user table does not need to be queried during the
+        # performance critical request (sessions are cached).
+        request.session['user_id'] = user.id
+        return http.HttpResponseNoContent()
 
 
 class SendToken(http.RestView):
@@ -273,8 +256,10 @@ class SendToken(http.RestView):
 
         token = login_token.generate_login_token(request.site, email=email)
 
-        params = urllib.parse.urlencode(dict(next=path, token=token))
-        url = '{0}{1}?{2}'.format(request.site_url, reverse('login'), params)
+        params = urllib.parse.urlencode(dict(next=path, token=token), safe=':')
+        url = '{0}{1}#{2}'.format(request.site_url,
+                                  reverse('login-check-token'),
+                                  params)
         subject = '{0} access token'.format(request.site_url)
         body = (
             'Hello,\n\n'

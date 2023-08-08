@@ -28,6 +28,7 @@
                getById('login-form').classList.add('hide');
                getById('token-send-success').classList.remove('hide');
              },
+             // TODO: handle isTextPlain false correctly. 
              function(errorMessage, errorStatus) {
                getById('token-send-error-message').innerText = errorMessage;
                getById('token-send-error').classList.remove('hide');
@@ -46,5 +47,12 @@
     }
     return false;
   });
+
+  if (BroadcastChannel) {
+    var broadcast = new BroadcastChannel('wwwhisper-login-success');
+    broadcast.onmessage = function() {
+      window.location.reload();
+    }
+  }
 
 }());

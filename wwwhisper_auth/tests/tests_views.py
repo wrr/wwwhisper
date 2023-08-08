@@ -264,7 +264,7 @@ class SendTokenTest(AuthTestCase):
         self.assertEqual('verify@wwwhisper.io', msg.from_email)
         self.assertEqual('alice@example.org', msg.to[0])
         path = urllib.parse.urlencode({'next': '/foo/bar'})
-        regexp = (TEST_SITE + '/wwwhisper/auth/api/login/\?' + path + 
+        regexp = (TEST_SITE + '/wwwhisper/auth/login#' + path +
                   '&token=.{60,}\n')
         self.assertRegex(msg.body, regexp)
 
@@ -294,7 +294,7 @@ class SendTokenTest(AuthTestCase):
         msg = mail.outbox[0]
         # Login ignores '/foo/../' and redirects to '/'.
         path = urllib.parse.urlencode({'next': '/'})
-        regexp = (TEST_SITE + '/wwwhisper/auth/api/login/\?' + path + 
+        regexp = (TEST_SITE + '/wwwhisper/auth/login#' + path +
                   '&token=.{60,}\n')
         self.assertRegex(msg.body, regexp)
 
@@ -327,12 +327,17 @@ class LoginTest(AuthTestCase):
         super(AuthTestCase, self).setUp()
 
     def test_login_fails_if_token_missing(self):
-        response = self.get('/wwwhisper/auth/api/login/')
+        response = self.post('/wwwhisper/auth/api/login/', {})
+        self.assertEqual(400, response.status_code)
+        self.assertEqual(b'Invalid request arguments', response.content)
+
+    def test_login_fails_if_token_null(self):
+        response = self.post('/wwwhisper/auth/api/login/', {'token': None})
         self.assertEqual(400, response.status_code)
         self.assertEqual(b'Token missing.', response.content)
 
     def test_login_fails_if_token_invalid(self):
-        response = self.get('/wwwhisper/auth/api/login/?token=xyz')
+        response = self.post('/wwwhisper/auth/api/login/', {'token': 'xyz'})
         self.assertEqual(400, response.status_code)
         self.assertEqual(b'Token invalid or expired.', response.content)
 
@@ -341,44 +346,28 @@ class LoginTest(AuthTestCase):
         other_site.users.create_item('foo@example.org')
         self.site.users.create_item('foo@example.org')
         token = generate_login_token(other_site, 'foo@example.org')
-        response = self.get('/wwwhisper/auth/api/login/?token=' + token)
+        response = self.post('/wwwhisper/auth/api/login/', {'token': token})
         self.assertEqual(400, response.status_code)
         self.assertEqual(b'Token invalid or expired.', response.content)
 
     def test_login_succeeds_if_known_user(self):
         self.site.users.create_item('foo@example.org')
         token = generate_login_token(self.site, 'foo@example.org')
-        params = urllib.parse.urlencode(dict(token=token, next='/foo'))
-        response = self.get('/wwwhisper/auth/api/login/?' + params)
-        self.assertEqual(302, response.status_code)
-        self.assertEqual(TEST_SITE + '/foo', response['Location'])
+        response = self.post('/wwwhisper/auth/api/login/', {'token': token})
+        self.assertEqual(204, response.status_code)
 
     def test_login_fails_if_unknown_user(self):
         token = generate_login_token(self.site, 'foo@example.org')
-        response = self.get('/wwwhisper/auth/api/login/?token=' + token,
-                            HTTP_ACCEPT='text/plain, text/html')
-        self.assertEqual(403, response.status_code)
-        self.assertEqual(response['Content-Type'], 'text/html; charset=utf-8')
-        self.assertRegex(response.content, b'<body')
-
-    def test_tricky_redirection_replaced(self):
-        # 'next' argument is not signed, so can be replaced by the
-        # user. This is OK as long as all tricky paths are replaced.
-        self.site.users.create_item('foo@example.org')
-        token = generate_login_token(self.site, 'foo@example.org')
-        params = urllib.parse.urlencode(
-            dict(token=token, next='www.example.com'))
-        response = self.get('/wwwhisper/auth/api/login/?' + params)
-        self.assertEqual(302, response.status_code)
-        # Ignore 'next' argument from the login URL
-        self.assertEqual(TEST_SITE + '/', response['Location'])
+        response = self.post('/wwwhisper/auth/api/login/', {'token': token})
+        self.assertEqual(400, response.status_code)
+        self.assertEqual(b'Token invalid or expired.', response.content)
 
     def test_successful_login_invalidates_token(self):
         self.site.users.create_item('foo@example.org')
         token = generate_login_token(self.site, 'foo@example.org')
-        response = self.get('/wwwhisper/auth/api/login/?token=' + token)
-        self.assertEqual(302, response.status_code)
-        response = self.get('/wwwhisper/auth/api/login/?token=' + token)
+        response = self.post('/wwwhisper/auth/api/login/', {'token': token})
+        self.assertEqual(204, response.status_code)
+        response = self.post('/wwwhisper/auth/api/login/', {'token': token})
         self.assertEqual(400, response.status_code)
         self.assertEqual(b'Token invalid or expired.', response.content)
 
@@ -387,9 +376,8 @@ class SessionCacheTest(AuthTestCase):
         user = self.site.users.create_item('foo@example.com')
 
         token = generate_login_token(self.site, 'foo@example.com')
-        params = urllib.parse.urlencode(dict(token=token, next='/foo'))
-        response = self.get('/wwwhisper/auth/api/login/?' + params)
-        self.assertEqual(302, response.status_code)
+        response = self.post('/wwwhisper/auth/api/login/', {'token': token})
+        self.assertEqual(204, response.status_code)
 
         s = self.client.session
         user_id = s['user_id']

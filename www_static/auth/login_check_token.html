@@ -47,29 +47,31 @@
       .hide {
         display: none;
       }
+      .error {
+        border-left: 4px solid #b94a48;
+        padding: 4px 4px 4px 12px;
+      }
     </style>
   </head>
 
   <body>
    <div class="container">
-     <h1>Goodbye</h1>
-     <p class="lead">
-       Signed out successfully. <span class="hide"><a id="sign-back">Sign back in.</a></span>
-     </p>
+     <noscript>
+
+       <h1>JavaScript required</h1>
+       <p class="lead">
+         To access this site, JavaScript needs to be enabled.
+       </p>
+     </noscript>
+     <div id="error" class="hide error">
+       <h1>Sign-in failed</h1>
+       <p class="lead">
+         <span id="error-message"></span>
+       </p>
+     </div>
    </div>
 
-    <script>
-      (function() {
-         const hashParams = new URLSearchParams(
-           window.location.hash.substring(1));
-         const path = hashParams.get('back');
-         if (path && path.startsWith('/') && !path.startsWith('//')) {
-           const link = document.getElementById('sign-back');
-           link.href = path;
-           link.parentElement.classList.remove('hide');
-         }
-       }());
-    </script>
-
+   <script src="/wwwhisper/auth/assets/js/net.js"></script>
+   <script src="/wwwhisper/auth/login_check_token.js"></script>
   </body>
 </html>

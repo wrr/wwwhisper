@@ -26,7 +26,10 @@ class VerifiedEmailBackend(ModelBackend):
             generated for a different site.
         """
         verified_email = login_token.load_login_token(site, token)
-        if verified_email is None:
-            raise AuthenticationError('Token invalid or expired.')
-
-        return site.users.find_item_by_email(verified_email)
+        if verified_email is not None:
+            user = site.users.find_item_by_email(verified_email)
+            if user:
+                # user can be None only if the user was deleted after the
+                # token was generated.
+                return user
+        raise AuthenticationError('Token invalid or expired.')
