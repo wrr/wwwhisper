@@ -4,84 +4,79 @@
     <meta charset="utf-8">
     <title>{{title}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="{% static "auth/assets/css/bootstrap.min.css" %}"
+    <link href="{% static "auth/style.css" %}"
           rel="stylesheet" type="text/css">
+    <link href="{% static "auth/login.css" %}"
+          rel="stylesheet" type="text/css">
+    <style>
     {% if branding %}
-    <style type="text/css">
       .branding {
         position: fixed;
         bottom: 0;
         right: 0;
         background-color: #222222;
         padding: 8px;
-        -webkit-border-top-left-radius: 6px;
         border-top-left-radius: 6px;
-        -moz-border-radius-topleft: 6px;
-        background-image: -moz-linear-gradient(top, #555555, #222222);
-        background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#555555), to(#222222));
-        background-image: -webkit-linear-gradient(top, #555555, #222222);
-        background-image: -o-linear-gradient(top, #555555, #222222);
         background-image: linear-gradient(to bottom, #555555, #222222);
         background-repeat: repeat-x;
       }
-      .branding a {
+      #branding-link {
         color: #eeeeee;
       }
       .logo {
         width: 92px;
-        margin: 0px;
+        vertical-align:middle;
       }
+    {% endif %}
     </style>
   </head>
-  {% endif %}
   <body>
    <div class="container">
+     <noscript>
+       <div class="error">
+         <h1>JavaScript required</h1>
+         <p class="lead">
+           To access this site, JavaScript needs to be enabled.
+         </p>
+       </div>
+     </noscript>
+
      <div class="hide" id="login-required">
        <h1>{{header}}</h1>
        <p id="intro" class="lead">{{message}}</p>
        <p id="token-send-success" class="lead hide">
          Check your email
-         at <em><span class="entered-email"></span></em>. If you are
-         allowed to access this site, you will receive a link with the
-         login token.
+         at <em><span class="entered-email"></span></em>. If you have
+         been granted access to this site, you will receive a login link.
        </p>
 
-     </div>
-
-     <noscript>
-         <div id="error-box">
-           <div class="alert alert-error">
-             <div class="alert-message">
-               To access this site, JavaScript needs to be enabled.
-             </div>
-           </div>  <!-- /.alert -->
-         </div>  <!-- /.error-box -->
-     </noscript>
-
-     <form id="login-form" class="hide">
-       <div class="input-append">
-         <input class="span3" id="email" type="text"
+       <form id="login-form">
+         <div class="input-group">
+           <input id="email-input" type="text"
                 placeholder="Enter your email">
-         <button class="btn btn-success" type="submit">
-           Request a login token
-         </button>
-       </div>
-       <div id="token-send-error" class="hide text-error">
-         Failed to send the token to
+           <button type="submit">
+             Get a <span class="tiny-width-hide">login</span> link
+           </button>
+         </div>
+       </form>
+       <div id="token-send-error" class="error error-text hide">
+         Failed to send a login link to
          <em><span class="entered-email"></span></em>:
          <span id="token-send-error-message"></span>
        </div>
+     </div>
 
-     </form>
    </div>
    {% if branding %}
-   <div class="branding">
-     <a href="https://github.com/wrr/wwwhisper">
+   <a href="https://github.com/wrr/wwwhisper" id="branding-link"
+      class="tiny-height-hide">
+     <div class="branding">
        <img src="{%static "auth/assets/img/logo.png" %}" alt="wwwhisper-logo"
             class="logo">
        Powered by wwwhisper
-     </a>
-   </div>
+     </div>
+   </a>
+
    {% endif %}
    <script src="{% static "auth/assets/js/net.js" %}"> </script>
    <script src="{% static "auth/login_enter_email.js" %}"> </script>

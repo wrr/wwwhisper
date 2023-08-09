@@ -28,7 +28,7 @@
                getById('login-form').classList.add('hide');
                getById('token-send-success').classList.remove('hide');
              },
-             // TODO: handle isTextPlain false correctly. 
+             // TODO: handle isTextPlain false correctly.
              function(errorMessage, errorStatus) {
                getById('token-send-error-message').innerText = errorMessage;
                getById('token-send-error').classList.remove('hide');
@@ -36,10 +36,9 @@
   }
 
   getById('login-required').classList.remove('hide');
-  getById('login-form').classList.remove('hide');
 
   getById('login-form').addEventListener('submit', function(event) {
-    var email = getById('email').value.trim();
+    var email = getById('email-input').value.trim();
     event.preventDefault();
     getById('token-send-error').classList.add('hide');
     if (email.length !== 0) {

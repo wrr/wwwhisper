@@ -4,64 +4,18 @@
     <meta charset="utf-8">
     <title>wwwhisper: Web Access Control</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-      body {
-        margin:0;
-        font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
-        font-size:14px;
-        line-height:20px;
-        color:#333;
-        background-color:#fff;
-      }
-      .container {
-        margin-top: 50px;
-        width: 80%;
-        min-width: 250px;
-        margin-right:auto;
-        margin-left:auto;
-      }
-      h1 {
-        margin:10px 0;
-        font-weight:bold;
-        line-height:40px;
-        font-size:38.5px;
-        text-rendering:optimizeLegibility;
-      }
-      p {
-        margin:0 0 10px;
-      }
-      .lead {
-        margin-bottom:20px;
-        font-size:21px;
-        font-weight:200;
-        line-height:30px;
-      }
-      a {
-        color: #08c;
-        text-decoration: none;
-      }
-      a:hover,a:focus {
-        color:#005580;
-        text-decoration:underline;
-      }
-      .hide {
-        display: none;
-      }
-      .error {
-        border-left: 4px solid #b94a48;
-        padding: 4px 4px 4px 12px;
-      }
-    </style>
+    <link href="/wwwhisper/auth/style.css" rel="stylesheet" type="text/css">
   </head>
 
   <body>
    <div class="container">
      <noscript>
-
-       <h1>JavaScript required</h1>
-       <p class="lead">
-         To access this site, JavaScript needs to be enabled.
-       </p>
+       <div class="error">
+         <h1>JavaScript required</h1>
+         <p class="lead">
+           To access this site, JavaScript needs to be enabled.
+         </p>
+       </div>
      </noscript>
      <div id="error" class="hide error">
        <h1>Sign-in failed</h1>
