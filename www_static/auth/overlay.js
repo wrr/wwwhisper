@@ -9,9 +9,18 @@
 (function () {
   'use strict';
   const net = new wwwhisper.Net(), MAX_EMAIL_LENGTH = 30;
+  let broadcast;
 
   function getById(id) {
     return document.getElementById(id);
+  }
+
+  function navigateToGoodbye() {
+    // Only pathname because login token doesn't preserve search and hash
+    // URL parts (also passing hash would result in two hashes in the URL unless
+    // the second hash is encoded).
+    const back = window.top.location.pathname;
+    window.top.location = '/wwwhisper/auth/goodbye#back=' + encodeURI(back);
   }
 
   /**
@@ -24,12 +33,11 @@
   }
 
   function logoutSucceeded() {
-    const location = window.top.location;
-    // Only pathname because login token doesn't preserve search and hash
-    // URL parts (also passing hash would result in two hashes in the URL unless
-    // the second hash is encoded).
-    const back = location.pathname;
-    window.top.location = '/wwwhisper/auth/goodbye#back=' + encodeURI(back);
+    if (broadcast) {
+      broadcast.postMessage('');
+      broadcast.close();
+    }
+    navigateToGoodbye();
   }
 
   function logout() {
@@ -46,6 +54,12 @@
     getById('email').innerText = emailToDisplay;
     getById('wwwhisper-overlay').classList.remove('hide');
     getById('logout').addEventListener('click', logout);
+    if (BroadcastChannel) {
+      broadcast = new BroadcastChannel('wwwhisper-logout-success');
+      broadcast.onmessage = function() {
+        navigateToGoodbye();
+      }
+    }
   }
 
   net.ajax('GET', '/wwwhisper/auth/api/whoami/', null,

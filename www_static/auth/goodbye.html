@@ -62,11 +62,22 @@
       (function() {
          const hashParams = new URLSearchParams(
            window.location.hash.substring(1));
-         const path = hashParams.get('back');
+         let path = hashParams.get('back');
          if (path && path.startsWith('/') && !path.startsWith('//')) {
            const link = document.getElementById('sign-back');
            link.href = path;
+           link.addEventListener('click', function(event) {
+             event.preventDefault();
+             // replace to prevent the goodbye path to be kept in the history.
+             window.location.replace(path);
+           });
            link.parentElement.classList.remove('hide');
+         } else {
+           path = '/';
+         }
+         const broadcast = new BroadcastChannel('wwwhisper-login-success');
+         broadcast.onmessage = function() {
+           window.location.replace(path);
          }
        }());
     </script>
