@@ -28,8 +28,10 @@
                getById('login-form').classList.add('hide');
                getById('token-send-success').classList.remove('hide');
              },
-             // TODO: handle isTextPlain false correctly.
-             function(errorMessage, errorStatus) {
+             function(errorMessage, errorStatus, isTextPlain) {
+               if (!isTextPlain) {
+                 errorMessage = 'server communication error, try again.';
+               }
                getById('token-send-error-message').innerText = errorMessage;
                getById('token-send-error').classList.remove('hide');
              });
