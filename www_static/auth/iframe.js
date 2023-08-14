@@ -54,11 +54,17 @@
     return (visualViewport && (visualViewport.height < iframeRect.bottom ||
                                visualViewport.width < iframeRect.right));
   }
-  function createIframe() {
-    if (document.documentElement.clientWidth < 300) {
-      // Screen too narrow.
-      return;
+
+  function hideIfSmallScreen() {
+    const iframe = document.getElementById('wwwhisper-iframe');
+    if (document.documentElement.clientHeight < 330) {
+      iframe.style.display = 'none';
+    } else {
+      iframe.style.display = 'block';
     }
+  }
+
+  function createIframe() {
     const iframe = document.createElement('iframe');
     iframe.id = 'wwwhisper-iframe';
     iframe.src = '/wwwhisper/auth/overlay.html';
@@ -75,6 +81,8 @@
     iframe.style.zIndex = '11235';
     iframe.style.backgroundColor = 'transparent';
     document.body.appendChild(iframe);
+    hideIfSmallScreen();
+    window.addEventListener('resize', hideIfSmallScreen);
 
     if (isDynamicRepositionNeeded(iframe)) {
       // See iframe.style.left comment in reposition().
