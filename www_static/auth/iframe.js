@@ -57,7 +57,8 @@
 
   function hideIfSmallScreen() {
     const iframe = document.getElementById('wwwhisper-iframe');
-    if (document.documentElement.clientHeight < 330) {
+    const visualViewport = window.visualViewport;
+    if (visualViewport && visualViewport.height < 330) {
       iframe.style.display = 'none';
     } else {
       iframe.style.display = 'block';
