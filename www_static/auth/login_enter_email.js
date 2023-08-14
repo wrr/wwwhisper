@@ -39,12 +39,16 @@
 
   getById('login-required').classList.remove('hide');
 
-  getById('login-form').addEventListener('submit', function(event) {
-    var email = getById('email-input').value.trim();
+  var loginForm = getById('login-form');
+  loginForm.addEventListener('submit', function(event) {
+    var emailInput = getById('email-input');
+    var email = emailInput.value.trim();
     event.preventDefault();
     getById('token-send-error').classList.add('hide');
     if (email.length !== 0) {
       login(email);
+    } else {
+      emailInput.focus();
     }
     return false;
   });
