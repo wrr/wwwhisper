@@ -1,8 +1,9 @@
 # wwwhisper - web access control.
-# Copyright (C) 2013 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2013-2023 Jan Wrobel <jan@mixedbit.org>
+
+from unittest.mock import Mock
 
 from django.test import TestCase
-from mock import Mock
 from wwwhisper_auth.site_cache import CachingSitesCollection
 from wwwhisper_auth.site_cache import SiteCache
 
