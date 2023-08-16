@@ -5,6 +5,9 @@ import datetime
 
 from django.conf import settings
 from django.core import signing
+from django.urls import reverse
+
+import urllib.parse
 
 """Returns float that has microseconds resolution"""
 def _datetime_to_timestamp(datetime_arg):
@@ -70,3 +73,17 @@ def load_login_token(site, token):
         return email
     except signing.BadSignature:
         return None
+
+def generate_login_url(site, email, root_url, next_path):
+    """Returns a login URL for a user with a given email.
+
+    The returned URL will log the user in after it is opened in a
+    browser. The URL points to the 'login-check-token' end point of
+    the root_url, with token and next=next_path appended as hash
+    parameters.
+    """
+    token = generate_login_token(site=site, email=email)
+    params = urllib.parse.urlencode(dict(next=next_path, token=token), safe=':')
+    return '{0}{1}#{2}'.format(root_url,
+                               reverse('login-check-token'),
+                               params)

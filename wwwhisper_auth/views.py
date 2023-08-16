@@ -8,7 +8,6 @@ from django.contrib import auth
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
-from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic import View
@@ -19,7 +18,6 @@ from wwwhisper_auth import url_utils
 from wwwhisper_auth.backend import AuthenticationError
 
 import logging
-import urllib.request, urllib.parse, urllib.error
 
 logger = logging.getLogger(__name__)
 
@@ -254,12 +252,11 @@ class SendToken(http.RestView):
             # response timing.
             return http.HttpResponseNoContent();
 
-        token = login_token.generate_login_token(request.site, email=email)
+        url = login_token.generate_login_url(site=request.site,
+                                             email=email,
+                                             root_url=request.site_url,
+                                             next_path=path)
 
-        params = urllib.parse.urlencode(dict(next=path, token=token), safe=':')
-        url = '{0}{1}#{2}'.format(request.site_url,
-                                  reverse('login-check-token'),
-                                  params)
         subject = '{0} access token'.format(request.site_url)
         body = (
             'Hello,\n\n'

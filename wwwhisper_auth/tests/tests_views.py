@@ -14,7 +14,7 @@ from wwwhisper_auth.tests.utils import HttpTestCase
 from wwwhisper_auth.tests.utils import TEST_SITE
 
 import json
-import urllib.request, urllib.parse, urllib.error
+import urllib.parse
 
 class FailingEmailBackend(BaseEmailBackend):
     def send_messages(self, messages):
@@ -265,7 +265,7 @@ class SendTokenTest(AuthTestCase):
         self.assertEqual('alice@example.org', msg.to[0])
         path = urllib.parse.urlencode({'next': '/foo/bar'})
         regexp = (TEST_SITE + '/wwwhisper/auth/login#' + path +
-                  '&token=.{60,}\n')
+                  '&token=.{100,}\n')
         self.assertRegex(msg.body, regexp)
 
     def test_email_not_sent_for_unknown_user(self):
@@ -295,7 +295,7 @@ class SendTokenTest(AuthTestCase):
         # Login ignores '/foo/../' and redirects to '/'.
         path = urllib.parse.urlencode({'next': '/'})
         regexp = (TEST_SITE + '/wwwhisper/auth/login#' + path +
-                  '&token=.{60,}\n')
+                  '&token=.{100,}\n')
         self.assertRegex(msg.body, regexp)
 
     @override_settings(

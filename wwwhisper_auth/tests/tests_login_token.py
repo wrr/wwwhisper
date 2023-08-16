@@ -3,10 +3,10 @@
 
 from django.test import TestCase
 from wwwhisper_auth.login_token import generate_login_token
+from wwwhisper_auth.login_token import generate_login_url
 from wwwhisper_auth.login_token import load_login_token
 from wwwhisper_auth.models import SitesCollection
 from wwwhisper_auth.models import SINGLE_SITE_ID
-
 
 class LoginToken(TestCase):
 
@@ -29,4 +29,14 @@ class LoginToken(TestCase):
     def test_load_valid_token_for_different_site(self):
         token = generate_login_token(self.site, 'alice@example.org')
         self.assertIsNone(load_login_token(self.site_other, token))
+
+    def test_generate_login_url(self):
+        url = generate_login_url(self.site,
+                                 'alice@example.org',
+                                 root_url='https://example.com',
+                                 next_path='/foo/bar')
+        encoded_path = 'next=%2Ffoo%2Fbar'
+        regexp = ('https://example.com/wwwhisper/auth/login#' + encoded_path +
+                  '&token=.{100,}')
+        self.assertRegex(url, regexp)
 
