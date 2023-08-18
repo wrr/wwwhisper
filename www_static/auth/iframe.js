@@ -96,9 +96,24 @@
     }
   }
 
+  function is_logged_in_to_wwwhisper() {
+    const cookies = document.cookie.split(";");
+    for (let i = 0; i < cookies.length; i += 1) {
+      const cookie_name = cookies[i].split('=')[0].trim();
+      if (cookie_name === 'wwwhisper-whoami') {
+        return true;
+      }
+    }
+    return false;
+  }
+
   // Do nothing if the current window is not the top level window (to
   // avoid having several overlays on the screen).
-  if (window.parent === window) {
+  //
+  // Also do not inject iframe if wwwhisper-whoami cookie is not sent,
+  // for open location this prevents whoami requests for not logged-in
+  // users. Such requests result in confusing 401 errors in the dev console.
+  if (window.parent === window && is_logged_in_to_wwwhisper()) {
     window.addEventListener('load', createIframe());
   }
 }());

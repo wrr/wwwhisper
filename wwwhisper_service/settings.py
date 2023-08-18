@@ -91,7 +91,7 @@ MIDDLEWARE = [
 # Don't use just sessionid, to avoid collision with apps protected by wwwhisper.
 SESSION_COOKIE_NAME = 'wwwhisper-sessionid'
 CSRF_COOKIE_NAME = 'wwwhisper-csrftoken'
-CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Strict'
 
 # Make the session valid for four weeks (discarding sessions after
 # browser close is inconvenient with login tokens).
@@ -99,6 +99,13 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_COOKIE_AGE = 2419200
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
+
+# Lack of this cookie prevents wwwhisper iframe from being injected,
+# so there are no /wwwhisper/auth/whoami resuquests for not logged-in
+# visitors of open locations.
+WHOAMI_COOKIE_NAME = 'wwwhisper-whoami'
+WHOAMI_COOKIE_AGE = 2419200
+WHOAMI_COOKIE_SAMESITE = 'Strict'
 
 ROOT_URLCONF = 'wwwhisper_service.urls'
 

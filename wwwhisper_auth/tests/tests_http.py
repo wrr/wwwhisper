@@ -8,6 +8,7 @@ from django.test import TestCase, override_settings
 from django.test.client import Client
 from wwwhisper_auth.http import accepts_html
 from wwwhisper_auth.http import RestView
+from wwwhisper_auth.http import HttpResponseNotAuthenticated
 from wwwhisper_auth.tests.utils import HttpTestCase
 from wwwhisper_auth.tests.utils import TEST_SITE
 
@@ -159,3 +160,13 @@ class AcceptHeaderUtilsTest(TestCase):
         self.assertFalse(accepts_html('audio/*'))
         self.assertFalse(accepts_html('text/x-dvi; q=0.8, text/x-c'))
         self.assertFalse(accepts_html(None))
+
+class HttpResponseTest(TestCase):
+    def test_not_authenticated_response_deletes_whoami_cookie(self):
+        response = HttpResponseNotAuthenticated()
+        # Also each 401 response should delete whoami cookie
+        whoami_cookie = response.cookies[settings.WHOAMI_COOKIE_NAME]
+        self.assertEqual('', whoami_cookie.value)
+        self.assertEqual('Strict', whoami_cookie['samesite'])
+        self.assertEqual('/', whoami_cookie['path'])
+        self.assertEqual(0, whoami_cookie['max-age'])

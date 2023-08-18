@@ -217,7 +217,9 @@ class Login(http.RestView):
         # way, user table does not need to be queried during the
         # performance critical request (sessions are cached).
         request.session['user_id'] = user.id
-        return http.HttpResponseNoContent()
+        response = http.HttpResponseNoContent()
+        http.set_whoami_cookie(response, user.email)
+        return response
 
 
 class SendToken(http.RestView):
@@ -290,6 +292,7 @@ class Logout(http.RestView):
         auth.logout(request)
         # TODO: send a message to all processes to discard cached user session.
         response = http.HttpResponseNoContent()
+        http.delete_whoami_cookie(response)
         return response
 
 class WhoAmI(http.RestView):
@@ -300,5 +303,7 @@ class WhoAmI(http.RestView):
         """Returns an email or an authentication required error."""
         user = _get_user(request)
         if user is not None:
-            return http.HttpResponseOKJson({'email': user.email})
+            response = http.HttpResponseOKJson({'email': user.email})
+            http.set_whoami_cookie(response, user.email)
+            return response
         return http.HttpResponseNotAuthenticated()
