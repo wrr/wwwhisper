@@ -66,8 +66,13 @@
   }
 
   function createIframe() {
+    const iframeId = 'wwwhisper-iframe';
+    if (document.getElementById(iframeId)) {
+      // Can happen if iframe.js is included more than once.
+      return;
+    }
     const iframe = document.createElement('iframe');
-    iframe.id = 'wwwhisper-iframe';
+    iframe.id = iframeId;
     iframe.src = '/wwwhisper/auth/overlay.html';
     iframe.width = Math.min(window.innerWidth, 340);
     iframe.height = 30;
