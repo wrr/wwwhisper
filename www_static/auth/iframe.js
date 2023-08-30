@@ -114,6 +114,6 @@
   // for open location this prevents whoami requests for not logged-in
   // users. Such requests result in confusing 401 errors in the dev console.
   if (window.parent === window && is_logged_in_to_wwwhisper()) {
-    window.addEventListener('load', createIframe());
+    window.addEventListener('load', createIframe);
   }
 }());
