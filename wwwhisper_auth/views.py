@@ -137,7 +137,16 @@ class Auth(View):
 
             if location is not None and location.can_access(user):
                 logger.debug('%s: access granted.' % (debug_msg))
-                response =  http.HttpResponseOK('Access granted.')
+                # Empty response, so if this end point is contacted by
+                # nginx auth_request module, the connection can use the
+                # keep alive option. nginx terminates an upstream
+                # connection made by the auth request module if the
+                # response returns a body (to avoid reading the body).
+                # https://forum.nginx.org/read.php?2,293531,293535
+                #
+                # HttpResponseNoContent would be better, but wwwhisper
+                # middlewares for Ruby and Node.js test for 200 code.
+                response =  http.HttpResponseOK('')
             else:
                 logger.debug('%s: access denied.' % (debug_msg))
                 response = http.HttpResponseNotAuthorized(
@@ -149,7 +158,7 @@ class Auth(View):
         if location is not None and location.open_access_granted():
             logger.debug('%s: authentication not required, access granted.'
                          % (debug_msg))
-            return http.HttpResponseOK('Access granted.')
+            return http.HttpResponseOK('')
         logger.debug('%s: user not authenticated.' % (debug_msg))
         return http.HttpResponseNotAuthenticated(
             _html_or_none(request,

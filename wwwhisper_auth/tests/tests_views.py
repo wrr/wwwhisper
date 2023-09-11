@@ -81,6 +81,7 @@ class AuthTest(AuthTestCase):
         self.login('foo@example.com')
         response = self.get('/wwwhisper/auth/api/is-authorized/?path=/foo/')
         self.assertEqual(200, response.status_code)
+        self.assertEqual('0', response['Content-Length'])
         self.assertEqual('foo@example.com', response['User'])
 
     def test_is_authorized_if_user_of_other_site(self):
@@ -97,6 +98,7 @@ class AuthTest(AuthTestCase):
         response = self.get('/wwwhisper/auth/api/is-authorized/?path=/foo/')
         self.assertFalse(response.has_header('User'))
         self.assertEqual(200, response.status_code)
+        self.assertEqual('0', response['Content-Length'])
 
     def test_is_authorized_if_open_location_and_authenticated(self):
         user = self.site.users.create_item('foo@example.com')
