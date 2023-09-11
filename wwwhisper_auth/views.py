@@ -227,7 +227,7 @@ class Login(http.RestView):
         # performance critical request (sessions are cached).
         request.session['user_id'] = user.id
         response = http.HttpResponseNoContent()
-        http.set_whoami_cookie(response, user.email)
+        http.set_logged_in_cookie(response)
         return response
 
 
@@ -301,7 +301,7 @@ class Logout(http.RestView):
         auth.logout(request)
         # TODO: send a message to all processes to discard cached user session.
         response = http.HttpResponseNoContent()
-        http.delete_whoami_cookie(response)
+        http.delete_logged_in_cookie(response)
         return response
 
 class WhoAmI(http.RestView):
@@ -313,6 +313,6 @@ class WhoAmI(http.RestView):
         user = _get_user(request)
         if user is not None:
             response = http.HttpResponseOKJson({'email': user.email})
-            http.set_whoami_cookie(response, user.email)
+            http.set_logged_in_cookie(response)
             return response
         return http.HttpResponseNotAuthenticated()

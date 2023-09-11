@@ -100,12 +100,20 @@ SESSION_COOKIE_AGE = 2419200
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 
+# A helper cookie set together with the session cookie to indicate
+# that the user is logged-in. Needed because the session cookie is
+# http only and cannot be read from JavaScript.
+#
 # Lack of this cookie prevents wwwhisper iframe from being injected,
-# so there are no /wwwhisper/auth/whoami resuquests for not logged-in
+# so there are no /wwwhisper/auth/whoami requests for not logged-in
 # visitors of open locations.
-WHOAMI_COOKIE_NAME = 'wwwhisper-whoami'
-WHOAMI_COOKIE_AGE = 2419200
-WHOAMI_COOKIE_SAMESITE = 'Strict'
+#
+# No security important functionality should depend on this cookie
+# being in the correct state (present for logged-in users, missing for
+# not logged-in users).
+LOGGED_IN_COOKIE_NAME = 'wwwhisper-in'
+LOGGED_IN_COOKIE_AGE = 2419200
+LOGGED_IN_COOKIE_SAMESITE = 'Strict'
 
 ROOT_URLCONF = 'wwwhisper_service.urls'
 

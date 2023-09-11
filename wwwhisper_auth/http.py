@@ -38,17 +38,17 @@ def accepts_html(accept_header):
     return (accept_header is not None
             and _accepts_html_re.search(accept_header) is not None)
 
-def set_whoami_cookie(response, email):
-    response.set_cookie(key=settings.WHOAMI_COOKIE_NAME,
-                        value=email,
-                        max_age=settings.WHOAMI_COOKIE_AGE,
+def set_logged_in_cookie(response):
+    response.set_cookie(key=settings.LOGGED_IN_COOKIE_NAME,
+                        value='y',
+                        max_age=settings.LOGGED_IN_COOKIE_AGE,
                         path='/',
                         httponly=False,
-                        samesite=settings.WHOAMI_COOKIE_SAMESITE)
+                        samesite=settings.LOGGED_IN_COOKIE_SAMESITE)
 
-def delete_whoami_cookie(response):
-    response.delete_cookie(key=settings.WHOAMI_COOKIE_NAME,
-                           samesite=settings.WHOAMI_COOKIE_SAMESITE)
+def delete_logged_in_cookie(response):
+    response.delete_cookie(key=settings.LOGGED_IN_COOKIE_NAME,
+                           samesite=settings.LOGGED_IN_COOKIE_SAMESITE)
 
 class HttpResponseOK(HttpResponse):
     """"Request succeeded.
@@ -139,7 +139,7 @@ class HttpResponseNotAuthenticated(HttpResponse):
         super(HttpResponseNotAuthenticated, self).__init__(
             body, content_type=content_type, status=401)
         self['WWW-Authenticate'] = 'VerifiedEmail'
-        delete_whoami_cookie(self)
+        delete_logged_in_cookie(self)
 
 class HttpResponseNotAuthorized(HttpResponse):
     """User is authenticated but is not authorized to access a resource."""

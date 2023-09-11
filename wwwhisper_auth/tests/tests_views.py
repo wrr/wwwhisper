@@ -212,17 +212,17 @@ class LogoutTest(AuthTestCase):
         response = self.post('/wwwhisper/auth/api/logout/', {})
         self.assertEqual(204, response.status_code)
 
-        # Should delete the whoami cookie
-        whoami_cookie = response.cookies[settings.WHOAMI_COOKIE_NAME]
-        self.assertEqual('', whoami_cookie.value)
+        # Should delete the 'logged-in' cookie
+        logged_in_cookie = response.cookies[settings.LOGGED_IN_COOKIE_NAME]
+        self.assertEqual('', logged_in_cookie.value)
 
 
         response = self.get('/wwwhisper/auth/api/is-authorized/?path=/bar/')
         # Not authenticated
         self.assertEqual(401, response.status_code)
-        # Also each 401 response should delete whoami cookie
-        whoami_cookie = response.cookies[settings.WHOAMI_COOKIE_NAME]
-        self.assertEqual('', whoami_cookie.value)
+        # Also each 401 response should delete the 'logged-in' cookie
+        logged_in_cookie = response.cookies[settings.LOGGED_IN_COOKIE_NAME]
+        self.assertEqual('', logged_in_cookie.value)
 
 
 class WhoAmITest(AuthTestCase):
@@ -239,13 +239,14 @@ class WhoAmITest(AuthTestCase):
         parsed_response_body = json.loads(response.content)
         self.assertEqual('foo@example.com', parsed_response_body['email'])
 
-        whoami_cookie = response.cookies[settings.WHOAMI_COOKIE_NAME]
-        self.assertEqual('foo@example.com', whoami_cookie.value)
-        self.assertTrue(whoami_cookie['secure'])
-        self.assertEqual('Strict', whoami_cookie['samesite'])
-        self.assertEqual('/', whoami_cookie['path'])
-        self.assertFalse(whoami_cookie['httponly'])
-        self.assertEqual(settings.WHOAMI_COOKIE_AGE, whoami_cookie['max-age'])
+        logged_in_cookie = response.cookies[settings.LOGGED_IN_COOKIE_NAME]
+        self.assertEqual('y', logged_in_cookie.value)
+        self.assertTrue(logged_in_cookie['secure'])
+        self.assertEqual('Strict', logged_in_cookie['samesite'])
+        self.assertEqual('/', logged_in_cookie['path'])
+        self.assertFalse(logged_in_cookie['httponly'])
+        self.assertEqual(settings.LOGGED_IN_COOKIE_AGE,
+                         logged_in_cookie['max-age'])
 
     def test_whoami_for_user_of_differen_site(self):
         other_site = self.sites.create_item('othersite')
@@ -256,9 +257,9 @@ class WhoAmITest(AuthTestCase):
         response = self.get('/wwwhisper/auth/api/whoami/')
         self.assertEqual(401, response.status_code)
 
-        # Should delete the whoami cookie.
-        whoami_cookie = response.cookies[settings.WHOAMI_COOKIE_NAME]
-        self.assertEqual('', whoami_cookie.value)
+        # Should delete the 'logged-in' cookie.
+        logged_in_cookie = response.cookies[settings.LOGGED_IN_COOKIE_NAME]
+        self.assertEqual('', logged_in_cookie.value)
 
 class CsrfTokenTest(AuthTestCase):
 
@@ -378,13 +379,14 @@ class LoginTest(AuthTestCase):
         response = self.post('/wwwhisper/auth/api/login/', {'token': token})
         self.assertEqual(204, response.status_code)
 
-        whoami_cookie = response.cookies[settings.WHOAMI_COOKIE_NAME]
-        self.assertEqual('foo@example.org', whoami_cookie.value)
-        self.assertTrue(whoami_cookie['secure'])
-        self.assertEqual('Strict', whoami_cookie['samesite'])
-        self.assertEqual('/', whoami_cookie['path'])
-        self.assertFalse(whoami_cookie['httponly'])
-        self.assertEqual(settings.WHOAMI_COOKIE_AGE, whoami_cookie['max-age'])
+        logged_in_cookie = response.cookies[settings.LOGGED_IN_COOKIE_NAME]
+        self.assertEqual('y', logged_in_cookie.value)
+        self.assertTrue(logged_in_cookie['secure'])
+        self.assertEqual('Strict', logged_in_cookie['samesite'])
+        self.assertEqual('/', logged_in_cookie['path'])
+        self.assertFalse(logged_in_cookie['httponly'])
+        self.assertEqual(settings.LOGGED_IN_COOKIE_AGE,
+                         logged_in_cookie['max-age'])
 
     def test_login_fails_if_unknown_user(self):
         token = generate_login_token(self.site, 'foo@example.org')

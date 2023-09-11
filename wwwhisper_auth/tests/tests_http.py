@@ -162,11 +162,11 @@ class AcceptHeaderUtilsTest(TestCase):
         self.assertFalse(accepts_html(None))
 
 class HttpResponseTest(TestCase):
-    def test_not_authenticated_response_deletes_whoami_cookie(self):
+
+    def test_not_authenticated_response_deletes_logged_in_cookie(self):
         response = HttpResponseNotAuthenticated()
-        # Also each 401 response should delete whoami cookie
-        whoami_cookie = response.cookies[settings.WHOAMI_COOKIE_NAME]
-        self.assertEqual('', whoami_cookie.value)
-        self.assertEqual('Strict', whoami_cookie['samesite'])
-        self.assertEqual('/', whoami_cookie['path'])
-        self.assertEqual(0, whoami_cookie['max-age'])
+        logged_in_cookie = response.cookies[settings.LOGGED_IN_COOKIE_NAME]
+        self.assertEqual('', logged_in_cookie.value)
+        self.assertEqual('Strict', logged_in_cookie['samesite'])
+        self.assertEqual('/', logged_in_cookie['path'])
+        self.assertEqual(0, logged_in_cookie['max-age'])
