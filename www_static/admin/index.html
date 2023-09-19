@@ -50,30 +50,27 @@
 
       <div class="alert alert-success help-message fade in hide">
         <p>
-          Left side: paths to which access can be granted. <br>
-          Right side: emails of users that can access the selected path.
-          Enter <i>*</i> to allow everyone access without login.
-          You can enter multiple emails at once separated by <i>;</i>
+          Left side: Paths to which access can be granted. <br> Right
+          side: Email addresses of users who can access the selected
+          path. You can enter multiple email addresses at once,
+          separating them with semicolons (<i>;</i>)</b>.
+          Enter <i>*</i> to allow access to everyone without requiring login.
         </p>
 
         <p>
-          Granting access to a path gives also access to all
-          sub-paths unless a more specific access control rule is
-          defined.  The more specific rule overwrites a more generic
-          one.  <!--For example, if a user is on a list granting
-          access to /foo she can access /foo/bar but if there is more
-          specific access control list for /foo/baz and the user is
-          not on this list, she can't access anything under
-          /foo/baz. -->
+          Granting access to a path also grants access to all
+          sub-paths, unless a more specific access control rule is
+          defined. A more specific rule takes precedence over a more
+          generic one.
         </p>
 
         <p>
-        <i class="icon-eye-open icon-light"></i> visit a location in a
+        <i class="icon-eye-open icon-light"></i> Visit a location in a
         separate tab.  <br>
-        <i class="icon-envelope icon-light"></i> compose a notification about a
+        <i class="icon-envelope icon-light"></i> Compose a notification about a
         shared location.
         <br>
-        <i class="icon-remove icon-light"></i> remove an access control
+        <i class="icon-remove icon-light"></i> Remove an access control
         list for a path (left) or remove a user (right).
         </p>
       </div> <!-- /.alert -->
@@ -138,17 +135,17 @@
 
       <div class="alert alert-success help-message fade in hide">
         <p>
-          Move a mouse over a user to quickly check which locations the user
+          Hover over a user to quickly check which locations the user
           can access (marked with <i class="icon-hand-right icon-light"></i>).
           <br>
-          <i class="icon-arrow-up icon-light"></i> grant a user access to
+          <i class="icon-arrow-up icon-light"></i> Grant a user access to
           the currently active location.
           <br>
-          <i class="icon-envelope icon-light"></i> compose a notification
+          <i class="icon-envelope icon-light"></i> Compose a notification
           about locations shared with a user.
           <br>
-          <i class="icon-remove icon-light"></i> remove a user and disallow
-          the removed user access to all locations.
+          <i class="icon-remove icon-light"></i> Remove a user and
+          revoke access to all locations.
         </p>
       </div>  <!-- /.alert -->
 
@@ -185,14 +182,15 @@
 
       <div class="alert alert-success help-message fade in hide">
         <p>
-          Customizes a page shown to not authenticated users.
+          Customize the log in page.
         <p>
-          Set a field to an empty string to revert the field to its
+          Set a field to an empty string to revert it to its
           default value. HTML tags are not interpreted.
         </p>
         <p>
-          <i class="icon-trash icon-light"></i> marks changed, but not
-          yet saved fields. When clicked, reverts the changes. <br>
+          <i class="icon-trash icon-light"></i> Marks changed fields
+          that have not been saved yet. When clicked, reverts the
+          changes.<br>
         </p>
       </div> <!-- /.alert -->
 
@@ -227,14 +225,14 @@
 
       <div class="alert alert-success help-message fade in hide">
         <p>
-          A list of addresses (protocol://domain[:optional port]) that
-          can be used to access the site. Requests from addresses that
-          are not on the list are rejected.
+          A list of addresses (protocol://domain[:optional port]) of
+          the protected site. Requests from addresses that are not on
+          the list are rejected.
         </p>
         <p>
           If https://example.org is on the list and http://example.org
-          is not, requests to http://example.org will be redirected to
-          https://example.org.
+          is not, requests to http://example.org will be automatically
+          redirected to https://example.org.
         </p>
         <p>
           It is safe to add
@@ -243,13 +241,13 @@
         </p>
 
         <p>
-        <i class="icon-eye-open icon-light"></i> visit an address in a
+        <i class="icon-eye-open icon-light"></i> Open an address in a
         separate tab.  <br>
-        <i class="icon-remove icon-light"></i> remove an address.
+        <i class="icon-remove icon-light"></i> Remove an address.
         </p>
       </div> <!-- /.alert -->
 
-      <h4>Allowed addresses</h4>
+      <h4>Site addresses</h4>
       <div class="row">
         <div class="span6">
           <ul id="alias-list" class="unstyled">
@@ -285,25 +283,15 @@
         Powered by
         <strong>
           <a href="https://github.com/wrr/wwwhisper">wwwhisper</a></strong>:
-        an open source, application independent, web access control
+        an application-independent web access control
         system.<br>To request new features or report problems,
         please open
         a <a href="https://github.com/wrr/wwwhisper/issues">GitHub</a>
         issue.
       </p>
 
-      <p>
-        wwwhisper uses many great, open components, among them:
-      </p>
-        <ul>
-          <li><a href="http://jquery.com/">JQuery</a></li>
-          <li><a href="http://twitter.github.io/bootstrap/">Bootstrap</a></li>
-          <li><a href="http://glyphicons.com/">Glyphicons Free</a></li>
-          <li><a href="http://www.subtlepatterns.com">Subtle Patterns</a></li>
-        </ul>
-
       <p class="text-center">
-        <small>&copy; 2012-2023 MixedBit</small>
+        <small>&copy; 2012-2023 Mixedbit</small>
       </p>
     </div> <!-- /.container about -->
 
