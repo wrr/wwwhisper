@@ -1,26 +1,25 @@
 body {
- /* to make the container go all the way to the bottom of the topbar */
- padding-top: 60px;
- /*  The pattern is downloaded from www.subtlepatterns.com
-     If you need more, that's where to get'em.*/
- background: url("../auth/assets/img/random_grey_variations.png");
+  margin-bottom: 100px;
 }
 
-h4 {
- margin-bottom: 17px;
- font-weight: normal;
- font-size: 21px;
+.error-box {
+  margin-top: 1em;
 }
 
-.icon-light,
-.menu-item {
-  background-image: url("../auth/assets/img/glyphicons-halflings-light.png");
+h3 {
+  margin-bottom: 0.5em;
+  margin-top: 1em;
 }
 
-.menu-item {
-  float: right;
-  /* Without this some items are not clickable in IE 8: */
-  position: relative;
+.nav-link.active {
+  border-bottom: 2px solid var(--bs-navbar-active-color);
+}
+
+#active-location-info {
+  padding-bottom: 0.5em;
+  margin-bottom: 0px;
+  font-weight: bold;
+  background-color: var(--bs-body-bg);
 }
 
 .menu-item:hover {
@@ -29,33 +28,114 @@ h4 {
   cursor: pointer;
 }
 
-.tabs-left > .nav-tabs .active > a,
-.tab-content {
-  background: #F9F9FC;
+.spaced-left {
+  margin-left: 10px;
 }
 
-.tab-pane {
-  margin-top: 8px;
-  margin-left: 19px;
-  margin-right: 19px;
-  margin-bottom: 19px;
+.hide {
+  display: none;
 }
 
-.tab-content {
-  border-top: 1px solid #ddd;
+#location-list {
+  margin-bottom: 0px;
 }
 
-.tooltip {
-  overflow: visible;
+.location-list-item {
+  padding: 2px 12px 2px 12px;
 }
 
-.tooltip-inner {
-  max-width: 950px;
+.location-link {
+  text-decoration: none;
 }
 
-.tabs-left > .nav-tabs {
-  float: left;
-  margin-right: 0px;
+.location-link,
+.allowed-user-list-item .user-mail,
+.url {
+  font-weight: bold;
+}
+
+.location-list-item:hover,
+.allowed-user-list-item:hover,
+.alias-list-item:hover,
+.user-list-item:hover {
+/*  background-color: var(--bs-tertiary-bg); */
+  background: #eeeeee;
+}
+
+.location-list-item:hover {
+  cursor: pointer;
+}
+
+.location-list-item.active {
+  background-color: var(--bs-tertiary-bg);
+  border-top: 2px solid var(--bs-border-color);
+  border-left: 2px solid var(--bs-border-color);
+  border-bottom: 2px solid var(--bs-border-color);
+  border-top-left-radius: var(--bs-border-radius);
+  border-bottom-left-radius: var(--bs-border-radius);
+  padding: 0px 14px 0px 10px;
+}
+
+@media (max-width: 767px) {
+  .location-list-item.active {
+    border-right: 2px solid var(--bs-border-color);
+    padding-right: 10px;
+    border-top-right-radius: var(--bs-border-radius);
+    border-bottom-right-radius: var(--bs-border-radius);
+  }
+}
+
+@media (min-width: 768px) {
+  .location-list-item:not(.active), #add-location {
+    border-right: 2px solid var(--bs-border-color);
+  }
+}
+
+#acl-row {
+  background-color: var(--bs-tertiary-bg);
+}
+
+#location-container {
+  background-color: var(--bs-body-bg);
+}
+
+#location-info-container {
+  background-color: var(--bs-tertiary-bg);
+  border-top: 2px solid var(--bs-border-color);
+}
+
+@media (max-width: 767px) {
+  #location-info-container {
+    border: 2px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+  }
+}
+
+.allowed-user-list {
+  max-height: 30em;
+  overflow-y: auto;
+}
+
+.allowed-user-list-item {
+  padding: 2px 12px 2px 12px;
+}
+
+#add-location, #add-user {
+  padding: 15px 15px 30px 6px;
+}
+
+.user-list-item {
+  padding: 0px 12px 0px 12px;
+}
+
+.help {
+  margin-top: 1.5em;
+  float: right;
+}
+
+.long-text-container {
+  overflow-x: auto;
+  white-space: nowrap;
 }
 
 .path {
@@ -63,80 +143,35 @@ h4 {
   white-space: pre;
 }
 
-.spaced-right {
-  margin-right: 5px;
+.help-message-container {
+  background-color: var(--bs-body-bg);
+  padding-bottom: 0.75em;
 }
 
-.spaced-left {
-  margin-left: 10px;
+.help-message {
+  /*color: var(--bs-success-text-emphasis);*/
+  border-left: 4px solid var(--bs-success-border-subtle);
+  padding: 0.5em;
+  padding-left: 1em;
+  /*background-color: var(--bs-body-bg);*/
+  /*background-color: #e1f5ec;
+  background-color: #edf5ed;*/
+  background-color: #ebf4f0;
+  /*border-radius: var(--bs-border-radius);*/
+  /*margin-right: 0.5em; */
+  /*font-family: Georgia, "Times New Roman", Times, serif; */
 }
 
-#add-location-input,
-.add-allowed-user {
-  width: 310px;
+.help-action {
+  margin-left: 0.5em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
 }
 
-#add-alias-scheme {
-  width: 85px;
-  float: left;
-}
-
-#add-alias-input {
-  width: 330px;
-}
-
-.tabs-left .input-append {
-  margin-left: 5px;
-  margin-top: 15px;
-}
-
-.tab-pane .input-append {
-  margin-left: 15px;
-  margin-top: 15px;
-}
-
-.can-access {
-  margin-left: -27px;
-  float: left;
-}
-
-.in-dialog {
-  width: 50px;
-}
-
-.in-dialog .controls {
-  margin-left: 60px;
-}
-
-.in-dialog .control-label {
-  width: 50px;
-}
-
-.in-dialog .form-actions {
-  padding-left: 60px;
-}
-
-.input-wide {
-  width: 450px;
-}
-
-.navbar-inverse .brand {
-  color: #ffffff;
-}
-
-li,
-.nav-tabs > li > a {
-  line-height: 18px;
-  font-size: 13px;
-}
-
-.user-list-item {
-  /* To align icons with locations' icons */
-  margin-right: 12px;
-}
-
-.hoverable:hover {
-  background: #eeeeee;
+.help-action img {
+  vertical-align: middle;
+  height: 1.5em;
+  margin-right: 0.5em;
 }
 
 .removing {
@@ -148,35 +183,15 @@ li,
   border-width: 1px;
 }
 
-.content {
-  background: #ffffff;
-  border-top: 30px solid transparent;
-  border-left: 30px solid transparent;
-  border-right: 30px solid transparent;
-  border-bottom: 30px solid transparent;
+#add-alias-scheme {
+  max-width: 110px;
 }
 
-.wwwhisper-logo {
-  float: left;
-  margin-top: 5px;
-  margin-right: 5px;
-  margin-left: -30px;
-}
-
-.help {
-  float: right;
-}
-
-#custom-login-control {
-  margin-bottom: 60px;
-}
-
-#location-control {
-  margin-bottom: 20px;
+.tooltip-inner {
+  max-width: 300px;
 }
 
 /* Enable for debugging
 div, span, p{
     border: 1px solid red;
 } */
-

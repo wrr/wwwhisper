@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <!-- wwwhisper - web access control -->
 
 <html lang="en">
@@ -6,280 +6,350 @@
     <meta charset="utf-8">
     <title>wwwhisper: Web Access Control</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="/wwwhisper/auth/assets/css/bootstrap.min.css" rel="stylesheet"
-          type="text/css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
     <link href="/wwwhisper/admin/admin.css" rel="stylesheet" type="text/css">
   </head>
 
   <body>
-
-    <div class="navbar navbar-fixed-top navbar-inverse">
-      <div class="navbar-inner">
-        <div class="container">
-          <img src="/wwwhisper/auth/assets/img/logo.png" alt="wwwhisper logo"
-               class="wwwhisper-logo">
-          <ul class="nav pull-right">
-            <li><a href="#" class="acl">Access control</a></li>
-            <li><a href="#settings" class="settings">Site settings</a></li>
-            <li><a href="#about">About</a></li>
-          </ul>
+      <nav class="navbar bg-dark border-bottom border-body navbar-expand-sm"
+           data-bs-theme="dark">
+        <div class="container-xxl">
+          <span class="navbar-brand mb-0 h1">
+            <img src="/wwwhisper/auth/assets/img/logo.png" alt="wwwhisper logo"
+                 class="wwwhisper-logo" height="30" width="92">
+          </span>
+            <div class="navbar-nav">
+              <a class="nav-link active acl" aria-current="page" href="#">
+                Access control
+              </a>
+              <a class="nav-link settings" href="#settings">Site settings</a>
+              <a class="nav-link about" href="#about">About</a>
+            </div>
         </div>
-      </div>
-    </div>
+      </nav>
 
-    <div class="container content loading">
+    <div class="alert alert-danger alert-dismissible hide"
+         role="alert">
+      <div class="alert-message">
+      </div>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"
+              aria-label="Close"></button>
+    </div>  <!-- /.alert -->
+
+    <div class="container-xxl content loading">
       <div class="error-box">
-        <div class="alert alert-error fade in hide">
-          <a class="close" data-dismiss="alert">&times;</a>
-          <div class="alert-message">
-          </div>
-        </div>  <!-- /.alert -->
       </div>  <!-- /.error-box -->
       Loading...
     </div>
 
-    <div class="container content acl hide">
+    <div class="container-xxl content acl hide">
+      <div class="error-box"></div>
+      <h3>Locations</h3>
+      <div class="row gx-0" id="acl-row">
+        <div class="col-md-6" id="location-container">
+          <div class="help-message-container">
+            <div class="help-message fade-in hide">
+              <p>
+                Paths to which access can be granted.
+              </p>
 
-      <div class="error-box">
-        <div class="alert alert-error fade in hide">
-          <a class="close"  data-dismiss="alert">&times;</a>
-          <div class="alert-message">
-          </div>
-        </div>  <!-- /.alert -->
-      </div>  <!-- /.error-box -->
+              <p>
+                Granting access to a path also grants access to all
+                sub-paths, unless a more specific access control rule is
+                defined. A more specific rule takes precedence over a more
+                generic one.
+              </p>
+              <div class="row">
+                <div class="col-12 help-action">
+                  <img src="/wwwhisper/auth/assets/icons/box-arrow-up-right.svg"
+                       alt="Non-clickable visit a location icon."> Visit a location in a
+                  separate tab.
+                </div>
+                <div class="col-12 help-action">
+                  <img src="/wwwhisper/auth/assets/icons/x-lg.svg"
+                       alt="Non-clickable remove a location icon"> Remove a location.
+                </div>
+              </div> <!-- ./row -->
+            </div> <!-- /.help-message -->
+          </div> <!-- ./help-message-container -->
 
-      <div class="alert alert-success help-message fade in hide">
-        <p>
-          Left side: Paths to which access can be granted. <br> Right
-          side: Email addresses of users who can access the selected
-          path. You can enter multiple email addresses at once,
-          separating them with semicolons (<i>;</i>)</b>.
-          Enter <i>*</i> to allow access to everyone without requiring login.
-        </p>
-
-        <p>
-          Granting access to a path also grants access to all
-          sub-paths, unless a more specific access control rule is
-          defined. A more specific rule takes precedence over a more
-          generic one.
-        </p>
-
-        <p>
-        <i class="icon-eye-open icon-light"></i> Visit a location in a
-        separate tab.  <br>
-        <i class="icon-envelope icon-light"></i> Compose a notification about a
-        shared location.
-        <br>
-        <i class="icon-remove icon-light"></i> Remove an access control
-        list for a path (left) or remove a user (right).
-        </p>
-      </div> <!-- /.alert -->
-
-      <h4>Locations</h4>
-      <div class="tabbable tabs-left" id="location-control">
-
-        <ul class="nav nav-tabs span5" id="location-list">
-          <li id="location-list-item" class="hoverable">
-            <a class="url" href="#location-info-list-item" data-toggle="tab">
-              <i class="icon-hand-right icon-light invisible can-access"> </i>
-              <span class="path"></span>
-              <i class="menu-item icon-remove spaced-left remove-location"></i>
-              <i class="menu-item icon-envelope notify"></i>
-              <i class="menu-item icon-eye-open view-page"></i>
-            </a>
-          </li>
-
-          <li>
-            <div class="input-append" id="add-location">
-              <input type="text" placeholder="Enter a path"
-                     id="add-location-input">
-              <button type="button" class="btn disabled"
-                      id="add-location-button">
-                <i class="icon-arrow-up icon-light"></i>
-              </button>
-
-            </div> <!-- /.input-append -->
-          </li>
-
-        </ul>
-
-        <div class="tab-content" id="location-info-list">
-          <div class="tab-pane" id="location-info-list-item">
-
-            <div class="row">
-              <div class="span5">
-                <ul class="allowed-user-list unstyled">
-                  <li id="allowed-user-list-item" class="hoverable">
-                    <i class="icon-user icon-light spaced-right"></i>
-                    <span class="user-mail"></span>
-                    <i class="menu-item icon-remove unshare span1"></i>
-                  </li>
-                </ul>
-              </div> <!-- /.span4 -->
-            </div> <!-- /.row -->
-
-            <div class="input-append">
-              <input type="text" class="add-allowed-user"
-                     placeholder="Enter an email to grant access">
-              <button type="button"
-                      class="btn disabled add-allowed-user-button">
-                <i class="icon-arrow-up icon-light"></i>
-              </button>
-            </div> <!-- /.input-append -->
-
-
-          </div> <!-- /.tab-pane -->
-        </div> <!-- /.tab-content -->
-
-      </div> <!-- /.tabbable -->
-
-      <div class="alert alert-success help-message fade in hide">
-        <p>
-          Hover over a user to quickly check which locations the user
-          can access (marked with <i class="icon-hand-right icon-light"></i>).
-          <br>
-          <i class="icon-arrow-up icon-light"></i> Grant a user access to
-          the currently active location.
-          <br>
-          <i class="icon-envelope icon-light"></i> Compose a notification
-          about locations shared with a user.
-          <br>
-          <i class="icon-remove icon-light"></i> Remove a user and
-          revoke access to all locations.
-        </p>
-      </div>  <!-- /.alert -->
-
-      <h4>Users</h4>
-      <div class="row">
-        <div class="span5">
-          <ul id="user-list" class="unstyled">
-            <li class="user-list-item hoverable">
-              <i class="icon-user icon-light spaced-right"></i>
-              <span class="user-mail"> </span>
-              <i class="menu-item icon-remove spaced-left remove-user"></i>
-              <i class="menu-item icon-envelope notify"></i>
-              <i class="menu-item icon-arrow-up share invisible"></i>
+          <ul class="list-unstyled" id="location-list">
+            <li class="location-list-item">
+              <div class="row align-items-center gx-0">
+                <div class="col-8 col-sm-9 long-text-container">
+                  <a aria-current="page" href="#" class="location-link">
+                    <span class="path"></span>
+                  </a>
+                </div>  <!-- ./col -->
+                <div class="col-4 col-sm-3 text-end">
+                  <button type="button" class="btn menu-item view-page">
+                    <img src="/wwwhisper/auth/assets/icons/box-arrow-up-right.svg"
+                         alt="Open the location in a new browser tab.">
+                  </button><!-- Kill white space
+                  --><button type="button"
+                          class="btn menu-item remove-location">
+                    <img src="/wwwhisper/auth/assets/icons/x-lg.svg"
+                         alt="Remove the location.">
+                  </button>
+                </div> <!-- ./col  -->
+              </div> <!-- ./row -->
             </li>
           </ul>
-        </div>  <!-- /.span4 -->
-      </div> <!-- /.row -->
-
-      <div class="row">
-        <a class="btn btn-info help">Show help</a>
-      </div>
-    </div> <!-- /.container acl -->
-
-    <div class="container content settings hide">
-
-      <div class="error-box">
-        <div class="alert alert-error fade in hide">
-          <a class="close" data-dismiss="alert">&times;</a>
-          <div class="alert-message">
-          </div>
-        </div>  <!-- /.alert -->
-      </div>  <!-- /.error-box -->
-
-
-      <div class="alert alert-success help-message fade in hide">
-        <p>
-          Customize the log in page.
-        <p>
-          Set a field to an empty string to revert it to its
-          default value. HTML tags are not interpreted.
-        </p>
-        <p>
-          <i class="icon-trash icon-light"></i> Marks changed fields
-          that have not been saved yet. When clicked, reverts the
-          changes.<br>
-        </p>
-      </div> <!-- /.alert -->
-
-      <h4>Login page</h4>
-      <div class="well well-large" id="custom-login-control">
-        <form id="custom-login">
-          <fieldset>
-            <div>
-              <label>Title</label>
-              <input type="text" class="span6" id="title">
-              <i class="icon-trash icon-light revert invisible"></i>
-            </div>
-            <div>
-              <label>Header</label>
-              <input type="text" class="span6" id="header">
-              <i class="icon-trash icon-light revert invisible"></i>
-            </div>
-            <div>
-              <label>Message</label>
-              <input type="text" class="span6" id="message">
-              <i class="icon-trash icon-light revert invisible"></i>
-            </div>
-            <label class="checkbox">
-              <input type="checkbox" id="branding"> wwwhisper logo
-            </label>
-            <button type="submit" class="btn disabled" id="custom-login-save">
-              Save
+          <div class="input-group" id="add-location">
+            <input type="text" placeholder="Enter a path"
+                   class="form-control" id="add-location-input">
+            <button type="button" class="btn btn-outline-secondary disabled"
+                    id="add-location-button">
+              <img src="/wwwhisper/auth/assets/icons/arrow-up.svg"
+                   alt="up-arrow">
             </button>
-          </fieldset>
-        </form>
-      </div>
+          </div> <!-- /.input-group -->
+        </div> <!-- ./#location-container -->
 
-      <div class="alert alert-success help-message fade in hide">
-        <p>
-          A list of addresses (protocol://domain[:optional port]) of
-          the protected site. Requests from addresses that are not on
-          the list are rejected.
-        </p>
-        <p>
-          If https://example.org is on the list and http://example.org
-          is not, requests to http://example.org will be automatically
-          redirected to https://example.org.
-        </p>
-        <p>
-          It is safe to add
-          http://localhost[:port] to communicate with wwwhisper from a
-          local machine.
-        </p>
+        <div class="col-md-6">
+          <h5 class="d-md-none" id="active-location-info">
+            Allowed to access <i><span class="active-location"></span></i>
+          </h5>
+          <div class="help-message-container">
+            <div class="help-message fade-in hide">
+              <p>
+                Email addresses of users who can access the currently selected
+                location.
+              </p>
+              <p>
+                You can enter multiple email addresses at once,
+                separated with spaces.
+              </p>
+              <p>
+                Enter <i>*</i> to allow access to everyone without requiring login.
+              </p>
+              <div class="row">
+                <div class="col-12 help-action">
+                  <img src="/wwwhisper/auth/assets/icons/x-lg.svg"
+                       alt="Non-clickable remove a user icon">
+                  Remove a user.
+                </div>
+              </div> <!-- ./row -->
+            </div> <!-- /.help-message -->
+          </div> <!-- ./help-message-container -->
+          <div id="location-info-container">
+            <div class="active" id="location-info">
+              <ul class="allowed-user-list list-unstyled">
+                <li class="allowed-user-list-item">
+                  <div class="row align-items-center">
+                    <div class="col-10 long-text-container">
+                      <span class="user-mail"></span>
+                    </div> <!-- ./col -->
+                    <div class="col-2 text-end">
+                      <button type="button"
+                              class="btn menu-item unshare">
+                        <img src="/wwwhisper/auth/assets/icons/x-lg.svg"
+                             alt="Remove the user from the allowed users list.">
+                      </button>
+                    </div> <!-- ./col -->
+                  </div> <!-- ./row -->
+                </li>
+              </ul>
+              <div class="input-group" id="add-user">
+                <input type="text" class="add-allowed-user form-control"
+                       placeholder="Enter an email to grant access">
+                <button type="button"
+                        class="btn btn-outline-secondary add-allowed-user-button disabled">
+                  <img src="/wwwhisper/auth/assets/icons/arrow-up.svg"
+                       alt="Enter a new email.">
+                </button>
+              </div> <!-- /.input-group -->
+            </div> <!-- /.location-info -->
+          </div> <!-- /.location-info-container -->
+        </div> <!-- ./col -->
+      </div> <!-- ./row -->
 
-        <p>
-        <i class="icon-eye-open icon-light"></i> Open an address in a
-        separate tab.  <br>
-        <i class="icon-remove icon-light"></i> Remove an address.
-        </p>
-      </div> <!-- /.alert -->
 
-      <h4>Site addresses</h4>
+      <h3>Users</h3>  
+      <div class="help-message-container">
+        <div class="help-message fade-in hide">
+          <div class="row">
+            <div class="col-12 help-action">
+              <img src="/wwwhisper/auth/assets/icons/arrow-up.svg"
+                   alt="Non-clickable grant access icon.">
+              Grant a user access to
+              the currently active location.
+            </div>
+            <div class="col-12 help-action">
+              <img src="/wwwhisper/auth/assets/icons/x-lg.svg"
+                   alt="Non-clickable remove a user icon.">
+              Remove a user and revoke access to all locations.
+            </div>
+          </div> <!-- ./row -->
+        </div>  <!-- /.help-message -->
+      </div> <!-- ./help-message-container -->
+
       <div class="row">
-        <div class="span6">
-          <ul id="alias-list" class="unstyled">
-            <li class="alias-list-item hoverable">
-              <span class="url spaced-left"> </span>
-              <i class="menu-item icon-remove spaced-left remove-alias"></i>
-              <i class="menu-item icon-eye-open view-page"></i>
+        <div class="col-md-6">
+          <ul id="user-list" class="list-unstyled">
+            <li class="user-list-item">
+              <div class="row align-items-center gx-0">
+                <div class="col-8 col-sm-9 long-text-container">
+                  <span class="user-mail"> </span>
+                </div> <!-- ./col -->
+                <div class="col-4 col-sm-3 text-end">
+                  <button type="button" class="btn menu-item share invisible">
+                    <img src="/wwwhisper/auth/assets/icons/arrow-up.svg"
+                         alt="Grant the user access the currently active location.">
+                  </button><!-- Kill white space
+                  --><button type="button" class="btn menu-item remove-user">
+                    <img src="/wwwhisper/auth/assets/icons/x-lg.svg"
+                         alt="Remove the user.">
+                  </button>
+                </div> <!-- ./col -->
+              </div> <!-- ./row -->
             </li>
           </ul>
-        </div>  <!-- /.span5 -->
+        </div>  <!-- /.col -->
+      </div> <!-- /.row -->
+
+      <button type="button" class="btn btn-outline-success help">
+        Show help
+      </button>
+
+    </div> <!-- ./container acl -->
+
+
+    <div class="container-xxl content settings hide">
+      <div class="error-box"></div>
+
+      <h3>Login page</h3>
+      <div class="help-message-container">
+        <div class="help-message fade-in hide">
+          <p>
+            Customize the log in page.
+          <p>
+            Set a field to an empty string to revert it to its
+            default value. HTML tags are not interpreted.
+          </p>
+        </div> <!-- /.help-message -->
+      </div> <!-- ./help-message-container -->
+
+      <div class="card">
+        <div class="card-body">
+          <form id="custom-login">
+            <fieldset>
+              <div class="mb-3">
+                <label for="title" class="form-label">Title</label>
+                <div class="col">
+                  <input type="text" class="col-6 form-control" id="title">
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="header" class="form-label">Header</label>
+                <div class="col">
+                  <input type="text" class="col-6 form-control" id="header">
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="message" class="form-label">Message</label>
+                <div class="col">
+                  <input type="text" class="col-6 form-control" id="message">
+                </div>
+              </div>
+              <div class="col-3 form-check mb-3">
+                <input type="checkbox" class="form-check-input" id="branding">
+                <label for="branding" class="form-label checkbox">wwwhisper logo
+                </label>
+              </div>
+              <button type="button" class="btn btn-primary btn disabled"
+                      id="custom-login-save">
+                Save
+              </button>
+            </fieldset>
+          </form>
+        </div> <!-- ./card-body -->
+      </div> <!-- ./card -->
+
+      <h3>Site addresses</h3>
+      <div class="help-message-container">
+        <div class="help-message fade-in hide">
+          <p>
+            A list of addresses (protocol://domain[:optional port]) of
+            the protected site. Requests from addresses that are not on
+            the list are rejected.
+          </p>
+          <p>
+            If https://example.org is on the list and http://example.org
+            is not, requests to http://example.org will be automatically
+            redirected to https://example.org.
+          </p>
+          <p>
+            It is safe to add
+            http://localhost[:port] to communicate with wwwhisper from a
+            local machine.
+          </p>
+
+          <div class="row">
+            <div class="col-12 help-action">
+              <img src="/wwwhisper/auth/assets/icons/box-arrow-up-right.svg"
+                   alt="Non-clickable open an address icon.">
+              Open an address in a separate tab.
+            </div>
+            <div class="col-12 help-action">
+              <img src="/wwwhisper/auth/assets/icons/x-lg.svg"
+                   alt="Non-clickable remove an address icon.">
+              Remove an address.
+            </div>
+          </div> <!-- ./row -->
+        </div> <!-- /.help-message -->
+      </div> <!-- ./help-message-container -->
+
+      <div class="row">
+        <div class="col-lg-6">
+          <ul id="alias-list" class="list-unstyled">
+            <li class="alias-list-item">
+              <div class="row align-items-center gx-0">
+                <div class="col-8 col-sm-9 long-text-container">
+                  <span class="url"> </span>
+                </div> <!-- ./col -->
+                <div class="col-4 col-sm-3 text-end">
+                  <button type="button" class="btn menu-item view-page">
+                    <img src="/wwwhisper/auth/assets/icons/box-arrow-up-right.svg"
+                         alt="Open the alias URL in a new browser tab.">
+                  </button><!-- Kill white space
+                  --><button type="button" class="btn menu-item remove-alias">
+                    <img src="/wwwhisper/auth/assets/icons/x-lg.svg"
+                         alt="Remove the alias.">
+                  </button>
+                </div> <!-- ./col -->
+              </div> <!-- ./row -->
+            </li>
+          </ul>
+        </div>  <!-- /.col -->
       </div> <!-- /.row -->
 
       <div class="row">
-        <div class="input-prepend input-append span6" id="add-alias">
-          <select id="add-alias-scheme">
-            <option>https://</option>
-            <option>http://</option>
-          </select>
-          <input type="text" id="add-alias-input"
-                 placeholder="Enter a domain">
-          <button type="button" id="add-alias-button" class="btn disabled">
-            <i class="icon-arrow-up icon-light"></i>
-          </button>
-        </div>  <!-- /.input-prepend -->
+        <div class="col-lg-6">
+          <div class="input-group" id="add-alias">
+            <select class="form-select w-auto" id="add-alias-scheme">
+              <option>https://</option>
+              <option>http://</option>
+            </select>
+            <input type="text" class="form-control" id="add-alias-input"
+                   placeholder="Enter a domain">
+            <button type="button" id="add-alias-button"
+                    class="btn btn-outline-secondary disabled">
+              <img src="/wwwhisper/auth/assets/icons/arrow-up.svg"
+                   alt="up-arrow">
+            </button>
+          </div>  <!-- /.input-group -->
+        </div> <!-- ./col -->
       </div> <!-- /.row -->
-      <div class="row">
-        <a class="btn btn-info help">Show help</a>
-      </div>
+
+      <button type="button" class="btn btn-outline-success help">
+        Show help
+      </button>
     </div> <!-- /.container settings -->
 
-    <div class="container content about hide">
-      <p>
+    <div class="container-xxl content about hide">
+
+      <p class="lead">
         Powered by
         <strong>
           <a href="https://github.com/wrr/wwwhisper">wwwhisper</a></strong>:
@@ -295,44 +365,8 @@
       </p>
     </div> <!-- /.container about -->
 
-    <div class="modal hide fade" id="notify-modal">
-      <div class="modal-header">
-        <a class="close" data-dismiss="modal">&times;</a>
-        <h4>Email invitation</h4>
-      </div>
-      <div class="modal-body">
-        <form class="form-horizontal in-dialog">
-          <div class="control-group">
-            <label class="control-label" for="notify-to">To</label>
-            <div class="controls">
-              <input type="text" class="input-xlarge input-wide" id="notify-to"
-                     value="jimi@example.com">
-            </div>
-            <label class="control-label" for="notify-subject">Subject</label>
-            <div class="controls">
-              <input type="text" class="input-xlarge input-wide"
-                     id="notify-subject" value="Invitation">
-            </div>
-          </div>
-          <div class="control-group">
-            <div class="controls">
-              <textarea class="input-xlarge input-wide" id="notify-body"
-                        rows="7">
-              </textarea>
-            </div>
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <a href="#" class="btn btn-primary" id="send" target="_blank">
-        Launch email client
-        </a>
-        <a href="#" class="btn" data-dismiss="modal">Cancel</a>
-      </div>
-    </div>
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
     <script src="/wwwhisper/auth/assets/js/jquery-min.js"></script>
-    <script src="/wwwhisper/auth/assets/js/bootstrap.min.js"></script>
     <script src="/wwwhisper/auth/assets/js/net.js"></script>
     <script src="/wwwhisper/admin/admin.js"></script>
     <script src="/wwwhisper/auth/iframe.js"></script>

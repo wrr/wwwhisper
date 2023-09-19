@@ -162,6 +162,8 @@
 
     this.aliases = [];
     this.locations = [];
+    var activeLocation = null;
+
     this.users = [];
     // Holds a wwwhisper login page configuration.
     this.skin = null;
@@ -178,6 +180,31 @@
     this.adminPath = null;
     // Delegate errors to the UI.
     this.errorHandler = ui.handleError;
+
+    this.getSortedLocations = function() {
+      return utils.sortByProperty(this.locations, 'path');
+    };
+
+    this.getActiveLocation = function() {
+      return activeLocation;
+    };
+
+    this.setActiveLocation = function(location) {
+      activeLocation = location;
+      ui.refresh();
+    };
+
+    this.isActiveLocation = function(location) {
+      return (location === activeLocation);
+    };
+
+    function activateFirstLocation() {
+      if (that.locations.length > 0) {
+        activeLocation = that.getSortedLocations()[0];
+      } else {
+        activeLocation = null;
+      }
+    }
 
     /**
      * Returns true if a user can access a location.
@@ -239,6 +266,7 @@
     this.getLocations = function(successCallback) {
       net.ajax('GET', 'api/locations/', null, function(result) {
         that.locations = result.locations;
+        activateFirstLocation();
         successCallback();
       });
     };
@@ -347,7 +375,8 @@
       net.ajax('POST', 'api/locations/', {path: locationPath},
                function(newLocation) {
                  that.locations.push(newLocation);
-                 ui.refresh(newLocation);
+                 activeLocation = newLocation;
+                 ui.refresh();
                });
     };
 
@@ -355,6 +384,9 @@
       net.ajax('DELETE', location.self, null,
                function() {
                  utils.removeFromArray(location, that.locations);
+                 if (location === activeLocation) {
+                   activateFirstLocation();
+                 }
                  ui.refresh();
                },
                failureHandler);
@@ -515,36 +547,29 @@
     // DOM 'manually'.
     var view = {
       // A path to a location + controls to remove and visit a location.
-      locationPath : $('#location-list-item').clone(true),
+      locationPath : $('.location-list-item').clone(true),
       // A list of users that can access a location (contains
       // view.allowedUser elements) + input box for adding a new user.
-      locationInfo : $('#location-info-list-item').clone(true)
+      locationInfo : $('#location-info').clone(true)
         .find('.add-allowed-user').val('').end(), //Clears any stored input.
       // A single user that is allowed to access a location + control
       // to revoke access.
-      allowedUser : $('#allowed-user-list-item').clone(true),
+      allowedUser : $('.allowed-user-list-item').clone(true),
       // An input box for adding a new location.
       addLocation : $('#add-location').clone(true)
         .find('#add-location-input').val('').end(),
-      // User that is on contact list (was granted access to some
-      // location at some point) + controls to remove the user (along
-      // with access to all locations), check which locations a user
-      // can access, notify a user and grant access to currently
-      // active location.
+      // User who was granted access to some location at some point +
+      // controls to remove the user (alongwith access to all
+      // locations) and grant access to currently active location.
       user : $('.user-list-item').clone(true),
       alias : $('.alias-list-item').clone(true),
       // Box for displaying error messages.
-      errorMessage : $('.alert-error').first().clone(true)
+      errorMessage : $('.alert-danger').first().clone(true)
     },
     that = this,
     controller = null,
     loading = true,
-    ENTER_KEY = 13,
-    // These would preferably be obtained dynamically, but css floats
-    // make it hard to get elements' max-width.
-    MAX_PATH_WIDTH_PX = 275,
-    MAX_EMAIL_WIDTH_PX = MAX_PATH_WIDTH_PX - 5,
-    MAX_ALIAS_WIDTH_PX = 390;
+    ENTER_KEY = 13;
 
     /**
      * scheme://domain[:port if not default] of the current document.
@@ -604,116 +629,12 @@
       return 'add-allowed-user-input-' + utils.urn2uuid(location.id);
     }
 
-    /**
-     * Returns an active location (the one for which a list of allowed
-     * users is currently displayed) or null.
-     */
-    function findActiveLocation() {
-      var activeElement, urn;
-      activeElement = $('#location-list').find('.active');
-      if (activeElement.length === 0) {
-        return null;
-      }
-      urn = activeElement.attr('location-urn');
-      return utils.findOnly(controller.locations, function(location) {
-        return location.id === urn;
-      });
-    }
-
-    /**
-     * Displays a dialog to compose a notification about shared resources.
-     */
-    function showNotifyDialog(to, locations) {
-      var body, website, locationsString, recipent = '', bcc = '';
-      if (locations.length === 0) {
-        body = 'I have shared nothing with you. Enjoy.';
-      } else {
-        website = 'a website';
-        if (locations.length > 1) {
-          website = 'websites';
-        }
-        locationsString = $.map(locations, function(locationPath) {
-          return currentUrlRoot() + locationPath;
-        }).join('\n');
-
-        body = 'I have shared ' + website + ' with you.\n'
-          + 'Please visit:\n' + locationsString;
-      }
-      if (to.length !== 0) {
-        recipent = to[0];
-        bcc = to.slice(1).join(',');
-      }
-
-      $('#notify-modal')
-        .find('#notify-to').attr('value', to.join(', '))
-        .end()
-        .find('#notify-body').text(body)
-        .end()
-        .find('#send')
-        .attr('href', 'mailto:' + encodeURIComponent(recipent) +
-              '?subject=Invitation&bcc=' + encodeURIComponent(bcc)
-              + '&body=' + encodeURIComponent(body))
-        .end()
-        .modal('show');
-    }
-
-
-    /**
-     * Shortens a text of a child specified by the selector so it has
-     * at most maxWidthPx pixels.
-     *
-     * If the text was shortened, appends '...' to the shortened text
-     * and sets a tooltip on the parent with the original text value.
-     *
-     * Must be called on elements that are on the screen, because
-     * width of other elements is 0.
-     */
-    function trimText(parent, selector, maxWidthPx, placement) {
-      var inner = parent.find(selector), origText = inner.text(),
-      text = origText;
-      // Remove trailing characters one by one until length is acceptable.
-      while (inner.width() > maxWidthPx) {
-        text = text.slice(0, -1);
-        inner.text(text);
-      }
-      if (text !== origText) {
-        inner.text(text + '...');
-        parent.attr('title', origText).tooltip({
-          'placement': placement
-        });
-      }
-      return parent;
-    }
-
-    function trimEmailsInActiveLocation() {
-      // This can be done only when the active location is already on
-      // the screen.
-      $('#location-info-list .active')
-        .find('li')
-        .each(function() {
-          trimText($(this), '.user-mail', MAX_EMAIL_WIDTH_PX, 'left');
-        });
-    }
-
-    /**
-     * Active location is the one for which detailed information and
-     * controls are displayed.
-     */
-    function activateLocation(location) {
-      // If any location is already active, deactivate it:
-      $('#location-list').find('.active').removeClass('active');
-      $('#location-info-list').find('.active').removeClass('active');
-
-      $('#' + locationPathId(location)).addClass('active');
-      $('#' + locationInfoId(location)).addClass('active');
-    }
-
     function grantAccess(userId, location) {
       if (userId === '*') {
         controller.grantOpenAccess(location);
       } else {
         // Allow to enter multiple emails separated by ';'.
-        utils.each(userId.split(';'), function(email) {
+        utils.each(userId.split(/[;\s]+/), function(email) {
           if (email !== '') {
             controller.grantAccess(email, location);
           }
@@ -722,14 +643,14 @@
     }
 
     function inProgress(element, cssClass) {
-      element.css('visibility', 'hidden');
-      element.parent().addClass(cssClass);
+      element.closest('div').addClass('invisible');
+      element.closest('li').addClass(cssClass);
     }
 
     function failedHandler(element, cssClass) {
       return function(message, status, isTextPlain) {
-        element.parent().removeClass(cssClass);
-        element.css('visibility', 'visible');
+        element.closes('li').removeClass(cssClass);
+        element.closes('div').addClass('visibility', 'visible');
         that.handleError(message, status, isTextPlain);
       };
     }
@@ -824,13 +745,13 @@
               })
               // Protect the currently signed-in user from disallowing
               // herself access to the admin application.
-              .css('visibility',
-                   isAdminLocation && isAdminUser ? 'hidden' : 'visible')
+              .addClass(isAdminLocation && isAdminUser ? 'invisible' : null)
               .end()
               .appendTo(allowedUserList);
           });
       }
-      locationView.appendTo('#location-info-list');
+      locationView.appendTo('#location-info-container');
+
       // Break circular references.
       locationView = null;
       allowedUserList = null;
@@ -839,7 +760,11 @@
     function showLocation(location) {
       var pathView, isAdminLocation;
       isAdminLocation = controller.handledByAdmin(location.path);
+
       pathView = view.locationPath.clone(true)
+        .click(function() {
+          controller.setActiveLocation(location);
+        })
         .attr('id', locationPathId(location))
         .attr('location-urn', location.id)
         .find('.url').attr(
@@ -853,21 +778,17 @@
           // Do not propagate the event (not to show removed location info):
           return false;
         })
-      // Do not allow admin location to be removed.
-        .css('visibility', isAdminLocation ? 'hidden' : 'visible')
-        .end()
-        .find('.notify').click(function() {
-          showNotifyDialog(
-            utils.extractProperty(location.allowedUsers, 'email'),
-            [location.path]);
-        })
+         // Do not allow admin location to be removed.
+        .addClass(isAdminLocation ? 'invisible' : null)
         .end()
         .find('.view-page').click(function() {
-          window.open(location.path,'_blank');
+          window.open(location.path, '_blank');
         })
         .end()
         .appendTo('#location-list');
-      trimText(pathView, '.path', MAX_PATH_WIDTH_PX, 'right');
+      if (controller.isActiveLocation(location)) {
+        pathView.addClass('active');
+      }
       pathView = null;
       isAdminLocation = null;
     }
@@ -875,14 +796,12 @@
     /**
      * Creates a DOM subtree to handle a list of locations. The
      * subtree contains locations' paths, controls to add/remove a
-     * location and to compose notifications, a link to visit a
-     * location with a browser. For a currently active location more
-     * details are visible (created with the showLocationInfo
-     * function).
+     * location and a link to visit a location with a browser. For a
+     * currently active location more details are visible (created
+     * with the showLocationInfo function).
      */
     function showLocationsList(activeLocation) {
-      utils.each(utils.sortByProperty(controller.locations, 'path'),
-                 showLocation);
+      utils.each(controller.getSortedLocations(), showLocation);
 
       view.addLocation.clone(true)
         .find('#add-location-input')
@@ -912,13 +831,10 @@
           $(this).addClass('disabled');
         })
         .end()
-        .appendTo('#location-list');
+        .appendTo('#location-container');
 
       if (activeLocation !== null) {
         showLocationInfo(activeLocation);
-        activateLocation(activeLocation);
-        // Must be called after activateLocation().
-        trimEmailsInActiveLocation();
       }
     }
 
@@ -933,14 +849,13 @@
           controller.removeAlias(alias, removeFailedHandler($(this)));
           return false;
         })
-        .css('visibility', isCurrentUrl ? 'hidden' : 'visible')
+        .addClass(isCurrentUrl ? 'invisible' : null)
         .end()
         .find('.view-page').click(function() {
           window.open(alias.url,'_blank');
         })
         .end()
         .appendTo('#alias-list');
-      trimText(aliasView, '.url', MAX_ALIAS_WIDTH_PX, 'right');
       aliasView = null;
     }
 
@@ -982,29 +897,8 @@
         .end();
     }
 
-    /**
-     * Highlights locations a user can access.
-     */
-    function highlightAccessibleLocations(user) {
-      utils.each(controller.locations, function(location) {
-        var id = '#' + locationPathId(location);
-        if (controller.canAccess(user, location)) {
-          $(id + ' .can-access').removeClass('invisible');
-        } else {
-          $(id + ' .can-access').addClass('visible');
-        }
-      });
-    }
-
-    /**
-     * Turns off location highlighting.
-     */
-    function highlighLocationsOff() {
-      $('#location-list .can-access').addClass('invisible');
-    }
-
     function showUser(user, activeLocation) {
-      var userView = view.user.clone(true), isAdminUser;
+      const userView = view.user.clone(true);
 
       if (activeLocation !== null &&
           !controller.canAccess(user, activeLocation)) {
@@ -1017,11 +911,8 @@
           });
       }
 
-      isAdminUser = (user.email === controller.adminUserEmail);
+      const isAdminUser = (user.email === controller.adminUserEmail);
       userView
-        .hover(function() {
-          highlightAccessibleLocations(user);
-        }, highlighLocationsOff)
         .find('.user-mail')
         .text(user.email + userAnnotation(user))
         .end()
@@ -1032,29 +923,17 @@
       // Do not allow currently signed-in user to delete herself
       // (this is only UI enforced, from a server perspective such
       // operation is OK).
-        .css('visibility', isAdminUser ? 'hidden' : 'visible')
-        .end()
-        .find('.notify').click(function() {
-          showNotifyDialog(
-            [user.email],
-            utils.extractProperty(
-              controller.accessibleLocations(user), 'path')
-          );
-        })
+        .addClass(isAdminUser ? 'invisible' : null)
         .end()
         .appendTo('#user-list');
-      trimText(userView, '.user-mail', MAX_EMAIL_WIDTH_PX, 'right');
-      userView = null;
     }
 
     /**
      * Creates a DOM subtree to handle a list of known users. The
      * subtree contains an email of each user and controls to remove a
-     * user, highlight which locations a user can access, notify a
-     * user about shared locations. It also contains a control to
-     * grant a user access to a currently active location (this
-     * control is visible only if the user can not already access the
-     * location).
+     * user and to grant a user access to a currently active location
+     * (this control is visible only if the user can not already
+     * access the location).
      */
     function showUsersList(activeLocation) {
       utils.each(utils.sortByProperty(controller.users, 'email'),
@@ -1068,11 +947,21 @@
      * changed, otherwise disables the button.
      */
     function toggleSaveButton() {
-      if ($('#custom-login i:not(.invisible)').length === 0 &&
-          $('#branding').prop('checked') === controller.skin.branding) {
-        $('#custom-login-save').addClass('disabled');
-      } else {
+      let saveNeeded = false;
+      for (let formId of ['title', 'header', 'message']) {
+        if ($('#' + formId).val() !== controller.skin[formId]) {
+          saveNeeded = true;
+          break;
+        }
+      }
+      if (!saveNeeded) {
+        saveNeeded = (
+          $('#branding').prop('checked') !== controller.skin.branding);
+      }
+      if (saveNeeded) {
         $('#custom-login-save').removeClass('disabled');
+      } else {
+        $('#custom-login-save').addClass('disabled');
       }
     }
 
@@ -1080,31 +969,15 @@
      * Configures controls to customize the wwwhisper login page.
      */
     function showCustomizeLogin() {
-      var inputChangedHandler = function() {
-        var revert = $(this).siblings('.revert');
-        // Shows a revert icon beside all changed inputs.
-        if ($(this).val() !== controller.skin[$(this).attr('id')]) {
-          revert.removeClass('invisible');
-        } else {
-          revert.addClass('invisible');
-        }
-        toggleSaveButton();
-      };
       $('#custom-login input:text').each(function() {
         var field = $(this).attr('id');
         $(this).val(controller.skin[field]);
-        $(this).siblings('.revert').click(function() {
-          $(this).siblings('input').val(controller.skin[field]);
-          $(this).addClass('invisible');
-          toggleSaveButton();
-        }).addClass('invisible');
-        $(this).change(inputChangedHandler);
+        $(this).change(toggleSaveButton);
         // Redundant, but for input fields change() is not fired until
         // focus is changed, and keyup() is not fired when the input is
         // changes with a mouse (for example on copy-paste).
-        $(this).keyup(inputChangedHandler);
+        $(this).keyup(toggleSaveButton);
       });
-      // Branding checkbox does not have the revert icon.
       $('#branding').prop('checked', controller.skin.branding)
         .change(toggleSaveButton);
       toggleSaveButton();
@@ -1138,10 +1011,14 @@
     /**
      * Changes the main content that is displayed on the screen
      * (access control UI or site settings etc.).
+     *
+     * Highlights the relevant link in the top navigation bar.
      */
     function showContainer(containerClass) {
-      $('.container.content').addClass('hide');
-      $('.container.content.' + containerClass).removeClass('hide');
+      $('.container-xxl.content').addClass('hide');
+      $('.container-xxl.content.' + containerClass).removeClass('hide');
+      $('.navbar-nav > a').removeClass('active');
+      $('.navbar-nav > a.' + containerClass).addClass('active');
     }
 
     function showContainerPointedByHash() {
@@ -1178,8 +1055,11 @@
      */
     this.handleError = function(message, status, isTextPlain) {
       // Scroll to make sure error is visible.
-      $(document).scrollTop(0);
-      $(document).scrollLeft(0);
+      window.scroll({
+        top: 0,
+        left: 0,
+        behavior: 'smooth',
+      });
 
       if (status === undefined || status === 401 || isTextPlain) {
         var error = view.errorMessage.clone(true);
@@ -1211,31 +1091,23 @@
      * becomes activated, otherwise currently active location stays
      * active or if none, the first location in alphabetical order.
      */
-    this.refresh = function(locationToActivate) {
-      var focusedElementId, activeLocation = locationToActivate,
+    this.refresh = function() {
+      var focusedElementId, activeLocation = controller.getActiveLocation(),
       scrollTop = $(document).scrollTop(),
       scrollLeft = $(document).scrollLeft();
 
       loading = false;
 
-      if (locationToActivate === undefined) {
-        // DOM subtrees representing a currently focused input box and
-        // an active location will be removed, corresponding elements in
-        // a new DOM structure need to be focused and activated.
-        activeLocation = findActiveLocation();
-      }
-      // Active location was probably just removed, activate the first
-      // location on the list.
-      if (activeLocation === null && controller.locations.length > 0) {
-        activeLocation = utils.sortByProperty(controller.locations, 'path')[0];
-      }
+      showContainerPointedByHash();
 
       focusedElementId = focusedElement().attr('id');
 
       $('#alias-list').empty();
       $('#location-list').empty();
-      $('#location-info-list').empty();
+      $('#add-location').remove();
+      $('#location-info-container').empty();
       $('#user-list').empty();
+      $('.active-location').text(activeLocation.path);
 
       showAliasesList(activeLocation);
       showLocationsList(activeLocation);
@@ -1245,10 +1117,13 @@
       if (focusedElementId) {
         $('#' + focusedElementId).focus();
       }
+
       // Rewind a document to where it was.
-      $(document).scrollTop(scrollTop);
-      $(document).scrollLeft(scrollLeft);
-      showContainerPointedByHash();
+      window.scroll({
+        top: scrollTop,
+        left: scrollLeft,
+        behavior: 'instant',
+      });
     };
 
     /**
@@ -1264,19 +1139,8 @@
     function initialize() {
       // locationInfo contains a single allowed user element from the
       // html document. Remove it.
-      view.locationInfo.find('#allowed-user-list-item').remove();
+      view.locationInfo.find('.allowed-user-list-item').remove();
 
-      // Refreshes the UI when new location is activated (to update
-      // the user list, so only users that can not access the location
-      // have active 'share' icon).
-      view.locationPath.find('a').click(function(e) {
-        e.preventDefault();
-        $(this).tab('show');
-        that.refresh();
-      });
-
-      // TODO: this is only needed if alert is to be removed programmatically.
-      $(".alert").alert();
 
       // Configure static help messages.
       $('.help').click(function() {
