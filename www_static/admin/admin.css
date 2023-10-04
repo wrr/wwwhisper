@@ -3,6 +3,9 @@ body {
 }
 
 .error-box {
+}
+
+.nav-content {
   margin-top: 1em;
 }
 
@@ -129,8 +132,11 @@ h3 {
 }
 
 .help {
-  margin-top: 1.5em;
-  float: right;
+  margin-top: 1.5rem;
+}
+
+.footer {
+  margin-top: 4rem;
 }
 
 .long-text-container {
