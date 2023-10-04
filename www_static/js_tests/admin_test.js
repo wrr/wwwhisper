@@ -5,17 +5,16 @@
 (function() {
   'use strict';
 
-  var mock_net, mock_ui, controller;
+  let mock_net, mock_ui, controller;
 
   function MockNet() {
-    var expectedCalls = [];
+    const expectedCalls = [];
 
     this.ajax = function(method, resource, params, successCallback) {
-      var expectedCall;
       if (expectedCalls.length === 0) {
         ok(false, 'Unexpected ajax call ' + method + ' ' + resource);
       } else {
-        expectedCall = expectedCalls.shift();
+        const expectedCall = expectedCalls.shift();
         deepEqual(method, expectedCall.method, 'HTTP method' );
         deepEqual(resource, expectedCall.resource, 'HTTP resource');
         deepEqual(params, expectedCall.params, 'HTTP method params');
@@ -41,7 +40,7 @@
   }
 
   function MockUI(controller) {
-    var that = this;
+    const that = this;
     this.lastError = null;
 
     this.refresh = function() {};
@@ -66,7 +65,7 @@
   });
 
   test('each', function() {
-    var sum = 0;
+    let sum = 0;
     utils.each([1, 1, 2, 3, 5], function(x) {
       sum += x;
     });
@@ -107,7 +106,7 @@
   });
 
   test('removeFromArray', function() {
-    var array = ['aa', 'bb', 'cc'];
+    const array = ['aa', 'bb', 'cc'];
     utils.removeFromArray('bb', array);
     deepEqual(array, ['aa', 'cc']);
     utils.removeFromArray('cc', array);
@@ -127,7 +126,7 @@
   });
 
   test('sort', function() {
-    var array = ['b', 'aa', 'a', 'z'];
+    const array = ['b', 'aa', 'a', 'z'];
     deepEqual(utils.sort(array), ['a', 'aa', 'b', 'z']);
     // Sort should not modify the input array.
     deepEqual(array, ['b', 'aa', 'a', 'z']);
@@ -135,23 +134,23 @@
   });
 
   test('sortByProperty', function() {
-    var array = [{f1: 'a', f2: 'b'},
-                 {f1: 'b', f2: 'aa'},
-                 {f1: 'c', f2: 'a'},
-                 {f1: 'd', f2: 'z'}];
+    const array = [{f1: 'a', f2: 'b'},
+                   {f1: 'b', f2: 'aa'},
+                   {f1: 'c', f2: 'a'},
+                   {f1: 'd', f2: 'z'}];
     deepEqual(utils.sortByProperty(array, 'f2'),
-             [{f1: 'c', f2: 'a'},
-              {f1: 'b', f2: 'aa'},
-              {f1: 'a', f2: 'b'},
-              {f1: 'd', f2: 'z'}]);
+              [{f1: 'c', f2: 'a'},
+               {f1: 'b', f2: 'aa'},
+               {f1: 'a', f2: 'b'},
+               {f1: 'd', f2: 'z'}]);
     deepEqual(utils.sortByProperty(array, 'f1'), array);
   });
 
   test('extractProperty', function() {
-    var array = [{f1: 'a', f2: 'b'},
-                 {f1: 'b', f2: 'aa'},
-                 {f1: 'c', f2: 'a'},
-                 {f1: 'd', f2: 'z'}];
+    const array = [{f1: 'a', f2: 'b'},
+                   {f1: 'b', f2: 'aa'},
+                   {f1: 'c', f2: 'a'},
+                   {f1: 'd', f2: 'z'}];
     deepEqual(utils.extractProperty(array, 'f2'),
               ['b', 'aa', 'a', 'z']);
   });
@@ -224,16 +223,15 @@
   });
 
   test('removeAllowedUser', function() {
-    var location, userA, userB;
-    userA = {
+    const userA = {
       email: 'foo@example.com',
       id: 'userA'
     };
-    userB = {
+    const userB = {
       email: 'bar@example.com',
       id: 'userB'
     };
-    location = {
+    const location = {
       id: '12',
       path: '/foo',
       allowedUsers: [
@@ -249,12 +247,11 @@
   });
 
   test('findUserWithEmail', function() {
-    var userA, userB;
-    userA = {
+    const userA = {
       email: 'foo@example.com',
       id: 'userA'
     };
-    userB = {
+    const userB = {
       email: 'bar@example.com',
       id: 'userB'
     };
@@ -265,12 +262,11 @@
   });
 
   test('findLocationWithId', function() {
-    var locationA, locationB;
-    locationA = {
+    const locationA = {
       path: '/foo',
       id: 'locationA'
     };
-    locationB = {
+    const locationB = {
       path: '/foo/bar',
       id: 'locationB'
     };
@@ -281,22 +277,21 @@
   });
 
   test('accessibleLocations', function() {
-    var locationA, locationB, userA, userB, userC;
-    userA = {
+    const userA = {
       email: 'foo@example.com',
       id: 'userA'
     };
-    userB = {
+    const userB = {
       email: 'bar@example.com',
       id: 'userB'
     };
-    userC = {
+    const userC = {
       email: 'baz@example.com',
       id: 'userC'
     };
     controller.users = [userA, userB, userC];
 
-    locationA = {
+    const locationA = {
       id: '12',
       path: '/foo',
       allowedUsers: [
@@ -304,7 +299,7 @@
         userB
       ]
     };
-    locationB = {
+    const locationB = {
       id: '13',
       path: '/foo/bar',
       allowedUsers: [
@@ -319,7 +314,7 @@
   });
 
   test('asyncExecuteAll', function() {
-    var cnt = 0, success = false;
+    let cnt = 0, success = false;
     function taskA(onSuccess) {
       cnt += 1;
       onSuccess();
@@ -341,7 +336,7 @@
   });
 
   test('asyncExecuteAllTaskFailure', function() {
-    var cnt = 0, success = false;
+    let cnt = 0, success = false;
     function taskA(onSuccess) {
       cnt += 1;
       // This task fails (onSuccess is not invoked).
@@ -366,8 +361,7 @@
   module('Controller Ajax calls');
 
   test('getLocations', function() {
-    var ajaxCallResult, callbackCalled;
-    ajaxCallResult = {
+    const ajaxCallResult = {
       locations: [
         {
           path: '/foo',
@@ -380,12 +374,12 @@
       ]
     };
     mock_net.expectAjaxCall('GET', 'api/locations/', null, ajaxCallResult);
-    callbackCalled = false;
+    let callbackCalled = false;
     controller.getLocations(function() {
       callbackCalled = true;
     });
     deepEqual(controller.locations, ajaxCallResult.locations);
-    var sortedLocations = controller.getSortedLocations();
+    const sortedLocations = controller.getSortedLocations();
     // Locations sorted by path so '/bar' should be first.
     deepEqual(sortedLocations[0], ajaxCallResult.locations[1]);
     deepEqual(sortedLocations[1], ajaxCallResult.locations[0]);
@@ -400,7 +394,7 @@
 
   test('addLocation', function() {
     deepEqual(controller.locations, []);
-    var newLocation = {id: '13', path: '/foo', allowedUsers: []};
+    const newLocation = {id: '13', path: '/foo', allowedUsers: []};
     mock_net.expectAjaxCall('POST', 'api/locations/', {path: '/foo'},
                              newLocation);
     controller.addLocation('/foo');
@@ -470,7 +464,7 @@
       }
     ]);
     // Active location should be changed to the first location in
-    // alphabetical order ('/bar').
+    // the alphabetical order ('/bar').
     ok(!controller.isActiveLocation(activeLocation));
     activeLocation = controller.getActiveLocation()
     deepEqual(activeLocation, controller.locations[1]);
@@ -499,8 +493,7 @@
   });
 
   test('getUsers', function() {
-    var ajaxCallResult, callbackCalled;
-    ajaxCallResult = {
+    const ajaxCallResult = {
       users: [
         {
           email: 'foo@example.com',
@@ -512,7 +505,7 @@
         }
       ]
     };
-    callbackCalled = false;
+    let callbackCalled = false;
     mock_net.expectAjaxCall('GET', 'api/users/', null, ajaxCallResult);
     controller.getUsers(function() {
       callbackCalled = true;
@@ -523,10 +516,9 @@
   });
 
   test('addUser', function() {
-    var nextCallbackInvoked, newUser;
     deepEqual(controller.users, []);
-    nextCallbackInvoked = false;
-    newUser = {id: '13', email: 'foo@example.com'};
+    let nextCallbackInvoked = false;
+    const newUser = {id: '13', email: 'foo@example.com'};
     mock_net.expectAjaxCall('POST', 'api/users/', {email: 'foo@example.com'},
                              newUser);
     controller.addUser('foo@example.com',
@@ -552,13 +544,12 @@
   });
 
   test('removeUser removes from location.allowedUsers list.', function() {
-    var location, user;
-    user = {
+    const user = {
       id: '13',
       email: 'foo@example.com',
       self: 'example.com/users/13/'
     };
-    location = {
+    const location = {
       id: '17',
       path: '/bar',
       self: 'example.com/locations/13/',
@@ -577,13 +568,12 @@
   });
 
   test('grantAccess when user exists', function() {
-    var location, user;
-    user = {
+    const user = {
       id: '17',
       email: 'foo@example.com',
       self: 'example.com/users/17/'
     };
-    location = {
+    const location = {
       id: '13',
       path: '/bar',
       self: 'example.com/locations/13/',
@@ -603,13 +593,12 @@
   });
 
   test('grantAccess when user does not exist', function() {
-    var location, user;
-    user = {
+    const user = {
       id: '17',
       email: 'foo@example.com',
       self: 'example.com/users/17/'
     };
-    location = {
+    const location = {
       id: '13',
       path: '/bar',
       self: 'example.com/locations/13/',
@@ -632,13 +621,12 @@
   });
 
   test('grantAccess when user already can access location', function() {
-    var location, user;
-    user = {
+    const user = {
       id: '17',
       email: 'foo@example.com',
       self: 'example.com/users/17/'
     };
-    location = {
+    const location = {
       id: '13',
       path: '/bar',
       self: 'example.com/locations/13/',
@@ -655,13 +643,12 @@
   });
 
   test('revokeAccess', function() {
-    var location, user;
-    user = {
+    const user = {
       id: '17',
       email: 'foo@example.com',
       self: 'example.com/users/17/'
     };
-    location = {
+    const location = {
       id: '13',
       path: '/bar',
       self: 'example.com/locations/13/',
@@ -682,8 +669,7 @@
   });
 
   test('grantOpenAccess.', function() {
-    var location, params;
-    location = {
+    const location = {
       id: '13',
       path: '/bar',
       self: 'example.com/locations/13/',
@@ -699,13 +685,12 @@
   });
 
   test('canAccess for open location.', function() {
-    var location, params, user;
-    user = {
+    const user = {
       id: '17',
       email: 'foo@example.com',
       self: 'example.com/users/17/'
     };
-    location = {
+    const location = {
       id: '13',
       path: '/bar',
       self: 'example.com/locations/13/',
@@ -724,8 +709,7 @@
   });
 
   test('revokeOpenAccess.', function() {
-    var location;
-    location = {
+    const location = {
       id: '13',
       openAccess: {
         requireLogin: false
@@ -744,11 +728,10 @@
   });
 
   test('getAdminUser', function() {
-    var ajaxCallResult, callbackCalled;
-    ajaxCallResult = {
+    const ajaxCallResult = {
       email: 'foo@example.com'
     };
-    callbackCalled = false;
+    let callbackCalled = false;
     ok(controller.adminUserEmail === null);
     mock_net.expectAjaxCall(
       'GET', '/wwwhisper/auth/api/whoami/', null, ajaxCallResult);
@@ -761,8 +744,7 @@
   });
 
   test('getAliases', function() {
-    var ajaxCallResult, callbackCalled;
-    ajaxCallResult = {
+    const ajaxCallResult = {
       aliases: [
         {
           url: 'https://example.org',
@@ -774,7 +756,7 @@
         }
       ]
     };
-    callbackCalled = false;
+    let callbackCalled = false;
     mock_net.expectAjaxCall('GET', 'api/aliases/', null, ajaxCallResult);
     controller.getAliases(function() {
       callbackCalled = true;
@@ -786,7 +768,7 @@
 
   test('addAlias', function() {
     deepEqual(controller.aliases, []);
-    var newAlias = {id: '13', url: 'https://example.org'};
+    const newAlias = {id: '13', url: 'https://example.org'};
     mock_net.expectAjaxCall(
       'POST', 'api/aliases/', {url: 'https://example.org'}, newAlias);
     controller.addAlias('https://example.org');
@@ -807,14 +789,13 @@
   });
 
   test('getSkin', function() {
-    var ajaxCallResult, callbackCalled;
-    ajaxCallResult = {
+    const ajaxCallResult = {
       'title': 'Foo',
       'header': 'Bar',
       'message': 'Baz',
       'branding': false
     };
-    callbackCalled = false;
+    let callbackCalled = false;
     mock_net.expectAjaxCall('GET', 'api/skin/', null, ajaxCallResult);
     controller.getSkin(function() {
       callbackCalled = true;
@@ -825,7 +806,7 @@
   });
 
   test('updateSkin', function() {
-    var newSkin = {
+    const newSkin = {
       'title': 'Foo',
       'header': 'Bar',
       'message': 'Baz',
