@@ -62,34 +62,58 @@ https://github.com/jquery/jquery/
     <div class="container-xxl nav-content acl hide">
       <div class="error-box"></div>
       <h3>Locations</h3>
-      <div class="row gx-0" id="acl-row">
-        <div class="col-md-6" id="location-container">
-          <div class="help-message-container">
-            <div class="help-message fade-in hide">
-              <p>
-                Paths to which access can be granted.
-              </p>
+      <div class="help-message fade-in hide">
+        <div class="row">
+          <div class="col-md-6">
+            <p>
+              Paths to which access can be granted.
+            </p>
 
-              <p>
-                Granting access to a path also grants access to all
-                sub-paths, unless a more specific access control rule is
-                defined. A more specific rule takes precedence over a more
-                generic one.
-              </p>
-              <div class="row">
-                <div class="col-12 help-action">
-                  <img src="/wwwhisper/auth/assets/icons/box-arrow-up-right.svg"
-                       alt="Non-clickable visit a location icon.">
-                  Visit a location in a separate tab.
-                </div>
-                <div class="col-12 help-action">
-                  <img src="/wwwhisper/auth/assets/icons/x-lg.svg"
-                       alt="Non-clickable remove a location icon">
-                  Remove a location.
-                </div>
-              </div> <!-- ./row -->
-            </div> <!-- /.help-message -->
-          </div> <!-- ./help-message-container -->
+            <p>
+              Granting access to a path also grants access to all
+              sub-paths, unless a more specific access control rule is
+              defined. A more specific rule takes precedence over a more
+              generic one.
+            </p>
+            <div class="row">
+              <div class="col-12 help-action">
+                <img src="/wwwhisper/auth/assets/icons/box-arrow-up-right.svg"
+                     alt="Non-clickable visit a location icon.">
+                Visit a location in a separate tab.
+              </div>
+              <div class="col-12 help-action">
+                <img src="/wwwhisper/auth/assets/icons/x-lg.svg"
+                     alt="Non-clickable remove a location icon">
+                Remove a location.
+              </div>
+            </div> <!-- ./row -->
+          </div> <!-- ./col -->
+          <div class="col-md-6 d-none d-md-block" id="help-allowed-users">
+            <p>
+              Email addresses of users who can access the currently selected
+              location.
+            </p>
+            <p>
+              You can enter multiple email addresses at once,
+              separated with spaces.
+            </p>
+            <p>
+              Enter <i>*</i> to allow access to everyone without requiring login.
+            </p>
+            <div class="row">
+              <div class="col-12 help-action">
+                <img src="/wwwhisper/auth/assets/icons/x-lg.svg"
+                     alt="Non-clickable remove a user icon">
+                Revoke a user's access to the currently selected location.
+              </div>
+            </div> <!-- ./row -->
+          </div> <!-- ./col -->
+        </div> <!-- ./row -->
+      </div> <!-- ./help-message -->
+
+      <div class="row gx-0" id="acl-row">
+
+        <div class="col-md-6" id="location-container">
 
           <ul class="list-unstyled" id="location-list">
             <li class="location-list-item">
@@ -128,28 +152,10 @@ https://github.com/jquery/jquery/
           <h5 class="d-md-none" id="active-location-info">
             Allowed to access <i><span class="active-location"></span></i>
           </h5>
-          <div class="help-message-container">
-            <div class="help-message fade-in hide">
-              <p>
-                Email addresses of users who can access the currently selected
-                location.
-              </p>
-              <p>
-                You can enter multiple email addresses at once,
-                separated with spaces.
-              </p>
-              <p>
-                Enter <i>*</i> to allow access to everyone without requiring login.
-              </p>
-              <div class="row">
-                <div class="col-12 help-action">
-                  <img src="/wwwhisper/auth/assets/icons/x-lg.svg"
-                       alt="Non-clickable remove a user icon">
-                  Remove a user.
-                </div>
-              </div> <!-- ./row -->
+            <div class="help-message fade-in hide d-md-none"
+                 id="help-allowed-users-copy">
             </div> <!-- /.help-message -->
-          </div> <!-- ./help-message-container -->
+
           <div id="location-info-container">
             <div class="active" id="location-info">
               <ul class="allowed-user-list list-unstyled">
@@ -184,23 +190,21 @@ https://github.com/jquery/jquery/
 
 
       <h3>Users</h3>  
-      <div class="help-message-container">
-        <div class="help-message fade-in hide">
-          <div class="row">
-            <div class="col-12 help-action">
-              <img src="/wwwhisper/auth/assets/icons/arrow-up.svg"
-                   alt="Non-clickable grant access icon.">
-              Grant a user access to
-              the currently active location.
-            </div>
-            <div class="col-12 help-action">
-              <img src="/wwwhisper/auth/assets/icons/x-lg.svg"
-                   alt="Non-clickable remove a user icon.">
-              Remove a user and revoke access to all locations.
-            </div>
-          </div> <!-- ./row -->
-        </div>  <!-- /.help-message -->
-      </div> <!-- ./help-message-container -->
+      <div class="help-message fade-in hide">
+        <div class="row">
+          <div class="col-12 help-action">
+            <img src="/wwwhisper/auth/assets/icons/arrow-up.svg"
+                 alt="Non-clickable grant access icon.">
+            Grant a user access to
+            the currently selected location.
+          </div>
+          <div class="col-12 help-action">
+            <img src="/wwwhisper/auth/assets/icons/x-lg.svg"
+                 alt="Non-clickable remove a user icon.">
+            Remove a user and revoke access to all locations.
+          </div>
+        </div> <!-- ./row -->
+      </div>  <!-- /.help-message -->
 
       <div class="row">
         <div class="col-md-6">
@@ -213,7 +217,7 @@ https://github.com/jquery/jquery/
                 <div class="col-4 col-sm-3 text-end">
                   <button type="button" class="btn menu-item share invisible">
                     <img src="/wwwhisper/auth/assets/icons/arrow-up.svg"
-                         alt="Grant the user access the currently active location.">
+                         alt="Grant the user access the currently selected location.">
                   </button><!-- Kill white space
                   --><button type="button" class="btn menu-item remove-user">
                     <img src="/wwwhisper/auth/assets/icons/x-lg.svg"
@@ -240,16 +244,14 @@ https://github.com/jquery/jquery/
       <div class="error-box"></div>
 
       <h3>Login page</h3>
-      <div class="help-message-container">
-        <div class="help-message fade-in hide">
-          <p>
-            Customize the log in page.
-          <p>
-            Set a field to an empty string to revert it to its
-            default value. HTML tags are not interpreted.
-          </p>
-        </div> <!-- /.help-message -->
-      </div> <!-- ./help-message-container -->
+      <div class="help-message fade-in hide">
+        <p>
+          Customize the log in page.
+        <p>
+          Set a field to an empty string to revert it to its
+          default value. HTML tags are not interpreted.
+        </p>
+      </div> <!-- /.help-message -->
 
       <div class="card">
         <div class="card-body">
@@ -288,38 +290,36 @@ https://github.com/jquery/jquery/
       </div> <!-- ./card -->
 
       <h3>Site addresses</h3>
-      <div class="help-message-container">
-        <div class="help-message fade-in hide">
-          <p>
-            A list of addresses (protocol://domain[:optional port]) of
-            the protected site. Requests from addresses that are not on
-            the list are rejected.
-          </p>
-          <p>
-            If https://example.org is on the list and http://example.org
-            is not, requests to http://example.org will be automatically
-            redirected to https://example.org.
-          </p>
-          <p>
-            It is safe to add
-            http://localhost[:port] to communicate with wwwhisper from a
-            local machine.
-          </p>
+      <div class="help-message fade-in hide">
+        <p>
+          A list of addresses (protocol://domain[:optional port]) of
+          the protected site. Requests from addresses that are not on
+          the list are rejected.
+        </p>
+        <p>
+          If https://example.org is on the list and http://example.org
+          is not, requests to http://example.org will be automatically
+          redirected to https://example.org.
+        </p>
+        <p>
+          It is safe to add
+          http://localhost[:port] to communicate with wwwhisper from a
+          local machine.
+        </p>
 
-          <div class="row">
-            <div class="col-12 help-action">
-              <img src="/wwwhisper/auth/assets/icons/box-arrow-up-right.svg"
-                   alt="Non-clickable open an address icon.">
-              Open an address in a separate tab.
-            </div>
-            <div class="col-12 help-action">
-              <img src="/wwwhisper/auth/assets/icons/x-lg.svg"
-                   alt="Non-clickable remove an address icon.">
-              Remove an address.
-            </div>
-          </div> <!-- ./row -->
-        </div> <!-- /.help-message -->
-      </div> <!-- ./help-message-container -->
+        <div class="row">
+          <div class="col-12 help-action">
+            <img src="/wwwhisper/auth/assets/icons/box-arrow-up-right.svg"
+                 alt="Non-clickable open an address icon.">
+            Open an address in a separate tab.
+          </div>
+          <div class="col-12 help-action">
+            <img src="/wwwhisper/auth/assets/icons/x-lg.svg"
+                 alt="Non-clickable remove an address icon.">
+            Remove an address.
+          </div>
+        </div> <!-- ./row -->
+      </div> <!-- /.help-message -->
 
       <div class="row">
         <div class="col-lg-6">
@@ -373,7 +373,7 @@ https://github.com/jquery/jquery/
     </div> <!-- /.container settings -->
 
     <div class="container-xxl nav-content about hide">
-      <h3>Auth made easy</h3>
+      <h2>Auth made easy</h2>
       <p class="lead">
         Powered by
         <strong>

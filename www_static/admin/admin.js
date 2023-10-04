@@ -1142,6 +1142,10 @@
       view.locationInfo.find('.allowed-user-list-item').remove();
 
 
+      $('#help-allowed-users-copy').append(
+        $('#help-allowed-users').children().clone()
+      );
+
       // Configure static help messages.
       $('.help').click(function() {
         if ($('.help-message').hasClass('hide')) {

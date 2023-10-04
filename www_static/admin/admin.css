@@ -9,7 +9,7 @@ body {
   margin-top: 1em;
 }
 
-h3 {
+h2, h3 {
   margin-bottom: 0.5em;
   margin-top: 1em;
 }
@@ -94,8 +94,10 @@ h3 {
   }
 }
 
-#acl-row {
-  background-color: var(--bs-tertiary-bg);
+@media (min-width: 768px) {
+  #acl-row {
+    background-color: var(--bs-tertiary-bg);
+  }
 }
 
 #location-container {
@@ -149,16 +151,13 @@ h3 {
   white-space: pre;
 }
 
-.help-message-container {
-  background-color: var(--bs-body-bg);
-  padding-bottom: 0.75em;
-}
-
 .help-message {
+  box-sizing: border-box;
   /*color: var(--bs-success-text-emphasis);*/
-  border-left: 4px solid var(--bs-success-border-subtle);
-  padding: 0.5em;
-  padding-left: 1em;
+  border-left: 0.25rem solid var(--bs-success-border-subtle);
+  padding: 1.25rem;
+  margin-top: 1.25rem;
+  margin-bottom: 1.25rem;
   /*background-color: var(--bs-body-bg);*/
   /*background-color: #e1f5ec;
   background-color: #edf5ed;*/
