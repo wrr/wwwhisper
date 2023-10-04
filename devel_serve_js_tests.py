@@ -12,5 +12,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 # http://localhost:8000/js_tests/index.html
 
 with socketserver.TCPServer(('127.0.0.1', PORT), Handler) as httpd:
-    print(f'Serving static files at port {PORT}')
-    httpd.serve_forever()
+    try:
+        print(f'Serving static files at port {PORT}')
+        httpd.serve_forever()
+    except Exception:
+        httpd.shutdown()
