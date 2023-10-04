@@ -17,7 +17,6 @@ Ruby and Node.js applications on Heroku.
   permissions. Access to the admin is protected by wwwhisper, this
   allows to easily add and remove admin users.
 
-[![Build Status](https://travis-ci.org/wrr/wwwhisper.png?branch=master)](https://travis-ci.org/wrr/wwwhisper)
 
 Quick tour
 -----------
