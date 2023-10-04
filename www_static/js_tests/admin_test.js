@@ -385,6 +385,15 @@
       callbackCalled = true;
     });
     deepEqual(controller.locations, ajaxCallResult.locations);
+    var sortedLocations = controller.getSortedLocations();
+    // Locations sorted by path so '/bar' should be first.
+    deepEqual(sortedLocations[0], ajaxCallResult.locations[1]);
+    deepEqual(sortedLocations[1], ajaxCallResult.locations[0]);
+
+    // The first location in alphabetical order should become active.
+    deepEqual(sortedLocations[0], controller.getActiveLocation());
+    ok(controller.isActiveLocation(sortedLocations[0]));
+
     ok(callbackCalled);
     mock_net.verify();
   });
@@ -396,6 +405,8 @@
                              newLocation);
     controller.addLocation('/foo');
     deepEqual(controller.locations, [newLocation]);
+    // Added location should become active.
+    ok(controller.isActiveLocation(newLocation));
     mock_net.verify();
   });
 
@@ -418,16 +429,72 @@
   });
 
   test('removeLocation', function() {
-    controller.locations = [{
-      id: '13',
-      path: '/foo',
-      self: 'example.com/locations/13/',
-      allowedUsers: []
-    }];
+    controller.locations = [
+      {
+        id: '13',
+        path: '/foo',
+        self: 'example.com/locations/13/',
+        allowedUsers: []
+      },
+      {
+        id: '14',
+        path: '/bar',
+        self: 'example.com/locations/14/',
+        allowedUsers: []
+      },
+      {
+        id: '15',
+        path: '/bar',
+        self: 'example.com/locations/15/',
+        allowedUsers: []
+      }
+    ];
+    let activeLocation = controller.locations[1];
+    controller.setActiveLocation(activeLocation);
+
+    mock_net.expectAjaxCall(
+      'DELETE', activeLocation.self, null, null);
+    controller.removeLocation(activeLocation);
+    deepEqual(controller.locations, [
+      {
+        id: '13',
+        path: '/foo',
+        self: 'example.com/locations/13/',
+        allowedUsers: []
+      },
+      {
+        id: '15',
+        path: '/bar',
+        self: 'example.com/locations/15/',
+        allowedUsers: []
+      }
+    ]);
+    // Active location should be changed to the first location in
+    // alphabetical order ('/bar').
+    ok(!controller.isActiveLocation(activeLocation));
+    activeLocation = controller.getActiveLocation()
+    deepEqual(activeLocation, controller.locations[1]);
+
+    mock_net.expectAjaxCall(
+      'DELETE', controller.locations[0].self, null, null);
+    controller.removeLocation(controller.locations[0]);
+    deepEqual(controller.locations, [
+      {
+        id: '15',
+        path: '/bar',
+        self: 'example.com/locations/15/',
+        allowedUsers: []
+      }
+    ]);
+    // Active location should not change
+    deepEqual(controller.getActiveLocation(), activeLocation);
+
     mock_net.expectAjaxCall(
       'DELETE', controller.locations[0].self, null, null);
     controller.removeLocation(controller.locations[0]);
     deepEqual(controller.locations, []);
+    // No remaining locations, so no location should be active.
+    ok(controller.getActiveLocation() === null);
     mock_net.verify();
   });
 
