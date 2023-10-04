@@ -1015,8 +1015,8 @@
      * Highlights the relevant link in the top navigation bar.
      */
     function showContainer(containerClass) {
-      $('.container-xxl.content').addClass('hide');
-      $('.container-xxl.content.' + containerClass).removeClass('hide');
+      $('.nav-content').addClass('hide');
+      $('.nav-content.' + containerClass).removeClass('hide');
       $('.navbar-nav > a').removeClass('active');
       $('.navbar-nav > a.' + containerClass).addClass('active');
     }
