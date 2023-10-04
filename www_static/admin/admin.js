@@ -1149,7 +1149,7 @@
           $('.help').text('Hide help');
         } else {
           $('.help-message').addClass('hide');
-          $('.help').text('Show help');
+          $('.help').text('Help');
         }
       });
       if (window.onhashchange !== undefined) {
