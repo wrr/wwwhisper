@@ -45,7 +45,7 @@ https://github.com/jquery/jquery/
       </div>
     </nav>
 
-    <div class="alert alert-danger alert-dismissible hide"
+    <div class="alert alert-danger alert-dismissible hide fade show"
          role="alert">
       <div class="alert-message">
       </div>
@@ -62,7 +62,7 @@ https://github.com/jquery/jquery/
     <div class="container-xxl nav-content acl hide">
       <div class="error-box"></div>
       <h3>Locations</h3>
-      <div class="help-message fade-in hide">
+      <div class="help-message hide">
         <div class="row">
           <div class="col-md-6">
             <p>
@@ -149,10 +149,10 @@ https://github.com/jquery/jquery/
         </div> <!-- ./#location-container -->
 
         <div class="col-md-6">
-          <h5 class="d-md-none" id="active-location-info">
-            Allowed to access <i><span class="active-location"></span></i>
-          </h5>
-            <div class="help-message fade-in hide d-md-none"
+          <h4 class="d-md-none" id="active-location-info">
+            Allowed to access <span class="active-location"></span>
+          </h4>
+            <div class="help-message hide d-md-none"
                  id="help-allowed-users-copy">
             </div> <!-- /.help-message -->
 
@@ -190,7 +190,7 @@ https://github.com/jquery/jquery/
 
 
       <h3>Users</h3>  
-      <div class="help-message fade-in hide">
+      <div class="help-message hide">
         <div class="row">
           <div class="col-12 help-action">
             <img src="/wwwhisper/auth/assets/icons/arrow-up.svg"
@@ -233,7 +233,7 @@ https://github.com/jquery/jquery/
       <div class="row text-end">
         <div class="col">
           <button type="button" class="btn btn-outline-success help">
-            Help
+            Show help
           </button>
         </div>
       </div>
@@ -244,9 +244,9 @@ https://github.com/jquery/jquery/
       <div class="error-box"></div>
 
       <h3>Login page</h3>
-      <div class="help-message fade-in hide">
+      <div class="help-message hide">
         <p>
-          Customize the log in page.
+          Customize the login page.
         <p>
           Set a field to an empty string to revert it to its
           default value. HTML tags are not interpreted.
@@ -290,16 +290,18 @@ https://github.com/jquery/jquery/
       </div> <!-- ./card -->
 
       <h3>Site addresses</h3>
-      <div class="help-message fade-in hide">
+      <div class="help-message hide">
         <p>
-          A list of addresses (protocol://domain[:optional port]) of
-          the protected site. Requests from addresses that are not on
-          the list are rejected.
+          A list of addresses of the protected site, in the form
+          of <strong>protocol://domain</strong>[:optional
+          port]. Requests from addresses that are not on the
+          list are rejected.
         </p>
         <p>
-          If https://example.org is on the list and http://example.org
-          is not, requests to http://example.org will be automatically
-          redirected to https://example.org.
+          If <i>https://example.org</i> is on the list
+          and <i>http://example.org</i> is not, requests to
+          <i>http://example.org</i> will be automatically redirected to
+          <i>https://example.org</i>.
         </p>
         <p>
           It is safe to add
@@ -366,14 +368,14 @@ https://github.com/jquery/jquery/
       <div class="row text-end">
         <div class="col">
           <button type="button" class="btn btn-outline-success help">
-            Help
+            Show help
           </button>
         </div>
       </div>
     </div> <!-- /.container settings -->
 
     <div class="container-xxl nav-content about hide">
-      <h2>Auth made easy</h2>
+      <h2>Access control made easy</h2>
       <p class="lead">
         Powered by
         <strong>

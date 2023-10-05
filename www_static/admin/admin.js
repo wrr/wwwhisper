@@ -579,18 +579,6 @@
     }
 
     /**
-     * Annotates currently signed in user to make it clearer that this
-     * user is treated a little specially (can not be removed, can not
-     * be revoked access to the admin location).
-     */
-    function userAnnotation(user) {
-      if (user.email === controller.adminUserEmail) {
-        return ' (you)';
-      }
-      return '';
-    }
-
-    /**
      * Annotates a current url on the list of aliases.
      */
     function aliasAnnotation(alias) {
@@ -736,7 +724,7 @@
           utils.sortByProperty(location.allowedUsers, 'email'), function(user) {
             var isAdminUser = (user.email === controller.adminUserEmail);
             view.allowedUser.clone(true)
-              .find('.user-mail').text(user.email + userAnnotation(user))
+              .find('.user-mail').text(user.email)
               .end()
               .find('.unshare').click(function() {
                 removeInProgress($(this));
@@ -914,7 +902,7 @@
       const isAdminUser = (user.email === controller.adminUserEmail);
       userView
         .find('.user-mail')
-        .text(user.email + userAnnotation(user))
+        .text(user.email)
         .end()
         .find('.remove-user').click(function() {
           removeInProgress($(this));
@@ -1153,7 +1141,7 @@
           $('.help').text('Hide help');
         } else {
           $('.help-message').addClass('hide');
-          $('.help').text('Help');
+          $('.help').text('Show help');
         }
       });
       if (window.onhashchange !== undefined) {

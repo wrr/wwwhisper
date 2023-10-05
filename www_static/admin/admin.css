@@ -18,10 +18,13 @@ h2, h3 {
   border-bottom: 2px solid var(--bs-navbar-active-color);
 }
 
+.active-location {
+  font-weight: bold;
+}
+
 #active-location-info {
   padding-bottom: 0.5em;
   margin-bottom: 0px;
-  font-weight: bold;
   background-color: var(--bs-body-bg);
 }
 
@@ -129,6 +132,7 @@ h2, h3 {
   padding: 15px 15px 30px 6px;
 }
 
+.alias-list-item,
 .user-list-item {
   padding: 0px 12px 0px 12px;
 }
