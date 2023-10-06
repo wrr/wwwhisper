@@ -1042,13 +1042,6 @@
      * received error message replaces the current document.
      */
     this.handleError = function(message, status, isTextPlain) {
-      // Scroll to make sure error is visible.
-      window.scroll({
-        top: 0,
-        left: 0,
-        behavior: 'smooth',
-      });
-
       if (status === undefined || status === 401 || isTextPlain) {
         var error = view.errorMessage.clone(true);
 
@@ -1070,6 +1063,17 @@
         // Fatal error.
         $('html').html(message);
       }
+
+      // Scroll to make sure error is visible.
+      // For unknown reason on Android scroll doesn't work from error
+      // handler, so we defer it.
+      window.setTimeout(function() {
+        window.scroll({
+          top: 0,
+          left: 0,
+          behavior: 'smooth',
+        });
+      }, 100);
     };
 
     /**
