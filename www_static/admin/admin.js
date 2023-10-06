@@ -592,31 +592,6 @@
       return $(document.activeElement);
     }
 
-    /**
-     * Returns id of a DOM element responsible for displaying a given
-     * location path (clone of the view.locationPath).
-     */
-    function locationPathId(location) {
-      return 'location-' + utils.urn2uuid(location.id);
-    }
-
-    /**
-     * Returns id of a DOM element responsible for displaying a list
-     * of users allowed to access a given location (clone of the
-     * view.locationInfo).
-     */
-    function locationInfoId(location) {
-      return 'location-info-' + utils.urn2uuid(location.id);
-    }
-
-    /**
-     * Returns id of an input box responsible for adding emails of
-     * users allowed to access a given location.
-     */
-    function addAllowedUserInputId(location) {
-      return 'add-allowed-user-input-' + utils.urn2uuid(location.id);
-    }
-
     function grantAccess(userId, location) {
       if (userId === '*') {
         controller.grantOpenAccess(location);
@@ -671,10 +646,7 @@
       isAdminLocation = controller.handledByAdmin(location.path);
 
       locationView = view.locationInfo.clone(true)
-        .attr('id', locationInfoId(location))
-        .attr('location-urn', location.id)
         .find('.add-allowed-user')
-        .attr('id', addAllowedUserInputId(location))
         .keyup(function(event) {
           var userId = $.trim($(this).val());
           if (event.which === ENTER_KEY) {
@@ -753,11 +725,6 @@
         .click(function() {
           controller.setActiveLocation(location);
         })
-        .attr('id', locationPathId(location))
-        .attr('location-urn', location.id)
-        .find('.url').attr(
-          'href', '#' + locationInfoId(location))
-        .end()
         .find('.path').text(location.path)
         .end()
         .find('.remove-location').click(function(event) {
