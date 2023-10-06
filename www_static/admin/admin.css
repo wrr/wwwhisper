@@ -147,6 +147,12 @@ button > img {
   padding: 15px 15px 30px 6px;
 }
 
+@media (max-width: 360px) {
+  #add-user input::placeholder {
+    font-size: 13px;
+  }
+}
+
 .alias-list-item,
 .user-list-item {
   padding: 0px 12px 0px 12px;
