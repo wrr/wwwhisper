@@ -13,30 +13,19 @@
       }
       body {
         margin: 0;
-        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
       }
-      button {
-        margin: 0;
-        font-weight: normal;
+      #icon-off {
+        vertical-align: middle;
       }
-      [class^="icon-"] {
-        display: inline-block;
-        width: 14px;
-        height: 14px;
-        margin-top: 1px;
-        line-height: 14px;
-        vertical-align: text-top;
-        background-image: url("/wwwhisper/auth/assets/img/glyphicons-halflings.png");
-        background-position: 14px 14px;
-        background-repeat: no-repeat;
-      }
-      .icon-off {
-        background-position: -384px 0;
+      .btn-text {
+        vertical-align: middle;
       }
       .btn {
         display: inline-block;
         padding: 4px 12px;
-        margin-bottom: 0;
+        margin: 0;
+        font-weight: normal;
         font-size: 14px;
         line-height: 20px;
         text-align: center;
@@ -46,8 +35,6 @@
         background-repeat: repeat-x;
         border: 1px solid #ccc;
         border-bottom-color: #b3b3b3;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2),
-                    0 1px 2px rgba(0, 0, 0, 0.05);
       }
       .btn:hover,
       .btn:focus,
@@ -66,18 +53,15 @@
       .btn:active {
         background-image: none;
         outline: 0;
-        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.05);
       }
       .btn.disabled {
         cursor: default;
         background-image: none;
         opacity: 0.65;
         filter: alpha(opacity=65);
-        box-shadow: none;
       }
       .btn-signout {
         color: #fff;
-        text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
         background-color: #da4f49;
         background-image: linear-gradient(to bottom, #ee5f5b, #bd362f);
         border-color: #bd362f #bd362f #802420;
@@ -91,7 +75,6 @@
       }
       .btn-inverse {
         color: #fff;
-        text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
         background-color: #363636;
         background-image: linear-gradient(to bottom, #444, #222);
         border-color: #222 #222 #000;
@@ -140,10 +123,10 @@
   <body class="transparent hide" id="wwwhisper-overlay">
     <div class="btn-group pull-right">
       <button class="btn btn-inverse truncate disabled">
-        <span id="email"></span>
+        <span id="email" class="btn-text"></span>
       </button>
       <button class="btn btn-signout" id="logout">
-        Sign out <i class="icon-off"></i>
+        <span class="btn-text">Sign out</span> <svg id="icon-off" xmlns="http://www.w3.org/2000/svg" fill="currentColor" height="20" viewBox="0 -960 960 960" width="20"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h280v80H200Zm440-160-55-58 102-102H360v-80h327L585-622l55-58 200 200-200 200Z"/></svg>
       </button>
     </div>
 
