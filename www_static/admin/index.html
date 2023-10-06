@@ -98,7 +98,7 @@ https://github.com/jquery/jquery/
               separated with spaces.
             </p>
             <p>
-              Enter <i>*</i> to allow access to everyone without requiring login.
+              Enter <strong>*</strong> to allow access to everyone without requiring login.
             </p>
             <div class="row">
               <div class="col-12 help-action">
@@ -295,18 +295,15 @@ https://github.com/jquery/jquery/
         <p>
           A list of addresses of the protected site, in the form
           of <strong>protocol://domain</strong>[:optional
-          port]. Requests from addresses that are not on the
+          port].
+        </p>
+        <p>
+          Requests from addresses that are not on the
           list are rejected.
         </p>
         <p>
-          If <i>https://example.org</i> is on the list
-          and <i>http://example.org</i> is not, requests to
-          <i>http://example.org</i> will be automatically redirected to
-          <i>https://example.org</i>.
-        </p>
-        <p>
           It is safe to add
-          http://localhost[:port] to communicate with wwwhisper from a
+          http://localhost:port to communicate with wwwhisper from a
           local machine.
         </p>
 
