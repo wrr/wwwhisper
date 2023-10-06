@@ -45,7 +45,7 @@
   }
 
   function authenticated(result) {
-    const emailToDisplay = result.email;
+    let emailToDisplay = result.email;
     if (emailToDisplay.length > MAX_EMAIL_LENGTH) {
       // Trim very long emails so 'sign out' button fits in
       // the iframe.
