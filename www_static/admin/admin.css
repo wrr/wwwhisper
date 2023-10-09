@@ -6,12 +6,15 @@ body {
 }
 
 .nav-content {
-  margin-top: 1em;
+  margin-top: 2em;
+}
+
+.nav-content h2:not(:first-of-type), h3:not(:first-of-type){
+  margin-top: 2em;
 }
 
 h2, h3 {
   margin-bottom: 0.5em;
-  margin-top: 1em;
 }
 
 .nav-link.active {
