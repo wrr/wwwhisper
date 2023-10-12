@@ -7,18 +7,19 @@ Contains classes representing commonly used HTTP responses with
 appropriate content types and encoding.
 """
 
+import functools
+import json
+import logging
+import re
+import traceback
+
 from django.conf import settings
 from django.http import HttpResponse
 from django.utils.crypto import constant_time_compare
 from django.views.decorators.cache import patch_cache_control
 from django.views.generic import View
-from functools import wraps
-from wwwhisper_auth import models
 
-import json
-import logging
-import re
-import traceback
+from wwwhisper_auth import models
 
 logger = logging.getLogger(__name__)
 
@@ -195,7 +196,7 @@ class HttpResponseInternalError(HttpResponse):
 
 def disallow_cross_site_request(decorated_method):
     """Drops a request if it has any indicators of a cross site request."""
-    @wraps(decorated_method)
+    @functools.wraps(decorated_method)
     def wrapper(self, request, *args, **kwargs):
         # Validate CSRF token unless test environment disabled CSRF protection.
         if (not getattr(request, '_dont_enforce_csrf_checks', False)
@@ -212,7 +213,7 @@ def never_ever_cache(decorated_method):
     enough. For example, with max-axe=0 Firefox returns cached results
     of GET calls when it is restarted.
     """
-    @wraps(decorated_method)
+    @functools.wraps(decorated_method)
     def wrapper(*args, **kwargs):
         response = decorated_method(*args, **kwargs)
         patch_cache_control(

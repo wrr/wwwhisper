@@ -1,6 +1,8 @@
 # wwwhisper - web access control.
 # Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
 
+import logging
+
 from django.conf import settings
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -10,7 +12,6 @@ from wwwhisper_auth.models import SINGLE_SITE_ID
 from wwwhisper_auth import url_utils
 
 import wwwhisper_auth.site_cache
-import logging
 
 logger = logging.getLogger(__name__)
 

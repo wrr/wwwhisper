@@ -1,6 +1,8 @@
 # wwwhisper - web access control.
 # Copyright (C) 2012-2023 Jan Wrobel <jan@mixedbit.org>
 
+import json
+import urllib.parse
 
 from django.contrib.auth.models import User
 from django.conf import settings
@@ -12,9 +14,6 @@ from django.test import override_settings
 from wwwhisper_auth.login_token import generate_login_token
 from wwwhisper_auth.tests.utils import HttpTestCase
 from wwwhisper_auth.tests.utils import TEST_SITE
-
-import json
-import urllib.parse
 
 class FailingEmailBackend(BaseEmailBackend):
     def send_messages(self, messages):

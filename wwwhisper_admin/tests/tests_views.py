@@ -1,10 +1,10 @@
 # wwwhisper - web access control.
 # Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
 
+import json
+
 from wwwhisper_auth.models import Site
 from wwwhisper_auth.tests.utils import HttpTestCase
-
-import json
 
 FAKE_UUID = '41be0192-0fcc-4a9c-935d-69243b75533c'
 TEST_USER_EMAIL = 'foo@bar.org'

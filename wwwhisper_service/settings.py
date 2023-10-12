@@ -1,5 +1,8 @@
 # Django settings for wwwhisper_service project.
 
+import os
+import sys
+
 DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 
@@ -14,9 +17,6 @@ WWWHISPER_PATH_PREFIX = 'wwwhisper/'
 # Static files are also served from /wwwhisper/ prefix.
 import wwwhisper_service.cdn_container
 STATIC_URL = wwwhisper_service.cdn_container.CDN_CONTAINER + '/' + 'wwwhisper/'
-
-import os
-import sys
 
 TESTING = sys.argv[1:2] == ['test']
 

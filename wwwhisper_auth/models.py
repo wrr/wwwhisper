@@ -21,6 +21,13 @@ because those ids can be reused after object is deleted.
 Makes sure entered emails and paths are valid.
 """
 
+import functools
+import logging
+import random
+import re
+import threading
+import uuid as uuidgen
+
 from django.contrib.auth.models import AbstractBaseUser
 from django.db import connection
 from django.db import models
@@ -29,15 +36,8 @@ from django.forms import ValidationError
 from django.urls import reverse
 from django.utils import timezone
 
-from functools import wraps
 from wwwhisper_auth import  url_utils
 from wwwhisper_auth import  email_re
-
-import logging
-import random
-import re
-import threading
-import uuid as uuidgen
 
 logger = logging.getLogger(__name__)
 
@@ -174,7 +174,7 @@ def modify_site(decorated_method):
     will retrieve new data from the DB instead of using cached data.
     """
 
-    @wraps(decorated_method)
+    @functools.wraps(decorated_method)
     def wrapper(self, *args, **kwargs):
         result = decorated_method(self, *args, **kwargs)
         # If no exception.

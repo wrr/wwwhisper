@@ -2,12 +2,12 @@
 # Copyright (C) 2016-2023 Jan Wrobel <jan@mixedbit.org>
 
 import datetime
+import urllib.parse
 
 from django.conf import settings
 from django.core import signing
 from django.urls import reverse
 
-import urllib.parse
 
 """Returns float that has microseconds resolution"""
 def _datetime_to_timestamp(datetime_arg):

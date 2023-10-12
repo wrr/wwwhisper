@@ -1,12 +1,12 @@
 # wwwhisper - web access control.
 # Copyright (C) 2012-2018 Jan Wrobel <jan@mixedbit.org>
 
+import logging
+
 from django.conf import settings
 from django.conf.urls import include, url
 from django.conf import settings
 from wwwhisper_auth.assets import Asset, HtmlFileView, JsFileView
-
-import logging
 
 logger = logging.getLogger(__name__)
 

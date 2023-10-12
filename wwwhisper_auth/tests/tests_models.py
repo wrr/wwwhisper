@@ -3,11 +3,13 @@
 # wwwhisper - web access control.
 # Copyright (C) 2012-2017 Jan Wrobel <jan@mixedbit.org>
 
+from contextlib import contextmanager
+from functools import wraps
+
 from django.db import transaction
 from django.forms import ValidationError
 from django.test import TestCase
-from contextlib import contextmanager
-from functools import wraps
+
 from wwwhisper_auth.models import LimitExceeded
 from wwwhisper_auth.models import SitesCollection
 

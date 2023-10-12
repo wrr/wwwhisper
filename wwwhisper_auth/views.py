@@ -3,6 +3,8 @@
 
 """Views that handle user authentication and authorization."""
 
+import logging
+
 from django.conf import settings
 from django.contrib import auth
 from django.core.cache import cache
@@ -11,13 +13,12 @@ from django.template.loader import render_to_string
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic import View
+
 from wwwhisper_auth import http
 from wwwhisper_auth import login_token
 from wwwhisper_auth import models
 from wwwhisper_auth import url_utils
 from wwwhisper_auth.backend import AuthenticationError
-
-import logging
 
 logger = logging.getLogger(__name__)
 

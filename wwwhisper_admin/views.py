@@ -7,12 +7,13 @@ Expose REST interface for adding/removing locations and users and for
 granting/revoking access to locations.
 """
 
+import functools
+import logging
+
 from django.forms import ValidationError
-from functools import wraps
+
 from wwwhisper_auth import http
 from wwwhisper_auth.models import LimitExceeded
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ def _full_path(request):
     return request.path
 
 def set_collection(decorated_function):
-    @wraps(decorated_function)
+    @functools.wraps(decorated_function)
     def wrapper(self, request, **kwargs):
         self.collection = getattr(request.site, self.collection_name)
         return decorated_function(self, request, **kwargs)
