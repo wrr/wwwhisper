@@ -23,7 +23,6 @@ Makes sure entered emails and paths are valid.
 
 import functools
 import logging
-import random
 import re
 import threading
 import uuid as uuidgen
