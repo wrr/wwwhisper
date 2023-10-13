@@ -59,7 +59,7 @@ class ValidatedModel(models.Model):
 
     def save(self, *args, **kwargs):
         self.full_clean()
-        return super(ValidatedModel, self).save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
 # Id used when wwwhisper servers just a single site.
 SINGLE_SITE_ID = 'theone'
@@ -98,7 +98,7 @@ class Site(ValidatedModel):
     locations_limit = None
 
     def __init__(self, *args, **kwargs):
-        super(Site, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         # Synchronizes mod id that can be read by a cache updating
         # thread.
         self.mod_id_lock = threading.Lock()
@@ -284,9 +284,6 @@ class Location(ValidatedModel):
                             editable=False, unique=True)
     open_access = models.CharField(max_length=2, choices=OPEN_ACCESS_CHOICES,
                                    default='n')
-
-    def __init__(self, *args, **kwargs):
-        super(Location, self).__init__(*args, **kwargs)
 
     def permissions(self):
         # Does not run a query to get permissions if not needed.
@@ -608,7 +605,7 @@ class LocationsCollection(Collection):
     model_class = Location
 
     def update_cache(self):
-        super(LocationsCollection, self).update_cache()
+        super().update_cache()
         # Retrieves permissions for all locations of the site with a
         # single query.
         self._cached_permissions = {}

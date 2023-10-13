@@ -57,8 +57,7 @@ class CachingSitesCollection(SitesCollection):
         self.site_cache = site_cache
 
     def create_item(self, site_id, **kwargs):
-        site = super(CachingSitesCollection, self).create_item(
-            site_id=site_id, **kwargs)
+        site = super().create_item(site_id=site_id, **kwargs)
         self.site_cache.insert(site)
         return site
 
@@ -66,13 +65,13 @@ class CachingSitesCollection(SitesCollection):
         site = self.site_cache.get(site_id)
         if site is not None:
             return site
-        site = super(CachingSitesCollection, self).find_item(site_id=site_id)
+        site = super().find_item(site_id=site_id)
         if site is not None:
             self.site_cache.insert(site)
         return site
 
     def delete_item(self, site_id):
-        rv = super(CachingSitesCollection, self).delete_item(site_id=site_id)
+        rv = super().delete_item(site_id=site_id)
         self.site_cache.delete(site_id)
         return rv
 

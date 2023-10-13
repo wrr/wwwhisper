@@ -58,38 +58,34 @@ class HttpResponseOK(HttpResponse):
     """
 
     def __init__(self, message):
-        super(HttpResponseOK, self).__init__(
-            message,
-            content_type=TEXT_MIME_TYPE,
-            status=200)
+        super().__init__(message,
+                         content_type=TEXT_MIME_TYPE,
+                         status=200)
 
 
 class HttpResponseOKJson(HttpResponse):
     def __init__(self, attributes_dict):
-        super(HttpResponseOKJson, self).__init__(
-            json.dumps(attributes_dict),
-            content_type=JSON_MIME_TYPE,
-            status=200)
+        super().__init__(json.dumps(attributes_dict),
+                         content_type=JSON_MIME_TYPE,
+                         status=200)
 
 class HttpResponseOKHtml(HttpResponse):
     def __init__(self, body):
-        super(HttpResponseOKHtml, self).__init__(
-            body,
-            content_type=HTML_MIME_TYPE,
-            status=200)
+        super().__init__(body,
+                         content_type=HTML_MIME_TYPE,
+                         status=200)
 
 class HttpResponseOKJs(HttpResponse):
     def __init__(self, body):
-        super(HttpResponseOKJs, self).__init__(
-            body,
-            content_type=JS_MIME_TYPE,
-            status=200)
+        super().__init__(body,
+                         content_type=JS_MIME_TYPE,
+                         status=200)
 
 class HttpResponseNoContent(HttpResponse):
     """Request succeeded, response body is empty."""
 
     def __init__(self):
-        super(HttpResponseNoContent, self).__init__(status=204)
+        super().__init__(status=204)
         self.__delitem__('Content-Type')
 
 class HttpResponseCreated(HttpResponse):
@@ -106,10 +102,9 @@ class HttpResponseCreated(HttpResponse):
                 json and returned in the response body
         """
 
-        super(HttpResponseCreated, self).__init__(
-            json.dumps(attributes_dict),
-            content_type=JSON_MIME_TYPE,
-            status=201)
+        super().__init__(json.dumps(attributes_dict),
+                         content_type=JSON_MIME_TYPE,
+                         status=201)
 
 class HttpResponseRedirect(HttpResponse):
     """See other resource.
@@ -120,9 +115,8 @@ class HttpResponseRedirect(HttpResponse):
     """
 
     def __init__(self, location):
-        super(HttpResponseRedirect, self).__init__(
-            content_type=JSON_MIME_TYPE,
-            status=302)
+        super().__init__(content_type=JSON_MIME_TYPE,
+                         status=302)
         self['Location'] = location
 
 class HttpResponseNotAuthenticated(HttpResponse):
@@ -137,8 +131,7 @@ class HttpResponseNotAuthenticated(HttpResponse):
             body, content_type = 'Authentication required.', TEXT_MIME_TYPE
         else:
             body, content_type = html_response, HTML_MIME_TYPE
-        super(HttpResponseNotAuthenticated, self).__init__(
-            body, content_type=content_type, status=401)
+        super().__init__(body, content_type=content_type, status=401)
         self['WWW-Authenticate'] = 'VerifiedEmail'
         delete_logged_in_cookie(self)
 
@@ -150,8 +143,7 @@ class HttpResponseNotAuthorized(HttpResponse):
             body, content_type = 'User not authorized.', TEXT_MIME_TYPE
         else:
             body, content_type = html_response, HTML_MIME_TYPE
-        super(HttpResponseNotAuthorized, self).__init__(
-            body, content_type=content_type, status=403)
+        super().__init__(body, content_type=content_type, status=403)
 
 class HttpResponseBadRequest(HttpResponse):
     """Request invalid.
@@ -162,37 +154,32 @@ class HttpResponseBadRequest(HttpResponse):
 
     def __init__(self, message):
         logger.debug('Bad request %s' % (message))
-        super(HttpResponseBadRequest, self).__init__(
-            message, content_type=TEXT_MIME_TYPE, status=400)
+        super().__init__(message, content_type=TEXT_MIME_TYPE, status=400)
 
 class HttpResponseLimitExceeded(HttpResponse):
     """Too many resource are already created, a new one can not be added."""
 
     def __init__(self, message):
         logger.debug('Limit exceeded %s' % (message))
-        super(HttpResponseLimitExceeded, self).__init__(
-            message, content_type=TEXT_MIME_TYPE, status=400)
+        super().__init__(message, content_type=TEXT_MIME_TYPE, status=400)
 
 class HttpResponseNotFound(HttpResponse):
 
     def __init__(self, message):
         logger.debug('Not found %s' % (message))
-        super(HttpResponseNotFound, self).__init__(
-            message, content_type=TEXT_MIME_TYPE, status=404)
+        super().__init__(message, content_type=TEXT_MIME_TYPE, status=404)
 
 class HttpResponseServiceUnavailable(HttpResponse):
 
     def __init__(self, message):
         logger.warning('Service unavailable %s' % (message))
-        super(HttpResponseServiceUnavailable, self).__init__(
-            message, content_type=TEXT_MIME_TYPE, status=503)
+        super().__init__(message, content_type=TEXT_MIME_TYPE, status=503)
 
 class HttpResponseInternalError(HttpResponse):
 
     def __init__(self, message):
         logger.warning('Internal error %s' % (message))
-        super(HttpResponseInternalError, self).__init__(
-            message, content_type=TEXT_MIME_TYPE, status=500)
+        super().__init__(message, content_type=TEXT_MIME_TYPE, status=500)
 
 def disallow_cross_site_request(decorated_method):
     """Drops a request if it has any indicators of a cross site request."""
@@ -268,7 +255,7 @@ class RestView(View):
                 return HttpResponseBadRequest(
                     'Failed to parse the request body as a json object.')
         try:
-            return super(RestView, self).dispatch(request, *args, **kwargs)
+            return super().dispatch(request, *args, **kwargs)
         except TypeError as err:
             trace = "".join(traceback.format_exc())
             logger.debug('Invalid arguments, handler not found: %s\n%s'
