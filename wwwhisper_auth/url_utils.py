@@ -6,7 +6,6 @@
 import posixpath
 import urllib.request, urllib.parse, urllib.error
 import re
-import urllib.parse
 
 def strip_query(path):
     """Strips query from a path."""
