@@ -153,32 +153,32 @@ class HttpResponseBadRequest(HttpResponse):
     """
 
     def __init__(self, message):
-        logger.debug('Bad request %s' % (message))
+        logger.debug(f'Bad request {message}')
         super().__init__(message, content_type=TEXT_MIME_TYPE, status=400)
 
 class HttpResponseLimitExceeded(HttpResponse):
     """Too many resource are already created, a new one can not be added."""
 
     def __init__(self, message):
-        logger.debug('Limit exceeded %s' % (message))
+        logger.debug(f'Limit exceeded {message}')
         super().__init__(message, content_type=TEXT_MIME_TYPE, status=400)
 
 class HttpResponseNotFound(HttpResponse):
 
     def __init__(self, message):
-        logger.debug('Not found %s' % (message))
+        logger.debug(f'Not found {message}')
         super().__init__(message, content_type=TEXT_MIME_TYPE, status=404)
 
 class HttpResponseServiceUnavailable(HttpResponse):
 
     def __init__(self, message):
-        logger.warning('Service unavailable %s' % (message))
+        logger.warning(f'Service unavailable {message}')
         super().__init__(message, content_type=TEXT_MIME_TYPE, status=503)
 
 class HttpResponseInternalError(HttpResponse):
 
     def __init__(self, message):
-        logger.warning('Internal error %s' % (message))
+        logger.warning(f'Internal error {message}')
         super().__init__(message, content_type=TEXT_MIME_TYPE, status=500)
 
 def disallow_cross_site_request(decorated_method):
@@ -237,8 +237,8 @@ class RestView(View):
             try:
                 if not _utf8_encoded_json(request):
                     return HttpResponseBadRequest(
-                        "Invalid Content-Type (only '%s' is acceptable)."
-                        % (JSON_MIME_TYPE))
+                        'Invalid Content-Type (only '
+                        f"'{JSON_MIME_TYPE}' is acceptable).")
 
                 json_args = json.loads(request.body)
                 for k in json_args:
@@ -250,16 +250,15 @@ class RestView(View):
                 kwargs.update()
             except ValueError as err:
                 logger.debug(
-                    'Failed to parse the request body a as json object: %s'
-                    % (err))
+                    f'Failed to parse the request body a as json object: {err}')
                 return HttpResponseBadRequest(
                     'Failed to parse the request body as a json object.')
         try:
             return super().dispatch(request, *args, **kwargs)
         except TypeError as err:
             trace = "".join(traceback.format_exc())
-            logger.debug('Invalid arguments, handler not found: %s\n%s'
-                         % (err, trace))
+            logger.debug(
+                f'Invalid arguments, handler not found: {err}\n{trace}')
             return HttpResponseBadRequest('Invalid request arguments')
 
 def _csrf_token_valid(request):

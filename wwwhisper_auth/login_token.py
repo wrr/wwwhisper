@@ -84,6 +84,4 @@ def generate_login_url(site, email, root_url, next_path):
     """
     token = generate_login_token(site=site, email=email)
     params = urllib.parse.urlencode(dict(next=next_path, token=token), safe=':')
-    return '{0}{1}#{2}'.format(root_url,
-                               reverse('login-check-token'),
-                               params)
+    return f'{root_url}{reverse("login-check-token")}#{params}'

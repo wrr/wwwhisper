@@ -49,7 +49,7 @@ class UserTest(AdminViewTestCase):
         user_uuid = extract_uuid(parsed_response_body['id'])
 
         self.assertRegex(parsed_response_body['id'],
-                         '^urn:uuid:%s$' % uid_regexp())
+                         f'^urn:uuid:{uid_regexp()}$')
         self.assertEqual(TEST_USER_EMAIL, parsed_response_body['email'])
         self_url = f'/wwwhisper/admin/api/users/{user_uuid}/'
         self.assertEqual(self_url, parsed_response_body['self'])
@@ -88,7 +88,7 @@ class UserTest(AdminViewTestCase):
                               [item['email'] for item in users])
 
     def test_get_not_existing_user(self):
-        response = self.get('/wwwhisper/admin/api/users/%s/' % FAKE_UUID)
+        response = self.get(f'/wwwhisper/admin/api/users/{FAKE_UUID}/')
         self.assertEqual(404, response.status_code)
         self.assertEqual(response.content, b'User not found')
 
@@ -118,12 +118,12 @@ class UserTest(AdminViewTestCase):
         limit = 8
         Site.users_limit = limit
         for i in range(0, limit):
-            email = '%s%d' % (TEST_USER_EMAIL, i)
+            email = f'{TEST_USER_EMAIL}{i}'
             response = self.post('/wwwhisper/admin/api/users/',
                                  {'email' : email})
             self.assertEqual(201, response.status_code)
 
-        email = '%s%d' % (TEST_USER_EMAIL, limit)
+        email = f'{TEST_USER_EMAIL}{limit}'
         response = self.post('/wwwhisper/admin/api/users/',
                              {'email' : email})
         self.assertEqual(400, response.status_code)
@@ -140,7 +140,7 @@ class LocationTest(AdminViewTestCase):
         location_uuid = extract_uuid(parsed_response_body['id'])
 
         self.assertRegex(parsed_response_body['id'],
-                         '^urn:uuid:%s$' % uid_regexp())
+                         f'^urn:uuid:{uid_regexp()}$')
         self.assertEqual(TEST_LOCATION, parsed_response_body['path'])
         self.assertTrue('openAccess' not in parsed_response_body)
         self_url = f'/wwwhisper/admin/api/locations/{location_uuid}/'
@@ -230,7 +230,7 @@ class LocationTest(AdminViewTestCase):
                               [item['path'] for item in locations])
 
     def test_get_not_existing_location(self):
-        response = self.get('/wwwhisper/admin/api/locations/%s/' % FAKE_UUID)
+        response = self.get(f'/wwwhisper/admin/api/locations/{FAKE_UUID}/')
         self.assertEqual(404, response.status_code)
         self.assertEqual(response.content, b'Location not found')
 
@@ -261,11 +261,11 @@ class LocationTest(AdminViewTestCase):
         limit = 7
         Site.locations_limit = limit
         for i in range(0, limit):
-            path = '%s%d' % (TEST_LOCATION, i)
+            path = f'{TEST_LOCATION}{i}'
             response = self.post('/wwwhisper/admin/api/locations/',
                                  {'path' : path})
             self.assertEqual(201, response.status_code)
-        path = '%s%d' % (TEST_LOCATION, limit)
+        path = f'{TEST_LOCATION}{limit}'
         response = self.post('/wwwhisper/admin/api/locations/', {'path' : path})
         self.assertEqual(400, response.status_code)
         self.assertEqual(response.content, b'Locations limit exceeded')
@@ -347,7 +347,7 @@ class AccessControlTest(AdminViewTestCase):
                               [item['id'] for item in allowed_users])
 
     def test_grant_access_to_not_existing_location(self):
-        location_url = '/wwwhisper/admin/api/locations/%s/' % FAKE_UUID
+        location_url = f'/wwwhisper/admin/api/locations/{FAKE_UUID}/'
         user_uuid = extract_uuid(self.add_user()['id'])
 
         response = self.put(location_url + 'allowed-users/' + user_uuid + '/')
@@ -416,7 +416,7 @@ class AliasTest(AdminViewTestCase):
         alias_uuid = extract_uuid(parsed_response_body['id'])
 
         self.assertRegex(parsed_response_body['id'],
-                         '^urn:uuid:%s$' % uid_regexp())
+                         f'^urn:uuid:{uid_regexp()}$')
         self.assertEqual(TEST_ALIAS, parsed_response_body['url'])
         self_url = f'/wwwhisper/admin/api/aliases/{alias_uuid}/'
         self.assertEqual(self_url, parsed_response_body['self'])

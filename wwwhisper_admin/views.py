@@ -90,7 +90,7 @@ class ItemView(http.RestView):
         item = self.collection.find_item(uuid)
         if item is None:
             return http.HttpResponseNotFound(
-                '%s not found' % self.collection.item_name.capitalize())
+                f'{self.collection.item_name.capitalize()} not found')
         return http.HttpResponseOKJson(item.attributes_dict())
 
     @set_collection
@@ -99,7 +99,7 @@ class ItemView(http.RestView):
         deleted = self.collection.delete_item(uuid)
         if not deleted:
             return http.HttpResponseNotFound(
-                '%s not found' % self.collection.item_name.capitalize())
+                f'{self.collection.item_name.capitalize()} not found')
         return http.HttpResponseNoContent()
 
 class OpenAccessView(http.RestView):

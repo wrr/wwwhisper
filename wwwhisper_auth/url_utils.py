@@ -99,5 +99,5 @@ def remove_default_port(url):
     scheme, rest, port = parts
     if ((scheme == 'https' and port == '443') or
         (scheme == 'http' and port == '80')):
-        return "%s:%s" % (scheme, rest)
+        return f'{scheme}:{rest}'
     return url

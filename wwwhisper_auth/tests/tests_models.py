@@ -284,7 +284,7 @@ class UsersCollectionTest(ModelTestCase):
         limit = 10
         self.site.users_limit = limit
         for i in range(0, limit):
-            self.users.create_item('foo%d@bar.com' % (i))
+            self.users.create_item(f'foo{i}@bar.com')
         self.assertRaisesRegex(LimitExceeded,
                                'Users limit exceeded',
                                self.users.create_item,
@@ -651,7 +651,7 @@ class LocationsCollectionTest(ModelTestCase):
         limit = 10
         self.site.locations_limit = limit
         for i in range(0, limit):
-            self.locations.create_item('/foo%d' % (i))
+            self.locations.create_item(f'/foo{i}')
         self.assertRaisesRegex(LimitExceeded,
                                'Locations limit exceeded',
                                self.locations.create_item,
@@ -723,14 +723,14 @@ class AliasesCollectionTest(ModelTestCase):
         limit = 10
         self.site.aliases_limit = limit
         for i in range(0, limit):
-            self.aliases.create_item('http://foo%d.org' % (i))
+            self.aliases.create_item(f'http://foo{i}.org')
         self.assertRaisesRegex(LimitExceeded,
                                'Aliases limit exceeded',
                                self.aliases.create_item,
                                'http://foo10.org')
 
     def test_alias_length_limit(self):
-        long_url = 'https://%s.org' % ('x' * self.aliases.ALIAS_LEN_LIMIT)
+        long_url = f"https://{'x' * self.aliases.ALIAS_LEN_LIMIT}.org"
         self.assertRaisesRegex(ValidationError,
                                'Url too long',
                                self.aliases.create_item,

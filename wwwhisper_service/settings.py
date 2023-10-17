@@ -160,7 +160,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 ABSOLUTE_URL_OVERRIDES = {
-    'auth.user': lambda u: "/admin/api/users/%s/" % u.username,
+    'auth.user': lambda u: f'/admin/api/users/{u.username}/',
 }
 
 handler = 'logging.StreamHandler' if not TESTING \

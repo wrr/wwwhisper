@@ -11,7 +11,7 @@ from wwwhisper_auth.assets import Asset, HtmlFileView, JsFileView
 logger = logging.getLogger(__name__)
 
 def _add_suffix(suffix):
-    return r'^%s%s' % (settings.WWWHISPER_PATH_PREFIX, suffix)
+    return f'^{settings.WWWHISPER_PATH_PREFIX}{suffix}'
 
 def _url(path, *args, **kwargs):
     return url(_add_suffix(path), *args, **kwargs)

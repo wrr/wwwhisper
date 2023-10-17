@@ -113,7 +113,7 @@ class Auth(View):
             return http.HttpResponseBadRequest(
                 "Client can not set the 'User' header")
 
-        debug_msg = "Auth request to '%s'" % (encoded_path)
+        debug_msg = f"Auth request to '{encoded_path}'"
 
         path_validation_error = None
         if url_utils.contains_fragment(encoded_path):
@@ -126,18 +126,18 @@ class Auth(View):
                 path_validation_error = 'Path should be absolute and ' \
                     'normalized (starting with / without /../ or /./ or //).'
         if path_validation_error is not None:
-            logger.debug('%s: incorrect path.' % (debug_msg))
+            logger.debug(f'{debug_msg}: incorrect path.')
             return http.HttpResponseBadRequest(path_validation_error)
 
         user = _get_user(request)
         location = request.site.locations.find_location(decoded_path)
         if user is not None:
 
-            debug_msg += " by '%s'" % (user.email)
+            debug_msg += f" by '{user.email}'"
             respone = None
 
             if location is not None and location.can_access(user):
-                logger.debug('%s: access granted.' % (debug_msg))
+                logger.debug(f'{debug_msg}: access granted.')
                 # Empty response, so if this end point is contacted by
                 # nginx auth_request module, the connection can use the
                 # keep alive option. nginx terminates an upstream
@@ -149,7 +149,7 @@ class Auth(View):
                 # middlewares for Ruby and Node.js test for 200 code.
                 response =  http.HttpResponseOK('')
             else:
-                logger.debug('%s: access denied.' % (debug_msg))
+                logger.debug(f'{debug_msg}: access denied.')
                 response = http.HttpResponseNotAuthorized(
                     _html_or_none(request, 'not_authorized.html',
                                   {'email' : user.email}))
@@ -157,10 +157,10 @@ class Auth(View):
             return response
 
         if location is not None and location.open_access_granted():
-            logger.debug('%s: authentication not required, access granted.'
-                         % (debug_msg))
+            logger.debug(
+                f'{debug_msg}: authentication not required, access granted.')
             return http.HttpResponseOK('')
-        logger.debug('%s: user not authenticated.' % (debug_msg))
+        logger.debug(f'{debug_msg}: user not authenticated.')
         return http.HttpResponseNotAuthenticated(
             _html_or_none(request,
                           'login_enter_email.html',
@@ -269,12 +269,12 @@ class SendToken(http.RestView):
                                              root_url=request.site_url,
                                              next_path=path)
 
-        subject = '{0} access token'.format(request.site_url)
+        subject = f'{request.site_url} access token'
         body = (
             'Hello,\n\n'
-            'You have requested access to {0}.\n'.format(request.site_url) +
+            f'You have requested access to {request.site_url}.\n'
             'Open this link to verify your email address:\n\n'
-            '{0}\n\n'.format(url) +
+            f'{url}\n\n'
             'If you have not requested such access, please ignore this email.\n'
             'The link is valid for the next 30 minutes and can be used once.\n'
         )

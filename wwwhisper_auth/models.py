@@ -290,7 +290,7 @@ class Location(ValidatedModel):
         return self.site.locations.get_permissions(self.id)
 
     def __unicode__(self):
-        return "%s" % (self.path)
+        return self.path
 
     def get_absolute_url(self):
         """Constructs URL of the location resource."""
@@ -420,7 +420,7 @@ class Permission(ValidatedModel):
                              on_delete=models.CASCADE)
 
     def __unicode__(self):
-        return "%s, %s" % (self.http_location, self.user.email)
+        return f'{self.http_location}, {self.user.email}'
 
     def get_absolute_url(self):
         """Constructs URL of the permission resource."""

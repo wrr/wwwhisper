@@ -281,7 +281,7 @@ class SendTokenTest(AuthTestCase):
         self.assertEqual(204, response.status_code)
         self.assertEqual(1, len(mail.outbox))
         msg = mail.outbox[0]
-        self.assertEqual('{0} access token'.format(TEST_SITE), msg.subject)
+        self.assertEqual(f'{TEST_SITE} access token', msg.subject)
         self.assertEqual(1, len(msg.to))
         self.assertEqual('verify@wwwhisper.io', msg.from_email)
         self.assertEqual('alice@example.org', msg.to[0])
