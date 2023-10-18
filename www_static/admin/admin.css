@@ -17,6 +17,11 @@ h2, h3 {
   margin-bottom: 0.5em;
 }
 
+.navbar {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
 .nav-link.active {
   border-bottom: 2px solid var(--bs-navbar-active-color);
 }
