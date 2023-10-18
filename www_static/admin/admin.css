@@ -37,7 +37,6 @@ h2, h3 {
 }
 
 .menu-item {
-  margin: 0.25em 0em 0.25em;
   padding: 0;
 }
 
@@ -69,7 +68,7 @@ button > img {
 }
 
 .location-list-item {
-  padding: 2px 12px 2px 12px;
+  padding: 12px 12px 12px 12px;
 }
 
 .location-link {
@@ -102,7 +101,7 @@ button > img {
   border-bottom: 2px solid var(--bs-border-color);
   border-top-left-radius: var(--bs-border-radius);
   border-bottom-left-radius: var(--bs-border-radius);
-  padding: 0px 14px 0px 10px;
+  padding: 10px 14px 10px 10px;
 }
 
 @media (max-width: 767px) {
@@ -148,11 +147,15 @@ button > img {
 }
 
 .allowed-user-list-item {
-  padding: 2px 12px 2px 12px;
+  margin-left: 12px;
 }
 
-#add-location, #add-user {
+#add-location {
   padding: 15px 15px 30px 6px;
+}
+
+#add-user {
+  padding: 15px 15px 30px 12px;
 }
 
 @media (max-width: 360px) {
@@ -162,8 +165,9 @@ button > img {
 }
 
 .alias-list-item,
+.allowed-user-list-item,
 .user-list-item {
-  padding: 0px 12px 0px 12px;
+  padding: 2px 12px 2px 12px;
 }
 
 .help {
