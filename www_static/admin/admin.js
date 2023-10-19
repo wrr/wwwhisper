@@ -1005,6 +1005,7 @@
         if (status === 401) {
           // User signed out, reload the admin page.
           window.location.reload(true);
+          return;
         }
 
         error.removeClass('hide')
