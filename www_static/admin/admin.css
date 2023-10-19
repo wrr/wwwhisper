@@ -76,8 +76,6 @@ button > img {
 }
 
 .location-link {
-/*(.allowed-user-list-item .user-mail,
-.url { */
   font-weight: bold;
 }
 
@@ -86,7 +84,6 @@ button > img {
 .allowed-user-list-item:hover,
 .alias-list-item:hover,
 .user-list-item:hover {
-/*  background-color: var(--bs-tertiary-bg); */
   background: #eeeeee;
 }
 
@@ -144,6 +141,7 @@ button > img {
 .allowed-user-list {
   max-height: 30em;
   overflow-y: auto;
+  margin-top: 5px;
 }
 
 .allowed-user-list-item {
@@ -155,7 +153,7 @@ button > img {
 }
 
 #add-user {
-  padding: 15px 15px 30px 12px;
+  padding: 5px 15px 15px 12px;
 }
 
 @media (max-width: 360px) {
@@ -190,18 +188,12 @@ button > img {
 
 .help-message {
   box-sizing: border-box;
-  /*color: var(--bs-success-text-emphasis);*/
   border-left: 0.25rem solid var(--bs-success-border-subtle);
   padding: 1.25rem;
   margin-top: 1.25rem;
   margin-bottom: 1.25rem;
-  /*background-color: var(--bs-body-bg);*/
-  /*background-color: #e1f5ec;
-  background-color: #edf5ed;*/
   background-color: #ebf4f0;
-  /*border-radius: var(--bs-border-radius);*/
-  /*margin-right: 0.5em; */
-  /*font-family: Georgia, "Times New Roman", Times, serif; */
+  /*font-family: Georgia, "Times New Roman", Times, serif;*/
 }
 
 .help-action {
