@@ -11,7 +11,7 @@
   /**
    * Utility functions.
    */
-  var utils = {
+  const utils = {
 
     /**
      * Throws if condition is false.
@@ -47,8 +47,7 @@
      * thrown.
      */
     findOnly: function(array, filterCallback) {
-      var result;
-      result = $.grep(array, filterCallback);
+      const result = $.grep(array, filterCallback);
       if (result.length === 0) {
         return null;
       }
@@ -69,7 +68,7 @@
      * in an array.
      */
     removeFromArray: function(value, array) {
-      var idx = $.inArray(value, array);
+      const idx = $.inArray(value, array);
       if (idx === -1) {
         return;
       }
@@ -96,7 +95,7 @@
      * input array.
      */
     sort: function(array, comparator) {
-      var arrayCopy = array.slice(0, array.length);
+      const arrayCopy = array.slice(0, array.length);
       arrayCopy.sort(comparator);
       return arrayCopy;
     },
@@ -158,11 +157,11 @@
    * updates when data to be displayed changes.
    */
   function Controller(ui, net) {
-    var that = this;
+    const that = this;
 
     this.aliases = [];
     this.locations = [];
-    var activeLocation = null;
+    let activeLocation = null;
 
     this.users = [];
     // Holds a wwwhisper login page configuration.
@@ -324,7 +323,7 @@
      * finish successfully, allDone callback is invoked.
      */
     this.asyncExecuteAll = function(tasks, allDone) {
-      var succesful_cnt = 0;
+      let succesful_cnt = 0;
       function done() {
         succesful_cnt += 1;
         if (succesful_cnt === tasks.length) {
@@ -365,7 +364,7 @@
      * himself in the foot).
      */
     this.addLocation = function(locationPathArg) {
-      var locationPath = $.trim(locationPathArg);
+      const locationPath = $.trim(locationPathArg);
       if (that.handledByAdmin(locationPath)) {
         that.errorHandler(
           'Adding sublocations to admin is not supported '+
@@ -457,19 +456,18 @@
      * Is user with such email does not exist, adds the user first.
      */
     this.grantAccess = function(email, location, failureHandler) {
-      var cleanedEmail, user, grantPermissionCallback;
-      cleanedEmail = $.trim(email);
+      const cleanedEmail = $.trim(email);
       if (cleanedEmail.length === 0) {
         return;
       }
 
-      user = that.findUserWithEmail(cleanedEmail);
+      const user = that.findUserWithEmail(cleanedEmail);
       if (user !== null && that.canAccess(user, location)) {
         // User already can access the location.
         return;
       }
 
-      grantPermissionCallback = function(userArg) {
+      const grantPermissionCallback = function(userArg) {
         net.ajax(
           'PUT',
           location.self + 'allowed-users/' + utils.urn2uuid(userArg.id) + '/',
@@ -545,7 +543,7 @@
     // manipulating access control list. The structure is defined in
     // the html file, this way js code does not need to create complex
     // DOM 'manually'.
-    var view = {
+    const view = {
       // A path to a location + controls to remove and visit a location.
       locationPath : $('.location-list-item').clone(true),
       // A list of users that can access a location (contains
@@ -565,11 +563,11 @@
       alias : $('.alias-list-item').clone(true),
       // Box for displaying error messages.
       errorMessage : $('.alert-danger').first().clone(true)
-    },
-    that = this,
-    controller = null,
-    loading = true,
-    ENTER_KEY = 13;
+    };
+    const that = this;
+    let controller = null;
+    let loading = true;
+    const ENTER_KEY = 13;
 
     /**
      * scheme://domain[:port if not default] of the current document.
@@ -641,14 +639,12 @@
      * user.
      */
     function showLocationInfo(location) {
-      var locationView, allowedUserList, isAdminLocation;
+      const isAdminLocation = controller.handledByAdmin(location.path);
 
-      isAdminLocation = controller.handledByAdmin(location.path);
-
-      locationView = view.locationInfo.clone(true)
+      const locationView = view.locationInfo.clone(true)
         .find('#add-allowed-user')
         .keyup(function(event) {
-          var userId = $.trim($(this).val());
+          let userId = $.trim($(this).val());
           if (event.which === ENTER_KEY) {
             grantAccess(userId, location);
             userId = '';
@@ -662,14 +658,14 @@
         })
         .end()
         .find('button').click(function() {
-          var input = $(this).siblings('input'), userId = $.trim(input.val());
+          const input = $(this).siblings('input'), userId = $.trim(input.val());
           grantAccess(userId, location);
           input.val('');
           $(this).addClass('disabled');
         })
         .end();
 
-      allowedUserList = locationView.find('.allowed-user-list');
+      const allowedUserList = locationView.find('.allowed-user-list');
       if (location.hasOwnProperty('openAccess')) {
         // Disable entering email addresses of allowed user: everyone
         // is allowed.
@@ -694,7 +690,7 @@
 
         utils.each(
           utils.sortByProperty(location.allowedUsers, 'email'), function(user) {
-            var isAdminUser = (user.email === controller.adminUserEmail);
+            const isAdminUser = (user.email === controller.adminUserEmail);
             view.allowedUser.clone(true)
               .find('.user-mail').text(user.email)
               .end()
@@ -711,17 +707,12 @@
           });
       }
       locationView.appendTo('#location-info-container');
-
-      // Break circular references.
-      locationView = null;
-      allowedUserList = null;
     }
 
     function showLocation(location) {
-      var pathView, isAdminLocation;
-      isAdminLocation = controller.handledByAdmin(location.path);
+      const isAdminLocation = controller.handledByAdmin(location.path);
 
-      pathView = view.locationPath.clone(true)
+      const pathView = view.locationPath.clone(true)
         .click(function() {
           controller.setActiveLocation(location);
         })
@@ -744,8 +735,6 @@
       if (controller.isActiveLocation(location)) {
         pathView.addClass('active');
       }
-      pathView = null;
-      isAdminLocation = null;
     }
 
     /**
@@ -761,7 +750,7 @@
       view.addLocation.clone(true)
         .find('#add-location-input')
         .keyup(function(event) {
-          var path = $.trim($(this).val());
+          let path = $.trim($(this).val());
           if (event.which === ENTER_KEY) {
             if (path !== '') {
               controller.addLocation(path);
@@ -778,7 +767,8 @@
         .end()
         .find('#add-location-button')
         .click(function() {
-          var input = $('#add-location-input'), path = $.trim(input.val());
+          const input = $('#add-location-input');
+          const path = $.trim(input.val());
           if (path !== '') {
             controller.addLocation(path);
           }
@@ -794,8 +784,8 @@
     }
 
     function showAlias(alias) {
-      var aliasView = view.alias.clone(true),
-      isCurrentUrl = (alias.url === currentUrlRoot());
+      const aliasView = view.alias.clone(true);
+      const isCurrentUrl = (alias.url === currentUrlRoot());
 
       aliasView.find('.url').text(alias.url + aliasAnnotation(alias))
         .end()
@@ -811,14 +801,13 @@
         })
         .end()
         .appendTo('#alias-list');
-      aliasView = null;
     }
 
     function showAliasesList() {
       utils.each(utils.sort(controller.aliases, function(a, b) {
-        var partsA = a.url.split('://'),
-        partsB = b.url.split('://'),
-        result = utils.compare(partsA[1], partsB[1]);
+        const partsA = a.url.split('://');
+        const partsB = b.url.split('://');
+        const result = utils.compare(partsA[1], partsB[1]);
         if (result === 0) {
           // Domains are the same, compare schemes.
           return utils.compare(partsA[0], partsB[0]);
@@ -826,9 +815,9 @@
         return result;
       }), showAlias);
 
-      function addAliasCommon(url) {
-        var input = $('#add-alias-input');
-        url = $.trim(input.val());
+      function addAliasCommon() {
+        const input = $('#add-alias-input');
+        const url = $.trim(input.val());
         if (url !== '') {
           controller.addAlias($('#add-alias-scheme').val() + url);
         }
@@ -925,7 +914,7 @@
      */
     function showCustomizeLogin() {
       $('#custom-login input:text').each(function() {
-        var field = $(this).attr('id');
+        const field = $(this).attr('id');
         $(this).val(controller.skin[field]);
         $(this).change(toggleSaveButton);
         // Redundant, but for input fields change() is not fired until
@@ -939,9 +928,9 @@
     }
 
     function saveCusomizedLogin() {
-      var skin = {};
+      const skin = {};
       $('#custom-login input:text').each(function() {
-        var field = $(this).attr('id');
+        const field = $(this).attr('id');
         skin[field] = $(this).val();
       });
       skin.branding = $('#branding').prop('checked');
@@ -953,7 +942,7 @@
      * if the hash part is empty.
      */
     function activeHash() {
-      var hash = location.hash.replace(/^#/, '');
+      const hash = location.hash.replace(/^#/, '');
       if (loading) {
         return 'loading';
       }
@@ -1010,7 +999,7 @@
      */
     this.handleError = function(message, status, isTextPlain) {
       if (status === undefined || status === 401 || isTextPlain) {
-        var error = view.errorMessage.clone(true);
+        const error = view.errorMessage.clone(true);
 
         if (status === 401) {
           // User signed out, reload the admin page.
@@ -1051,15 +1040,15 @@
      * active or if none, the first location in alphabetical order.
      */
     this.refresh = function() {
-      var focusedElementId, activeLocation = controller.getActiveLocation(),
-      scrollTop = $(document).scrollTop(),
-      scrollLeft = $(document).scrollLeft();
+      const activeLocation = controller.getActiveLocation();
+      const scrollTop = $(document).scrollTop();
+      const scrollLeft = $(document).scrollLeft();
 
       loading = false;
 
       showContainerPointedByHash();
 
-      focusedElementId = focusedElement().attr('id');
+      const focusedElementId = focusedElement().attr('id');
 
       $('#alias-list').empty();
       $('#location-list').empty();
@@ -1128,11 +1117,10 @@
   }
 
   function initialize() {
-    var ui, net, controller;
     // UI depends on controller, but can be created without it.
-    ui = new UI();
-    net = new wwwhisper.Net(ui);
-    controller = new Controller(ui, net);
+    const ui = new UI();
+    const net = new wwwhisper.Net(ui);
+    const controller = new Controller(ui, net);
     ui.setController(controller);
     controller.activate();
   }
