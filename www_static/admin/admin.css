@@ -73,9 +73,6 @@ button > img {
 
 .location-link {
   text-decoration: none;
-}
-
-.location-link {
   font-weight: bold;
 }
 
@@ -184,6 +181,7 @@ button > img {
 .path {
   /* Show all white spaces in paths and keep paths in a single line */
   white-space: pre;
+  color: rgba(var(--bs-link-color-rgb);
 }
 
 .help-message {

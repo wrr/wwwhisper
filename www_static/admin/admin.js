@@ -713,8 +713,9 @@
       const isAdminLocation = controller.handledByAdmin(location.path);
 
       const pathView = view.locationPath.clone(true)
-        .click(function() {
+        .click(function(event) {
           controller.setActiveLocation(location);
+          event.preventDefault();
         })
         .find('.path').text(location.path)
         .end()
