@@ -551,7 +551,7 @@
       // A list of users that can access a location (contains
       // view.allowedUser elements) + input box for adding a new user.
       locationInfo : $('#location-info').clone(true)
-        .find('.add-allowed-user').val('').end(), //Clears any stored input.
+        .find('#add-allowed-user').val('').end(), //Clears any stored input.
       // A single user that is allowed to access a location + control
       // to revoke access.
       allowedUser : $('.allowed-user-list-item').clone(true),
@@ -646,7 +646,7 @@
       isAdminLocation = controller.handledByAdmin(location.path);
 
       locationView = view.locationInfo.clone(true)
-        .find('.add-allowed-user')
+        .find('#add-allowed-user')
         .keyup(function(event) {
           var userId = $.trim($(this).val());
           if (event.which === ENTER_KEY) {
@@ -673,7 +673,7 @@
       if (location.hasOwnProperty('openAccess')) {
         // Disable entering email addresses of allowed user: everyone
         // is allowed.
-        locationView.find('.add-allowed-user')
+        locationView.find('#add-allowed-user')
           .attr('placeholder', 'Everyone is allowed to access the location')
           .attr('disabled', true);
 
@@ -690,7 +690,7 @@
         // page is refreshed, all locations become
         // disabled. Placeholder text is valid for them so it doesn't
         // seem like the first location is cloned.
-        locationView.find('.add-allowed-user').attr('disabled', false);
+        locationView.find('#add-allowed-user').attr('disabled', false);
 
         utils.each(
           utils.sortByProperty(location.allowedUsers, 'email'), function(user) {
