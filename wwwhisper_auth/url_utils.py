@@ -1,11 +1,11 @@
 # wwwhisper - web access control.
-# Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2012-2023 Jan Wrobel <jan@mixedbit.org>
 
 """Functions that operate on an HTTP resource path."""
 
 import posixpath
-import urllib.request, urllib.parse, urllib.error
 import re
+import urllib.parse
 
 def strip_query(path):
     """Strips query from a path."""

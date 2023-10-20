@@ -23,14 +23,14 @@ class RaisingEmailBackend(BaseEmailBackend):
 
 class AuthTestCase(HttpTestCase):
     def setUp(self):
-       settings.EMAIL_BACKEND = \
+        settings.EMAIL_BACKEND = \
             'django.core.mail.backends.locmem.EmailBackend'
-       settings.TOKEN_EMAIL_FROM = 'verify@wwwhisper.io'
-       super().setUp()
+        settings.TOKEN_EMAIL_FROM = 'verify@wwwhisper.io'
+        super().setUp()
 
     def tearDown(self):
         if mail.outbox:
-           mail.outbox = []
+            mail.outbox = []
 
     def login(self, email, site=None):
         if site is None:
@@ -42,9 +42,9 @@ class AuthTestCase(HttpTestCase):
         self.assertIsNotNone(user)
         # Session must be stored in a temporary variable, otherwise
         # updating does not work.
-        s = self.client.session
-        s['user_id'] = user.id
-        s.save()
+        session = self.client.session
+        session['user_id'] = user.id
+        session.save()
 
 class AuthTest(AuthTestCase):
     def test_is_authorized_requires_path_parameter(self):

@@ -20,15 +20,15 @@ class SetSiteMiddlewareTest(TestCase):
     def test_site_set_if_exists(self):
         _site = SitesCollection().create_item(SINGLE_SITE_ID)
         middleware = SetSiteMiddleware(get_response)
-        r = HttpRequest()
-        self.assertEqual(200, middleware(r).status_code)
-        self.assertEqual(SINGLE_SITE_ID, r.site.site_id)
+        request = HttpRequest()
+        self.assertEqual(200, middleware(request).status_code)
+        self.assertEqual(SINGLE_SITE_ID, request.site.site_id)
 
     def test_site_not_set_if_missing(self):
         middleware = SetSiteMiddleware(get_response)
-        r = HttpRequest()
-        self.assertEqual(200, middleware(r).status_code)
-        self.assertIsNone(r.site)
+        request = HttpRequest()
+        self.assertEqual(200, middleware(request).status_code)
+        self.assertIsNone(request.site)
 
 class SiteUrlMiddlewareTest(TestCase):
     def setUp(self):

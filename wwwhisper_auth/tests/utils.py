@@ -1,5 +1,5 @@
 # wwwhisper - web access control.
-# Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2012-2023 Jan Wrobel <jan@mixedbit.org>
 
 """Utilities to simplify testing."""
 
@@ -43,5 +43,3 @@ class HttpTestCase(TestCase):
 
     def delete(self, url):
         return self.client.delete(url, HTTP_SITE_URL=TEST_SITE)
-
-

@@ -515,8 +515,8 @@ class Collection:
     def find_item(self, uuid):
         return self.get_unique(lambda item: item.uuid == uuid)
 
-    def find_item_by_pk(self, pk):
-        return self.all_dict().get(pk, None)
+    def find_item_by_pk(self, primary_key):
+        return self.all_dict().get(primary_key, None)
 
     @modify_site
     def delete_item(self, uuid):
@@ -617,9 +617,10 @@ class LocationsCollection(Collection):
         # Retrieves permissions for all locations of the site with a
         # single query.
         self._cached_permissions = {}
-        for p in Permission.objects.filter(site=self.site):
-            self._cached_permissions.setdefault(
-                p.http_location_id, {})[p.user_id] = p
+        for permission in Permission.objects.filter(site=self.site):
+            location_permissions = self._cached_permissions.setdefault(
+                permission.http_location_id, {})
+            location_permissions[permission.user_id] = permission
 
     def get_permissions(self, location_id):
         """Returns permissions for a given location of the site."""

@@ -54,4 +54,3 @@ class VerifiedEmailBackendTest(TestCase):
                                HttpRequest(),
                                self.site,
                                self.user_token())
-

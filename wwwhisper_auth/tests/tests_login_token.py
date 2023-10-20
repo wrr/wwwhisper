@@ -38,4 +38,3 @@ class LoginToken(TestCase):
         regexp = ('https://example.com/wwwhisper/auth/login#' + encoded_path +
                   '&token=.{100,}')
         self.assertRegex(url, regexp)
-

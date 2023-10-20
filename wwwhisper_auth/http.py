@@ -26,7 +26,7 @@ HTML_MIME_TYPE = 'text/html; charset=utf-8'
 JSON_MIME_TYPE = 'application/json; charset=utf-8'
 JS_MIME_TYPE = 'text/javascript; charset=UTF-8'
 
-_accepts_html_re = re.compile('text/(html|\*)|(\*/\*)')
+_accepts_html_re = re.compile(r'text/(html|\*)|(\*/\*)')
 
 def accepts_html(accept_header):
     """Checks if the 'Accept' header accepts html response.

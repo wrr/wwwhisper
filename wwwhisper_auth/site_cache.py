@@ -71,9 +71,9 @@ class CachingSitesCollection(SitesCollection):
         return site
 
     def delete_item(self, site_id):
-        rv = super().delete_item(site_id=site_id)
+        result = super().delete_item(site_id=site_id)
         self.site_cache.delete(site_id)
-        return rv
+        return result
 
 # TODO: using this leads to problems in unit tests (a single test
 # creates sites that are visible to other tests).

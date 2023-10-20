@@ -88,10 +88,12 @@ class RedirectionTargetTest(TestCase):
 
 class SiteUrlTest(TestCase):
 
+    # pylint: disable=invalid-name
     def assertInvalid(self, result, errorRegexp):
         self.assertEqual(False, result[0])
         self.assertRegex(result[1], errorRegexp)
 
+    # pylint: disable=invalid-name
     def assertValid(self, result):
         self.assertEqual((True, None), result)
 
