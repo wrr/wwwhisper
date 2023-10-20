@@ -540,14 +540,14 @@ class Collection:
         try:
             item = self.model_class.objects.create(
                 site=self.site, uuid=str(uuidgen.uuid4()), **kwargs)
-        except IntegrityError as e:
+        except IntegrityError as ex:
             # In most cases UNIQUE constraint violation is detected by
             # the Django process which results in ValidationError. But
             # due to transaction isolation level that is used some
             # violations are not detected by Django in which case
             # IntegrityError is raised by the DB engine (translated to
             # ValidationError for consistency).
-            raise ValidationError(str(e))
+            raise ValidationError(str(ex)) from ex
         item.site = self.site
         return item
 
@@ -592,8 +592,8 @@ class UsersCollection(Collection):
         try:
             return self._do_create_item(email=encoded_email,
                                         last_login=timezone.now())
-        except ValidationError:
-            raise ValidationError('User already exists.')
+        except ValidationError as ex:
+            raise ValidationError('User already exists.') from ex
 
 
     def find_item_by_email(self, email):
@@ -663,13 +663,13 @@ class LocationsCollection(Collection):
                 "Path should not contain parameters (';' part).")
         try:
             path.encode('ascii')
-        except UnicodeError:
+        except UnicodeError as ex:
             raise ValidationError(
-                'Path should contain only ascii characters.')
+                'Path should contain only ascii characters.') from ex
         try:
             return self._do_create_item(path=path)
-        except ValidationError:
-            raise ValidationError('Location already exists.')
+        except ValidationError as ex:
+            raise ValidationError('Location already exists.') from ex
 
 
     def find_location(self, canonical_path):
@@ -730,8 +730,8 @@ class AliasesCollection(Collection):
         url = url_utils.remove_default_port(url)
         try:
             return self._do_create_item(url=url)
-        except ValidationError:
-            raise ValidationError('Alias with this url already exists')
+        except ValidationError as ex:
+            raise ValidationError('Alias with this url already exists') from ex
 
     def find_item_by_url(self, url):
         return self.get_unique(lambda item: item.url == url)
