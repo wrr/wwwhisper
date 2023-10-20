@@ -112,7 +112,6 @@ class Auth(View):
             return http.HttpResponseBadRequest(
                 "Client can not set the 'User' header")
 
-        debug_msg = f"Auth request to '{encoded_path}'"
 
         path_validation_error = None
         if url_utils.contains_fragment(encoded_path):
@@ -125,18 +124,17 @@ class Auth(View):
                 path_validation_error = 'Path should be absolute and ' \
                     'normalized (starting with / without /../ or /./ or //).'
         if path_validation_error is not None:
-            logger.debug(f'{debug_msg}: incorrect path.')
+            logger.debug('Auth request %s: incorrect path.', encoded_path)
             return http.HttpResponseBadRequest(path_validation_error)
 
         user = _get_user(request)
         location = request.site.locations.find_location(decoded_path)
         if user is not None:
-
-            debug_msg += f" by '{user.email}'"
             respone = None
 
             if location is not None and location.can_access(user):
-                logger.debug(f'{debug_msg}: access granted.')
+                logger.debug('Auth request %s %s: access granted.',
+                             user.email, encoded_path)
                 # Empty response, so if this end point is contacted by
                 # nginx auth_request module, the connection can use the
                 # keep alive option. nginx terminates an upstream
@@ -148,7 +146,8 @@ class Auth(View):
                 # middlewares for Ruby and Node.js test for 200 code.
                 response =  http.HttpResponseOK('')
             else:
-                logger.debug(f'{debug_msg}: access denied.')
+                logger.debug('Auth request %s %s: access denied.',
+                             user.email, encoded_path)
                 response = http.HttpResponseNotAuthorized(
                     _html_or_none(request, 'not_authorized.html',
                                   {'email' : user.email}))
@@ -156,10 +155,10 @@ class Auth(View):
             return response
 
         if location is not None and location.open_access_granted():
-            logger.debug(
-                f'{debug_msg}: authentication not required, access granted.')
+            logger.debug('Auth request %s: open location, access granted.',
+                         encoded_path)
             return http.HttpResponseOK('')
-        logger.debug(f'{debug_msg}: user not authenticated.')
+        logger.debug('Auth request %s: user not authenticated.', encoded_path)
         return http.HttpResponseNotAuthenticated(
             _html_or_none(request,
                           'login_enter_email.html',

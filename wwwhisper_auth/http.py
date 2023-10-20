@@ -153,32 +153,32 @@ class HttpResponseBadRequest(HttpResponse):
     """
 
     def __init__(self, message):
-        logger.debug(f'Bad request {message}')
+        logger.debug('Bad request %s', message)
         super().__init__(message, content_type=TEXT_MIME_TYPE, status=400)
 
 class HttpResponseLimitExceeded(HttpResponse):
     """Too many resource are already created, a new one can not be added."""
 
     def __init__(self, message):
-        logger.debug(f'Limit exceeded {message}')
+        logger.debug('Limit exceeded %s', message)
         super().__init__(message, content_type=TEXT_MIME_TYPE, status=400)
 
 class HttpResponseNotFound(HttpResponse):
 
     def __init__(self, message):
-        logger.debug(f'Not found {message}')
+        logger.debug('Not found %s', message)
         super().__init__(message, content_type=TEXT_MIME_TYPE, status=404)
 
 class HttpResponseServiceUnavailable(HttpResponse):
 
     def __init__(self, message):
-        logger.warning(f'Service unavailable {message}')
+        logger.warning('Service unavailable %s', message)
         super().__init__(message, content_type=TEXT_MIME_TYPE, status=503)
 
 class HttpResponseInternalError(HttpResponse):
 
     def __init__(self, message):
-        logger.warning(f'Internal error {message}')
+        logger.warning('Internal error %s', message)
         super().__init__(message, content_type=TEXT_MIME_TYPE, status=500)
 
 def disallow_cross_site_request(decorated_method):
@@ -250,15 +250,16 @@ class RestView(View):
                 kwargs.update()
             except ValueError as err:
                 logger.debug(
-                    f'Failed to parse the request body a as json object: {err}')
+                    'Failed to parse the request body as json: %s', err)
                 return HttpResponseBadRequest(
                     'Failed to parse the request body as a json object.')
         try:
             return super().dispatch(request, *args, **kwargs)
         except TypeError as err:
-            trace = "".join(traceback.format_exc())
+            trace = ''.join(traceback.format_exc())
             logger.debug(
-                f'Invalid arguments, handler not found: {err}\n{trace}')
+                'Invalid arguments, handler not found: %s\n%s',
+                err, trace)
             return HttpResponseBadRequest('Invalid request arguments')
 
 def _csrf_token_valid(request):
