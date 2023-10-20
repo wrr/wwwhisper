@@ -11,7 +11,7 @@ from wwwhisper_auth.site_cache import SiteCache
 
 TEST_SITE = 'https://example.com'
 
-class FakeCacheUpdater(object):
+class FakeCacheUpdater:
     def __init__(self):
         self.return_value = False
 

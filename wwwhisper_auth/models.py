@@ -1,5 +1,5 @@
 # wwwhisper - web access control.
-# Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2012-2023 Jan Wrobel <jan@mixedbit.org>
 
 """Data model for the site access control rules.
 
@@ -110,6 +110,7 @@ class Site(ValidatedModel):
         related data from the database. It is only performed if the site
         was modified since it was last retrieved.
         """
+        #pylint: disable=attribute-defined-outside-init
         self.locations = LocationsCollection(self)
         self.users = UsersCollection(self)
         self.aliases = AliasesCollection(self)
@@ -183,7 +184,7 @@ def modify_site(decorated_method):
     return wrapper
 
 
-class SitesCollection(object):
+class SitesCollection:
     def create_item(self, site_id, **kwargs):
         """Creates a new Site object.
 
@@ -459,7 +460,7 @@ class Alias(ValidatedModel):
         return _add_common_attributes(self, {'url': self.url})
 
 
-class Collection(object):
+class Collection:
     """A common base class for managing a collection of resources.
 
     All resources in a collection belong to a common site and only

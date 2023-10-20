@@ -1,5 +1,5 @@
 # wwwhisper - web access control.
-# Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2012-2023 Jan Wrobel <jan@mixedbit.org>
 
 import logging
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 SECURE_PROXY_SSL_HEADER = getattr(settings, 'SECURE_PROXY_SSL_HEADER')[0]
 
-class SetSiteMiddleware(object):
+class SetSiteMiddleware:
     """Associates a request with the only site that is in a db.
 
     The middleware is used for setups in which a single wwwhisper
@@ -34,7 +34,7 @@ class SetSiteMiddleware(object):
         request.site = self.sites.find_item(SINGLE_SITE_ID)
         return self.get_response(request)
 
-class SiteUrlMiddleware(object):
+class SiteUrlMiddleware:
     """Validates and sets site_url for the request.
 
     A Site-Url header must carry one of site's aliases otherwise a
@@ -90,7 +90,7 @@ class SiteUrlMiddleware(object):
         return self.get_response(request)
 
 
-class ProtectCookiesMiddleware(object):
+class ProtectCookiesMiddleware:
     """Sets 'secure' flag for all cookies if request is over https.
 
     The flag prevents cookies from being sent with HTTP requests.
@@ -108,7 +108,7 @@ class ProtectCookiesMiddleware(object):
         return response
 
 
-class SecuringHeadersMiddleware(object):
+class SecuringHeadersMiddleware:
     """Sets headers that impede clickjacking + content sniffing related attacks.
     """
 

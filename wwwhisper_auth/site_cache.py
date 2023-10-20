@@ -1,5 +1,5 @@
 # wwwhisper - web access control.
-# Copyright (C) 2013 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2013-2023 Jan Wrobel <jan@mixedbit.org>
 
 """Cache for sites with all associated data.
 
@@ -16,7 +16,7 @@ from wwwhisper_auth.models import SitesCollection
 
 logger = logging.getLogger(__name__)
 
-class CacheUpdater(object):
+class CacheUpdater:
     """Checks if the cached site needs to be updated.
 
     This is a simple, database agnostic implementation that runs a
@@ -28,7 +28,7 @@ class CacheUpdater(object):
         mod_id = site.mod_id_from_db()
         return mod_id is None or mod_id != site.mod_id
 
-class SiteCache(object):
+class SiteCache:
     def __init__(self, updater):
         self._updater = updater
         self._items = {}
