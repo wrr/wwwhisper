@@ -19,7 +19,7 @@ class FailingEmailBackend(BaseEmailBackend):
 
 class RaisingEmailBackend(BaseEmailBackend):
     def send_messages(self, messages):
-        raise Exception('Send failed');
+        raise Exception('Send failed')
 
 class AuthTestCase(HttpTestCase):
     def setUp(self):

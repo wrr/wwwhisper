@@ -68,7 +68,7 @@ class SiteUrlMiddlewareTest(TestCase):
     def test_allowed_site_url_with_port(self):
         url = 'http://bar.example.com:123'
         self.site.aliases.create_item(url)
-        request = self.get(url);
+        request = self.get(url)
         response = self.middleware(request)
         self.assertEqual(200, response.status_code)
         self.assertEqual(url, request.site_url)

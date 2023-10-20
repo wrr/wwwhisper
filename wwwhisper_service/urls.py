@@ -46,4 +46,3 @@ if settings.WWWHISPER_STATIC is not None:
         _url('auth/goodbye$', HtmlFileView.as_view(asset=goodbye)),
         _url('auth/goodbye.html$', HtmlFileView.as_view(asset=goodbye))
     ]
-

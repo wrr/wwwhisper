@@ -759,7 +759,7 @@ def _find(model_class, **kwargs):
     Returns:
         An item that satisfies expression or None.
     """
-    items = [item for item in model_class.objects.filter(**kwargs)]
+    items = list(model_class.objects.filter(**kwargs))
     count = len(items)
     assert count <= 1
     if count == 0:

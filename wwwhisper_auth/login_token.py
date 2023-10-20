@@ -9,8 +9,8 @@ from django.core import signing
 from django.urls import reverse
 
 
-"""Returns float that has microseconds resolution"""
 def _datetime_to_timestamp(datetime_arg):
+    """Returns float that has microseconds resolution"""
     # It does not matter what timezone and start time is used here.
     # It is only important that the output of this function increases
     # when datetime_arg increases.

@@ -163,9 +163,9 @@ ABSOLUTE_URL_OVERRIDES = {
     'auth.user': lambda u: f'/admin/api/users/{u.username}/',
 }
 
-handler = 'logging.StreamHandler' if not TESTING \
-    else 'logging.NullHandler'
-level = 'INFO' if not DEBUG else 'DEBUG'
+HANDLER = ('logging.StreamHandler' if not TESTING
+           else 'logging.NullHandler')
+LEVEL = 'INFO' if not DEBUG else 'DEBUG'
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -180,8 +180,8 @@ LOGGING = {
         },
     'handlers': {
         'console':{
-            'level': level,
-            'class': handler,
+            'level': LEVEL,
+            'class': HANDLER,
             'formatter': 'simple'
             },
         },
@@ -189,27 +189,27 @@ LOGGING = {
         'wwwhisper_service': {
             'handlers': ['console'],
             'propagate': True,
-            'level': level,
+            'level': LEVEL,
             },
         'wwwhisper_auth': {
             'handlers': ['console'],
             'propagate': True,
-            'level': level,
+            'level': LEVEL,
             },
         'wwwhisper_admin': {
             'handlers': ['console'],
             'propagate': True,
-            'level': level,
+            'level': LEVEL,
             },
         'django.request': {
             'handlers': ['console'],
             'propagate': True,
-            'level': level,
+            'level': LEVEL,
             },
         'django.db': {
             'handlers': ['console'],
             'propagate': True,
-            'level': level,
+            'level': LEVEL,
             },
         }
     }

@@ -35,7 +35,7 @@ def _html_or_none(request, template, context={}):
 
     Returns None if request does not accept html response type.
     """
-    if (http.accepts_html(request.META.get('HTTP_ACCEPT'))):
+    if http.accepts_html(request.META.get('HTTP_ACCEPT')):
         return render_to_string(template, context)
     return None
 
@@ -214,7 +214,7 @@ class Login(http.RestView):
         except AuthenticationError as ex:
             logger.debug('Token verification failed.')
             return http.HttpResponseBadRequest(str(ex))
-        assert(user is not None)
+        assert user
         auth.login(request, user)
         user.login_successful()
 
@@ -257,7 +257,7 @@ class SendToken(http.RestView):
             # possible to use the login form to query which emails are
             # allowed access. Such queries can still be possible by
             # response timing.
-            return http.HttpResponseNoContent();
+            return http.HttpResponseNoContent()
 
         url = login_token.generate_login_url(site=request.site,
                                              email=email,

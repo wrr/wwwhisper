@@ -13,8 +13,9 @@ class Asset:
     """Stores a static file to be returned by requests."""
 
     def __init__(self, prefix, *args):
-        assert prefix is not None
-        self.body = open(os.path.join(prefix, *args)).read()
+        assert prefix
+        with open(os.path.join(prefix, *args), encoding='utf-8') as asset_file:
+            self.body = asset_file.read()
 
 
 class StaticFileView(View):

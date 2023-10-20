@@ -243,8 +243,7 @@ class RestView(View):
                     if k in kwargs:
                         return HttpResponseBadRequest(
                             'Invalid argument passed in the request body.')
-                    else:
-                        kwargs[k] = json_args[k]
+                    kwargs[k] = json_args[k]
                 kwargs.update()
             except ValueError as err:
                 logger.debug(
