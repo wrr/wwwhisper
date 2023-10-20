@@ -13,17 +13,17 @@ from wwwhisper_auth.tests.utils import HttpTestCase
 from wwwhisper_auth.tests.utils import TEST_SITE
 
 class TestView(RestView):
-    def get(self, request):
+    def get(self, _request):
         return HttpResponse(status=267)
 
-    def post(self, request, ping_message):
+    def post(self, _request, ping_message):
         return HttpResponse(ping_message, status=277)
 
 class TestView2(RestView):
-    def get(self, request, url_arg):
+    def get(self, _request, url_arg):
         return HttpResponse(url_arg, status=288)
 
-    def post(self, request, url_arg):
+    def post(self, _request, url_arg):
         return HttpResponse(url_arg, status=298)
 
 urlpatterns = [

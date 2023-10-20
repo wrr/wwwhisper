@@ -16,7 +16,7 @@ from wwwhisper_auth.tests.utils import HttpTestCase
 from wwwhisper_auth.tests.utils import TEST_SITE
 
 class FailingEmailBackend(BaseEmailBackend):
-    def send_messages(self, messages):
+    def send_messages(self, _messages):
         return 0
 
 class RaisingEmailBackend(BaseEmailBackend):

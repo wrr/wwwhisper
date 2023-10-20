@@ -46,6 +46,7 @@ def _grant_admins_access_to_all_locations(site):
         for location in site.locations.all():
             location.grant_access(user.uuid)
 
+# pylint: disable=unused-argument
 def grant_initial_permission(sender, *args, **kwargs):
     """Configures initial permissions for wwwhisper protected site.
 

@@ -40,7 +40,7 @@ class CollectionView(http.RestView):
     collection_name = None
 
     @set_collection
-    def post(self, request, **kwargs):
+    def post(self, _request, **kwargs):
         """Ads a new resource to the collection.
 
         Args:
@@ -85,7 +85,7 @@ class ItemView(http.RestView):
     collection_name = None
 
     @set_collection
-    def get(self, request, uuid):
+    def get(self, _request, uuid):
         """Returns json representation of a resource with a given uuid."""
         if item := self.collection.find_item(uuid):
             return http.HttpResponseOKJson(item.attributes_dict())
@@ -94,7 +94,7 @@ class ItemView(http.RestView):
 
 
     @set_collection
-    def delete(self, request, uuid):
+    def delete(self, _request, uuid):
         """Deletes a resource with a given uuid."""
         deleted = self.collection.delete_item(uuid)
         if not deleted:

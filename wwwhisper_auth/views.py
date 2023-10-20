@@ -185,7 +185,7 @@ class CsrfToken(View):
 
     @http.never_ever_cache
     @method_decorator(ensure_csrf_cookie)
-    def get(self, request):
+    def get(self, _request):
         """Sets a cookie with CSRF protection token.
 
         The method must be called if the cookie is missing before any

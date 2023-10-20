@@ -15,7 +15,7 @@ class FakeCacheUpdater(object):
     def __init__(self):
         self.return_value = False
 
-    def is_obsolete(self, site):
+    def is_obsolete(self, _site):
         return self.return_value
 
 class SiteCacheTest(TestCase):

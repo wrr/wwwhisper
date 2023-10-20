@@ -24,7 +24,7 @@ class StaticFileView(View):
     asset = None
 
     @method_decorator(cache_control(private=True, max_age=60 * 60 * 5))
-    def get(self, request):
+    def get(self, _request):
         return self.do_get(self.asset.body)
 
 class HtmlFileView(StaticFileView):

@@ -136,6 +136,7 @@ class Site(ValidatedModel):
         result['branding'] = self.branding
         return result
 
+    # pylint: disable=unused-argument
     def update_skin(self, title, header, message, branding):
         for attr in self._default_skin.keys():
             arg = locals()[attr].strip()
@@ -529,7 +530,7 @@ class Collection(object):
         item.delete()
         return True
 
-    def _do_create_item(self, *args, **kwargs):
+    def _do_create_item(self, **kwargs):
         """Only to be called by subclasses.
 
         Raises ValidationError if the item can not be created because

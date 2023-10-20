@@ -13,7 +13,7 @@ from wwwhisper_auth.middleware import SiteUrlMiddleware
 from wwwhisper_auth.models import SitesCollection
 from wwwhisper_auth.models import SINGLE_SITE_ID
 
-def get_response(request):
+def get_response(_request):
     return HttpResponse()
 
 class SetSiteMiddlewareTest(TestCase):
@@ -148,7 +148,7 @@ class SiteUrlMiddlewareTest(TestCase):
         self.assertEqual('https://foo.example.com/foo/bar/baz?x=y&z=1',
                          response['Location'])
 
-def get_response_with_cookie(request):
+def get_response_with_cookie(_request):
     response = http.HttpResponseNoContent()
     response.set_cookie('session', value='foo', secure=None)
     return response
