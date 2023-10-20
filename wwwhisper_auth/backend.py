@@ -4,10 +4,8 @@
 """Authentication backend used by wwwhisper_auth."""
 
 from django.contrib.auth.backends import ModelBackend
-from django.forms import ValidationError
 
 from wwwhisper_auth import login_token
-from wwwhisper_auth.models import LimitExceeded
 
 class AuthenticationError(Exception):
     pass

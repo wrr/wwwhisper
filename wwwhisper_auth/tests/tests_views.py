@@ -4,10 +4,8 @@
 import json
 import urllib.parse
 
-from django.contrib.auth.models import User
 from django.conf import settings
 from django.core.mail.backends.base import BaseEmailBackend
-from django.contrib.auth.backends import ModelBackend
 from django.core import mail
 from django.test import override_settings
 
@@ -54,7 +52,7 @@ class AuthTest(AuthTestCase):
         self.assertEqual(400, response.status_code)
 
     def test_is_authorized_if_not_authenticated(self):
-        location = self.site.locations.create_item('/foo/')
+        _location = self.site.locations.create_item('/foo/')
         response = self.get('/wwwhisper/auth/api/is-authorized/?path=/foo/')
         self.assertEqual(401, response.status_code)
         self.assertTrue(response.has_header('WWW-Authenticate'))
@@ -85,8 +83,8 @@ class AuthTest(AuthTestCase):
 
     def test_is_authorized_if_user_of_other_site(self):
         site2 = self.sites.create_item('somesite')
-        user = site2.users.create_item('foo@example.com')
-        location = self.site.locations.create_item('/foo/')
+        _user = site2.users.create_item('foo@example.com')
+        _location = self.site.locations.create_item('/foo/')
         self.login('foo@example.com', site2)
         response = self.get('/wwwhisper/auth/api/is-authorized/?path=/foo/')
         self.assertEqual(401, response.status_code)
@@ -100,7 +98,7 @@ class AuthTest(AuthTestCase):
         self.assertEqual('0', response['Content-Length'])
 
     def test_is_authorized_if_open_location_and_authenticated(self):
-        user = self.site.users.create_item('foo@example.com')
+        _user = self.site.users.create_item('foo@example.com')
         self.login('foo@example.com')
         location = self.site.locations.create_item('/foo/')
         location.grant_open_access()
@@ -162,7 +160,7 @@ class AuthTest(AuthTestCase):
     # Make sure HTML responses are returned when request accepts HTML.
 
     def test_is_authorized_if_not_authenticated_html_response(self):
-        location = self.site.locations.create_item('/foo/')
+        _location = self.site.locations.create_item('/foo/')
         response = self.get('/wwwhisper/auth/api/is-authorized/?path=/foo/',
                             HTTP_ACCEPT='text/plain, text/html')
         self.assertEqual(401, response.status_code)
@@ -201,7 +199,7 @@ class AuthTest(AuthTestCase):
 
 class LogoutTest(AuthTestCase):
     def test_authentication_requested_after_logout(self):
-        user = self.site.users.create_item('foo@example.com')
+        _user = self.site.users.create_item('foo@example.com')
         self.login('foo@example.com')
 
         response = self.get('/wwwhisper/auth/api/is-authorized/?path=/bar/')

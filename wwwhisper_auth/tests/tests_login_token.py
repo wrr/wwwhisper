@@ -6,7 +6,6 @@ from wwwhisper_auth.login_token import generate_login_token
 from wwwhisper_auth.login_token import generate_login_url
 from wwwhisper_auth.login_token import load_login_token
 from wwwhisper_auth.models import SitesCollection
-from wwwhisper_auth.models import SINGLE_SITE_ID
 
 class LoginToken(TestCase):
 

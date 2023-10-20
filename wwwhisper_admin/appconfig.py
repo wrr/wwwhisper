@@ -1,5 +1,5 @@
 # wwwhisper - web access control.
-# Copyright (C) 2018 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2018-2023 Jan Wrobel <jan@mixedbit.org>
 
 
 from django.apps import AppConfig
@@ -36,7 +36,7 @@ def _create_initial_admins(site):
     emails = getattr(settings, 'WWWHISPER_INITIAL_ADMINS', [])
     for email in emails:
         try:
-            user = site.users.create_item(email)
+            _user = site.users.create_item(email)
         except ValidationError as ex:
             raise ImproperlyConfigured(
                 f'Failed to create admin user {email}') from ex
@@ -58,7 +58,6 @@ def grant_initial_permission(sender, *args, **kwargs):
     manages access to itself, so it can be used to add and remove
     users that can perform administrative operations.
     """
-    from wwwhisper_auth import models as auth_models
     if kwargs.get('interactive', True):
         site = _create_site()
         _create_initial_locations(site)

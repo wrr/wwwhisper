@@ -1,11 +1,10 @@
 # wwwhisper - web access control.
-# Copyright (C) 2013-2022 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2013-2023 Jan Wrobel <jan@mixedbit.org>
 
 import os
 
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_control
-from django.views.decorators.cache import cache_page
 from django.views.generic import View
 from wwwhisper_auth import http
 

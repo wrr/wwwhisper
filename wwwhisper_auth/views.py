@@ -7,7 +7,6 @@ import logging
 
 from django.conf import settings
 from django.contrib import auth
-from django.core.cache import cache
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.decorators import method_decorator
@@ -130,8 +129,6 @@ class Auth(View):
         user = _get_user(request)
         location = request.site.locations.find_location(decoded_path)
         if user is not None:
-            respone = None
-
             if location is not None and location.can_access(user):
                 logger.debug('Auth request %s %s: access granted.',
                              user.email, encoded_path)

@@ -19,8 +19,6 @@ from django.utils.crypto import constant_time_compare
 from django.views.decorators.cache import patch_cache_control
 from django.views.generic import View
 
-from wwwhisper_auth import models
-
 logger = logging.getLogger(__name__)
 
 TEXT_MIME_TYPE = 'text/plain; charset=utf-8'

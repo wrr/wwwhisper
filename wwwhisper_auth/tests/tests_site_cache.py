@@ -65,6 +65,6 @@ class CachingSitesCollectionTest(TestCase):
         self.assertTrue(site is not site2)
 
     def test_delete_removes_cached_item(self):
-        site = self.sites.create_item(TEST_SITE)
+        _site = self.sites.create_item(TEST_SITE)
         self.assertTrue(self.sites.delete_item(TEST_SITE))
         self.assertIsNone(self.sites.find_item(TEST_SITE))

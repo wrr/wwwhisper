@@ -18,7 +18,7 @@ def get_response(_request):
 
 class SetSiteMiddlewareTest(TestCase):
     def test_site_set_if_exists(self):
-        site = SitesCollection().create_item(SINGLE_SITE_ID)
+        _site = SitesCollection().create_item(SINGLE_SITE_ID)
         middleware = SetSiteMiddleware(get_response)
         r = HttpRequest()
         self.assertEqual(200, middleware(r).status_code)

@@ -27,7 +27,7 @@ class VerifiedEmailBackendTest(TestCase):
         self.assertEqual(user, auth_user)
 
     def test_token_invalid(self):
-        user = self.site.users.create_item(TEST_USER_EMAIL)
+        _user = self.site.users.create_item(TEST_USER_EMAIL)
         self.assertRaisesRegex(AuthenticationError,
                                'Token invalid or expired',
                                self.backend.authenticate,

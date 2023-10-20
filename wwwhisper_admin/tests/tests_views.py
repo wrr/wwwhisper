@@ -368,7 +368,7 @@ class AccessControlTest(AdminViewTestCase):
         location_url = self.add_location()['self']
 
         response = self.add_user()
-        user_url = response['self']
+        _user_url = response['self']
         user_uuid = extract_uuid(response['id'])
 
         response1 = self.put(location_url + 'allowed-users/' + user_uuid + "/")
@@ -385,7 +385,7 @@ class AccessControlTest(AdminViewTestCase):
         location_url = self.add_location()['self']
 
         response = self.add_user()
-        user_url = response['self']
+        _user_url = response['self']
         user_uuid = extract_uuid(response['id'])
 
         # Allow access.

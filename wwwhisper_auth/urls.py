@@ -7,7 +7,6 @@ is-authorized/ URL does not need to be exposed by the HTTP server to
 the outside world, other views need to be externally accessible.
 """
 
-from django.conf import settings
 from django.conf.urls import url
 from wwwhisper_auth.views import Auth, CsrfToken, Login, Logout, WhoAmI
 from wwwhisper_auth.views import SendToken

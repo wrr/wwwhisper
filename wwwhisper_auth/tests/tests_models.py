@@ -1,10 +1,9 @@
 # coding=utf-8
 
 # wwwhisper - web access control.
-# Copyright (C) 2012-2017 Jan Wrobel <jan@mixedbit.org>
+# Copyright (C) 2012-2023 Jan Wrobel <jan@mixedbit.org>
 
 from contextlib import contextmanager
-from functools import wraps
 
 from django.db import transaction
 from django.forms import ValidationError
@@ -57,7 +56,7 @@ class SiteModifiedTest(ModelTestCase):
         try:
             with self.assert_site_modified(self.site):
                 pass
-        except AssertionError as er:
+        except AssertionError:
             pass # Expected.
         else:
             self.fail('Assertion not raised')
@@ -66,7 +65,7 @@ class SiteModifiedTest(ModelTestCase):
         try:
             with self.assert_site_not_modified(self.site):
                 self.site.site_modified()
-        except AssertionError as er:
+        except AssertionError:
             pass # Expected.
         else:
             self.fail('Assertion not raised')
@@ -213,8 +212,8 @@ class UsersCollectionTest(ModelTestCase):
 
     def test_get_all_users(self):
         user1 = self.users.create_item('foo@example.com')
-        user2 = self.users.create_item('bar@example.com')
-        user3 = self.site2.users.create_item('baz@example.com')
+        _user2 = self.users.create_item('bar@example.com')
+        _user3 = self.site2.users.create_item('baz@example.com')
         self.assertEqual(2, self.users.count())
         self.assertEqual(1, self.site2.users.count())
         with self.assert_site_not_modified(self.site):
@@ -353,7 +352,7 @@ class LocationsCollectionTest(ModelTestCase):
 
     def test_get_all_locations(self):
         location1 = self.locations.create_item('/foo')
-        location2 = self.locations.create_item('/foo/bar')
+        _location2 = self.locations.create_item('/foo/bar')
         self.site2.locations.create_item('/foo/baz')
         self.assertEqual(2, self.locations.count())
         self.assertEqual(1, self.site2.locations.count())
@@ -536,7 +535,7 @@ class LocationsCollectionTest(ModelTestCase):
         self.assertFalse(location2.can_access(user))
 
     def test_trailing_slash_respected(self):
-        location = self.locations.create_item('/foo/bar/')
+        _location = self.locations.create_item('/foo/bar/')
         self.assertIsNone(self.locations.find_location('/foo/bar'))
 
     def test_grant_access_to_root(self):
