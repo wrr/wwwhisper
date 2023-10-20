@@ -232,8 +232,8 @@ class RestView(View):
         method = request.method.lower()
         # Parse body as json object if it is not empty (empty body
         # contains '--BoUnDaRyStRiNg--')
-        if (method == 'post' or method == 'put') \
-                and len(request.body) != 0 and request.body[0] != '-':
+        if ((method == 'post' or method == 'put')
+            and request.body and request.body[0] != '-'):
             try:
                 if not _utf8_encoded_json(request):
                     return HttpResponseBadRequest(

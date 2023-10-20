@@ -27,8 +27,7 @@ def _get_user(request):
 
     The user id of a logged in user is stored in the session key-value store.
     """
-    user_id = request.session.get('user_id', None)
-    if user_id is not None:
+    if user_id := request.session.get('user_id', None):
         return request.site.users.get_unique(lambda user: user.id == user_id)
     return None
 
@@ -311,8 +310,7 @@ class WhoAmI(http.RestView):
     @http.never_ever_cache
     def get(self, request):
         """Returns an email or an authentication required error."""
-        user = _get_user(request)
-        if user is not None:
+        if user := _get_user(request):
             response = http.HttpResponseOKJson({'email': user.email})
             http.set_logged_in_cookie(response)
             return response

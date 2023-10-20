@@ -87,11 +87,11 @@ class ItemView(http.RestView):
     @set_collection
     def get(self, request, uuid):
         """Returns json representation of a resource with a given uuid."""
-        item = self.collection.find_item(uuid)
-        if item is None:
-            return http.HttpResponseNotFound(
-                f'{self.collection.item_name.capitalize()} not found')
-        return http.HttpResponseOKJson(item.attributes_dict())
+        if item := self.collection.find_item(uuid):
+            return http.HttpResponseOKJson(item.attributes_dict())
+        return http.HttpResponseNotFound(
+            f'{self.collection.item_name.capitalize()} not found')
+
 
     @set_collection
     def delete(self, request, uuid):
