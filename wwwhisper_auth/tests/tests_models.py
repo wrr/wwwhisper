@@ -267,11 +267,10 @@ class UsersCollectionTest(ModelTestCase):
                                    'Invalid email format',
                                    self.users.create_item,
                                    r'a\b@b.c.d')
-            # Too long.
             self.assertRaisesRegex(ValidationError,
-                                   'Invalid email format',
+                                   'Email too long',
                                    self.users.create_item,
-                                   'foo@bar.com.' + ('z' * 100) )
+                                   'foo@baar.com' + ('.com' * 16) )
 
     def test_email_normalization(self):
         email = self.users.create_item('x@y.z').email

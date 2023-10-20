@@ -554,6 +554,9 @@ class UsersCollection(Collection):
 
     item_name = 'user'
     model_class = User
+    # When increased DB schema also needs to be altered to accept
+    # longer values (Django uses 75 limit for models.EmailField).
+    EMAIL_LEN_LIMIT = 75
 
     @modify_site
     def create_item(self, email):
@@ -571,6 +574,9 @@ class UsersCollection(Collection):
         users_limit = self.site.users_limit
         if (users_limit is not None and self.count() >= users_limit):
             raise LimitExceeded('Users limit exceeded')
+
+        if len(email) > self.EMAIL_LEN_LIMIT:
+            raise ValidationError('Email too long')
 
         encoded_email = _encode_email(email)
         if encoded_email is None:
