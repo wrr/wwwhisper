@@ -6,7 +6,7 @@ import logging
 from django.conf import settings
 from django.conf.urls import include, url
 
-from wwwhisper_auth.assets import Asset, HtmlFileView, JsFileView
+from wwwhisper_auth.assets import read_asset, HtmlFileView, JsFileView
 
 logger = logging.getLogger(__name__)
 
@@ -27,13 +27,13 @@ urlpatterns = [
 # wwwhisper_auth.views.SendToken.
 if settings.WWWHISPER_STATIC is not None:
     logger.debug('wwwhisper configured to serve static files.')
-    admin = Asset(settings.WWWHISPER_STATIC, 'admin', 'index.html')
-    overlay = Asset(settings.WWWHISPER_STATIC, 'auth', 'overlay.html')
-    iframe = Asset(settings.WWWHISPER_STATIC, 'auth', 'iframe.js')
-    logout = Asset(settings.WWWHISPER_STATIC, 'auth', 'logout.html')
-    login_check_token = Asset(settings.WWWHISPER_STATIC, 'auth',
+    admin = read_asset(settings.WWWHISPER_STATIC, 'admin', 'index.html')
+    overlay = read_asset(settings.WWWHISPER_STATIC, 'auth', 'overlay.html')
+    iframe = read_asset(settings.WWWHISPER_STATIC, 'auth', 'iframe.js')
+    logout = read_asset(settings.WWWHISPER_STATIC, 'auth', 'logout.html')
+    login_check_token = read_asset(settings.WWWHISPER_STATIC, 'auth',
                               'login_check_token.html')
-    goodbye = Asset(settings.WWWHISPER_STATIC, 'auth', 'goodbye.html')
+    goodbye = read_asset(settings.WWWHISPER_STATIC, 'auth', 'goodbye.html')
 
     urlpatterns += [
         _url('admin/$', HtmlFileView.as_view(asset=admin)),
