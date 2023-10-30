@@ -1,0 +1,3 @@
+#!/bin/sh
+
+pylint --rc-file ./pylintrc wwwhisper_auth wwwhisper_admin wwwhisper_service
