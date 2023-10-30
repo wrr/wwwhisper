@@ -212,6 +212,7 @@ class AllowedUsersView(http.RestView):
 class SkinView(http.RestView):
     """Configures the login page."""
 
+    # pylint: disable=too-many-arguments
     def put(self, request, title, header, message, branding):
         try:
             request.site.update_skin(title=title, header=header,

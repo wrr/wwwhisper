@@ -3,6 +3,18 @@
 import os
 import sys
 
+import django.core.exceptions
+
+import wwwhisper_service.cdn_container
+
+TESTING = sys.argv[1:2] == ['test']
+
+# pylint: disable=wildcard-import, import-error, unused-wildcard-import
+if TESTING:
+    from wwwhisper_service.test_site_settings import *
+else:
+    from site_settings import *
+
 DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 
@@ -15,15 +27,8 @@ WWWHISPER_STATIC = 'www_static'
 # /wwwhisper/admin/)
 WWWHISPER_PATH_PREFIX = 'wwwhisper/'
 # Static files are also served from /wwwhisper/ prefix.
-import wwwhisper_service.cdn_container
+
 STATIC_URL = wwwhisper_service.cdn_container.CDN_CONTAINER + '/' + 'wwwhisper/'
-
-TESTING = sys.argv[1:2] == ['test']
-
-if TESTING:
-    from wwwhisper_service.test_site_settings import *
-else:
-    from site_settings import *
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 TOKEN_EMAIL_FROM = 'verify@wwwhisper.io'
@@ -215,4 +220,5 @@ LOGGING = {
     }
 
 if not SECRET_KEY:
-    raise ImproperlyConfigured('DJANGO_SECRET_KEY environment variable not set')
+    raise django.core.exceptions.ImproperlyConfigured(
+        'DJANGO_SECRET_KEY environment variable not set')

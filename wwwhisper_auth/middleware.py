@@ -88,7 +88,7 @@ class SiteUrlMiddleware:
         request.site_url = url
         request.META[SECURE_PROXY_SSL_HEADER] = scheme
         request.META['HTTP_X_FORWARDED_HOST'] = host
-        # TODO: use is_secure() instead
+        # pylint: disable=superfluous-parens
         request.https = (scheme == 'https')
         return self.get_response(request)
 

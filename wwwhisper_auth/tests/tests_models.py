@@ -640,8 +640,8 @@ class LocationsCollectionTest(ModelTestCase):
                                    self.locations.create_item,
                                    long_path)
 
-    """Path passed to create_location is expected to be saved verbatim."""
     def test_location_path_not_encoded(self):
+        # Path passed to create_location is expected to be saved verbatim.
         self.assertEqual(
             '/foo%20bar', self.locations.create_item('/foo%20bar').path)
         self.assertEqual(

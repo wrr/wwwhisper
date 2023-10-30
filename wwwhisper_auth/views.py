@@ -4,6 +4,7 @@
 """Views that handle user authentication and authorization."""
 
 import logging
+import smtplib
 
 from django.conf import settings
 from django.contrib import auth
@@ -30,7 +31,7 @@ def _get_user(request):
         return request.site.users.get_unique(lambda user: user.id == user_id)
     return None
 
-def _html_or_none(request, template, context={}):
+def _html_or_none(request, template, context):
     """Renders html response string from a given template.
 
     Returns None if request does not accept html response type.
@@ -206,7 +207,7 @@ class Login(http.RestView):
         Verifies a token and check that a user with an email encoded
         in the token is known.
         """
-        if token == None:
+        if token is None:
             return http.HttpResponseBadRequest('Token missing.')
         try:
             user = auth.authenticate(site=request.site,
@@ -244,7 +245,7 @@ class SendToken(http.RestView):
         The login url contains a path to which the user should be
         redirected after successful verification.
         """
-        if email == None:
+        if email is None:
             return http.HttpResponseBadRequest('Email not set.')
         if not models.is_email_valid(email):
             return http.HttpResponseBadRequest('Email has invalid format.')
@@ -279,7 +280,7 @@ class SendToken(http.RestView):
         try:
             success = (send_mail(subject, body, from_email, [email],
                                  fail_silently=False) > 0)
-        except Exception as ex:
+        except smtplib.SMTPException as ex:
             logger.warning(ex)
         if not success:
             # This probaly can be also due to invalid email address,

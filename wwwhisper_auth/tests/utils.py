@@ -27,8 +27,8 @@ class HttpTestCase(TestCase):
             url, args, 'application/json; charset=UTF-8',
             HTTP_SITE_URL=TEST_SITE)
 
-    """ To be used for views that are not contacted via Ajax. """
     def post_form(self, url, args):
+        """Used for views that are not contacted via Ajax. """
         return self.client.post(url, args)
 
     def get(self, url, **extra_headers):

@@ -21,5 +21,6 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "wwwhisper_service.settings")
 # file. This includes Django's development server, if the WSGI_APPLICATION
 # setting points here.
 # Apply WSGI middleware here.
+# pylint: disable=wrong-import-position
 from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()

@@ -277,8 +277,7 @@ class AccessControlTest(AdminViewTestCase):
 
     def can_access(self, location_url, user_uuid):
         response = self.get(location_url + 'allowed-users/' + user_uuid + '/')
-        self.assertTrue(response.status_code == 200
-                        or response.status_code == 404)
+        self.assertTrue(response.status_code in (200, 404))
         return response.status_code == 200
 
     def test_grant_access(self):
@@ -308,7 +307,7 @@ class AccessControlTest(AdminViewTestCase):
         user_uuid = extract_uuid(response['id'])
 
         self.assertFalse(self.can_access(location_url, user_uuid))
-        self.put(location_url + 'allowed-users/' + user_uuid + "/")
+        self.put(f'{location_url}allowed-users/{user_uuid}/')
         self.assertTrue(self.can_access(location_url, user_uuid))
 
     def test_revoke_access(self):
@@ -318,12 +317,12 @@ class AccessControlTest(AdminViewTestCase):
         user_uuid = extract_uuid(response['id'])
 
         # Allow access.
-        self.put(location_url + 'allowed-users/' + user_uuid + "/")
+        self.put(f'{location_url}allowed-users/{user_uuid}/')
         self.assertTrue(self.can_access(location_url, user_uuid))
 
         # Revoke access.
         response = self.delete(
-            location_url + 'allowed-users/' + user_uuid + "/")
+            f'{location_url}allowed-users/{user_uuid}/')
         self.assertEqual(204, response.status_code)
         self.assertFalse(self.can_access(location_url, user_uuid))
 
@@ -337,8 +336,8 @@ class AccessControlTest(AdminViewTestCase):
         user2_urn = self.add_user('user2@acme.com')['id']
         user2_uuid = extract_uuid(user2_urn)
 
-        self.put(location_url + 'allowed-users/' + user1_uuid + "/")
-        self.put(location_url + 'allowed-users/' + user2_uuid + "/")
+        self.put(f'{location_url}allowed-users/{user1_uuid}/')
+        self.put(f'{location_url}allowed-users/{user2_uuid}/')
 
         response = self.get(location_url)
         parsed_response_body = json.loads(response.content)
@@ -374,11 +373,11 @@ class AccessControlTest(AdminViewTestCase):
         _user_url = response['self']
         user_uuid = extract_uuid(response['id'])
 
-        response1 = self.put(location_url + 'allowed-users/' + user_uuid + "/")
+        response1 = self.put(f'{location_url}allowed-users/{user_uuid}/')
         self.assertEqual(201, response1.status_code)
         self.assertTrue(response1.has_header('Location'))
 
-        response2 = self.put(location_url + 'allowed-users/' + user_uuid + "/")
+        response2 = self.put(f'{location_url}allowed-users/{user_uuid}/')
         self.assertEqual(200, response2.status_code)
         self.assertFalse(response2.has_header('Location'))
 
@@ -392,16 +391,14 @@ class AccessControlTest(AdminViewTestCase):
         user_uuid = extract_uuid(response['id'])
 
         # Allow access.
-        self.put(location_url + 'allowed-users/' + user_uuid + "/")
+        self.put(f'{location_url}allowed-users/{user_uuid}/')
         self.assertTrue(self.can_access(location_url, user_uuid))
 
         # Revoke access.
-        response = self.delete(
-            location_url + 'allowed-users/' + user_uuid + "/")
+        response = self.delete(f'{location_url}allowed-users/{user_uuid}/')
         self.assertEqual(204, response.status_code)
 
-        response = self.delete(
-            location_url + 'allowed-users/' + user_uuid + "/")
+        response = self.delete(f'{location_url}allowed-users/{user_uuid}/')
         self.assertEqual(404, response.status_code)
         self.assertEqual(response.content, b'User can not access location.')
 

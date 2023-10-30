@@ -32,9 +32,11 @@ def is_canonical(path):
     # canonical (it is the same as '/').
     if path == '' or not posixpath.isabs(path) or path.startswith('//'):
         return False
-    # Normpath removes trailing '/'.
     normalized_path =  posixpath.normpath(path)
-    if (normalized_path != path and normalized_path + '/' != path):
+    # Normpath removes trailing '/'.
+    if normalized_path != '/' and path[-1] == '/':
+        normalized_path += '/'
+    if path != normalized_path:
         return False
     return True
 

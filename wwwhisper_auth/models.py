@@ -85,7 +85,8 @@ class Site(ValidatedModel):
     _default_skin = {
         'title': 'wwwhisper: Web Access Control',
         'header': 'Protected site',
-        'message': 'Access to this site is restricted, please verify your email:'
+        'message': ('Access to this site is restricted, '
+                    'please verify your email:')
     }
 
     title = models.CharField(max_length=80, blank=True)
@@ -132,18 +133,18 @@ class Site(ValidatedModel):
     def skin(self):
         """Dictionary with settings that configure the site's login page."""
         # Dict comprehensions not used to support python 2.6.
-        result = dict([(attr, getattr(self, attr) or self._default_skin[attr])
-                       for attr in self._default_skin.keys()])
+        result = {key: getattr(self, key) or default_value
+                  for key, default_value in self._default_skin.items()}
         result['branding'] = self.branding
         return result
 
     # pylint: disable=unused-argument
     def update_skin(self, title, header, message, branding):
-        for attr in self._default_skin.keys():
-            arg = locals()[attr].strip()
-            if arg == self._default_skin[attr]:
+        for key, value in self._default_skin.items():
+            arg = locals()[key].strip()
+            if arg == value:
                 arg = ''
-            setattr(self, attr, arg)
+            setattr(self, key, arg)
         self.branding = branding
         self.save()
         self.site_modified()
@@ -327,7 +328,7 @@ class Location(ValidatedModel):
         if user.site_id != self.site_id:
             return False
         return (self.open_access_granted()
-                or self.permissions().get(user.id) != None)
+                or self.permissions().get(user.id) is not None)
 
     @modify_site
     def grant_access(self, user_uuid):

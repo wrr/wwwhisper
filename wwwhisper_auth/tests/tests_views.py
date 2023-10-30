@@ -5,6 +5,7 @@
 
 import json
 import urllib.parse
+import smtplib
 
 from django.conf import settings
 from django.core.mail.backends.base import BaseEmailBackend
@@ -16,12 +17,12 @@ from wwwhisper_auth.tests.utils import HttpTestCase
 from wwwhisper_auth.tests.utils import TEST_SITE
 
 class FailingEmailBackend(BaseEmailBackend):
-    def send_messages(self, _messages):
+    def send_messages(self, email_messages):
         return 0
 
 class RaisingEmailBackend(BaseEmailBackend):
-    def send_messages(self, messages):
-        raise Exception('Send failed')
+    def send_messages(self, email_messages):
+        raise smtplib.SMTPException('Send failed')
 
 class AuthTestCase(HttpTestCase):
     """A base class for auth related test cases."""
@@ -62,7 +63,7 @@ class AuthTest(AuthTestCase):
         self.assertTrue(response.has_header('WWW-Authenticate'))
         self.assertFalse(response.has_header('User'))
         self.assertEqual('VerifiedEmail', response['WWW-Authenticate'])
-        self.assertEqual(response['Content-Type'], "text/plain; charset=utf-8")
+        self.assertEqual(response['Content-Type'], 'text/plain; charset=utf-8')
         self.assertEqual(b'Authentication required.', response.content)
 
     def test_is_authorized_if_not_authorized(self):
@@ -72,7 +73,7 @@ class AuthTest(AuthTestCase):
         # For an authenticated user 'User' header should be always returned.
         self.assertEqual(403, response.status_code)
         self.assertEqual('foo@example.com', response['User'])
-        self.assertEqual(response['Content-Type'], "text/plain; charset=utf-8")
+        self.assertEqual(response['Content-Type'], 'text/plain; charset=utf-8')
         self.assertEqual(b'User not authorized.', response.content)
 
     def test_is_authorized_if_authorized(self):
@@ -412,7 +413,6 @@ class SessionCacheTest(AuthTestCase):
         response = self.post('/wwwhisper/auth/api/login/', {'token': token})
         self.assertEqual(204, response.status_code)
 
-        s = self.client.session
-        user_id = s['user_id']
+        user_id = self.client.session['user_id']
         self.assertIsNotNone(user_id)
         self.assertEqual(user_id, user.id)

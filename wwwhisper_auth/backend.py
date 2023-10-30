@@ -14,6 +14,7 @@ class AuthenticationError(Exception):
 class VerifiedEmailBackend(ModelBackend):
     """"Backend that authenticates the user using verified email"""
 
+    # pylint: disable=arguments-renamed, arguments-differ
     def authenticate(self, request, site, token):
         """Token was a part of a login url that proves email ownership.
 

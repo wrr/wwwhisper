@@ -17,6 +17,7 @@ SITE_URL = getattr(settings, 'WWWHISPER_INITIAL_SITE_URL', None)
 
 def _create_site():
     """Creates a site configured in settings.py."""
+    # pylint: disable=import-outside-toplevel
     from wwwhisper_auth import models as auth_models
     try:
         site =  auth_models.SitesCollection().create_item(
