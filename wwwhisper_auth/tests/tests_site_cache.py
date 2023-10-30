@@ -1,6 +1,8 @@
 # wwwhisper - web access control.
 # Copyright (C) 2013-2023 Jan Wrobel <jan@mixedbit.org>
 
+# pylint: disable=missing-module-docstring
+
 from unittest.mock import Mock
 
 from django.test import TestCase

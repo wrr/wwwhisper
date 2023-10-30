@@ -1,6 +1,14 @@
 # wwwhisper - web access control.
 # Copyright (C) 2013-2023 Jan Wrobel <jan@mixedbit.org>
 
+"""Utils for serving static HTML and JS assets.
+
+All the served files are explicitly defined and read individually with
+the read_asset function. There is no support for serving all the files
+from a directory and automatically recognizing the file content type
+based on extensions.
+"""
+
 import os
 
 from django.utils.decorators import method_decorator

@@ -1,13 +1,15 @@
 # wwwhisper - web access control.
 # Copyright (C) 2016-2023 Jan Wrobel <jan@mixedbit.org>
 
+# pylint: disable=missing-module-docstring
+
 from django.test import TestCase
 from wwwhisper_auth.login_token import generate_login_token
 from wwwhisper_auth.login_token import generate_login_url
 from wwwhisper_auth.login_token import load_login_token
 from wwwhisper_auth.models import SitesCollection
 
-class LoginToken(TestCase):
+class LoginTokenTest(TestCase):
 
     def setUp(self):
         self.sites = SitesCollection()

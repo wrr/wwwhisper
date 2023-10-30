@@ -8,6 +8,7 @@ from django.contrib.auth.backends import ModelBackend
 from wwwhisper_auth import login_token
 
 class AuthenticationError(Exception):
+    """Authentication token is invalid."""
     pass
 
 class VerifiedEmailBackend(ModelBackend):

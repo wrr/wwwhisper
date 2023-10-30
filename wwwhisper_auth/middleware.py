@@ -1,6 +1,9 @@
 # wwwhisper - web access control.
 # Copyright (C) 2012-2023 Jan Wrobel <jan@mixedbit.org>
 
+"""Middlewares for common HTTP requests handling logic."""
+
+
 import logging
 
 from django.conf import settings

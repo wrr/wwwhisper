@@ -1,6 +1,11 @@
 # wwwhisper - web access control.
 # Copyright (C) 2018-2023 Jan Wrobel <jan@mixedbit.org>
 
+"""Creates initial DB entries for newly created wwwhisper app.
+
+The entries are needed so the initial admin user can open the
+wwwhisper admin app, create additional users and grant access to them.
+"""
 
 from django.apps import AppConfig
 from django.forms import ValidationError

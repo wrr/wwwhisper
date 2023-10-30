@@ -1,6 +1,8 @@
 # wwwhisper - web access control.
 # Copyright (C) 2012-2023 Jan Wrobel <jan@mixedbit.org>
 
+# pylint: disable=missing-module-docstring
+
 import json
 import urllib.parse
 
@@ -22,6 +24,8 @@ class RaisingEmailBackend(BaseEmailBackend):
         raise Exception('Send failed')
 
 class AuthTestCase(HttpTestCase):
+    """A base class for auth related test cases."""
+
     def setUp(self):
         settings.EMAIL_BACKEND = \
             'django.core.mail.backends.locmem.EmailBackend'

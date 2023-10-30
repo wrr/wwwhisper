@@ -1,6 +1,8 @@
 # wwwhisper - web access control.
 # Copyright (C) 2012-2023 Jan Wrobel <jan@mixedbit.org>
 
+"""Root entry for wwwhisper URLs dispatching configuration."""
+
 import logging
 
 from django.conf import settings

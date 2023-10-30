@@ -1,4 +1,4 @@
-# Django settings for wwwhisper_service project.
+"""Settings for the wwwhisper app."""
 
 import os
 import sys

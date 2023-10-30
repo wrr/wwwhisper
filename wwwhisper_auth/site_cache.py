@@ -29,6 +29,8 @@ class CacheUpdater:
         return mod_id is None or mod_id != site.mod_id
 
 class SiteCache:
+    """Stores cached SitesCollection."""
+
     def __init__(self, updater):
         self._updater = updater
         self._items = {}

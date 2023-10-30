@@ -1,6 +1,8 @@
 # wwwhisper - web access control.
 # Copyright (C) 2012-2022 Jan Wrobel <jan@mixedbit.org>
 
+# pylint: disable=missing-module-docstring
+
 import json
 
 from wwwhisper_auth.models import Site
@@ -18,6 +20,7 @@ def extract_uuid(urn):
     return urn.replace('urn:uuid:', '')
 
 class AdminViewTestCase(HttpTestCase):
+    """A base class for admin view test cases."""
 
     def add_user(self, user_name=TEST_USER_EMAIL):
         response = self.post('/wwwhisper/admin/api/users/',

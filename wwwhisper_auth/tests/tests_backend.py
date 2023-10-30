@@ -1,6 +1,8 @@
 # wwwhisper - web access control.
 # Copyright (C) 2016-2023 Jan Wrobel <jan@mixedbit.org>
 
+# pylint: disable=missing-module-docstring
+
 from django.http import HttpRequest
 from django.test import TestCase
 

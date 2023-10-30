@@ -1,6 +1,8 @@
 # wwwhisper - web access control.
 # Copyright (C) 2016-2023 Jan Wrobel <jan@mixedbit.org>
 
+"""Functions for generating and validating login tokens."""
+
 import datetime
 import urllib.parse
 

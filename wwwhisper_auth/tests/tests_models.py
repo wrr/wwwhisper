@@ -3,6 +3,8 @@
 # wwwhisper - web access control.
 # Copyright (C) 2012-2023 Jan Wrobel <jan@mixedbit.org>
 
+# pylint: disable=missing-module-docstring
+
 from contextlib import contextmanager
 
 from django.db import transaction
@@ -19,6 +21,8 @@ TEST_USER_EMAIL = 'foo@bar.com'
 TEST_LOCATION = '/pub/kika'
 
 class ModelTestCase(TestCase):
+    """A base class for model test cases."""
+
     def setUp(self):
         self.sites = SitesCollection()
         self.site = self.sites.create_item(TEST_SITE)

@@ -228,6 +228,7 @@ class Login(http.RestView):
 
 
 class SendToken(http.RestView):
+    """Handles access token sending to the user's email address."""
 
     @http.never_ever_cache
     def post(self, request, email, path):

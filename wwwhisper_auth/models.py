@@ -185,6 +185,8 @@ def modify_site(decorated_method):
 
 
 class SitesCollection:
+    """Manages all models.Site items"""
+
     def create_item(self, site_id, **kwargs):
         """Creates a new Site object.
 
@@ -213,6 +215,8 @@ class SitesCollection:
         return True
 
 class User(AbstractBaseUser):
+    """A user of a site"""
+
     class Meta:
         app_label = 'wwwhisper_auth'
         unique_together = ('site', 'email')
@@ -711,6 +715,8 @@ class LocationsCollection(Collection):
         return False
 
 class AliasesCollection(Collection):
+    """All models.Aliases of a given site."""
+
     item_name = 'alias'
     model_class = Alias
     # RFC 1035

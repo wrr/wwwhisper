@@ -12,6 +12,8 @@ from wwwhisper_auth.models import SINGLE_SITE_ID
 TEST_SITE = 'https://foo.example.org:8080'
 
 class HttpTestCase(TestCase):
+    """A base class for test cases that make HTTP requests."""
+
     def setUp(self):
         self.client = Client()
         self.sites = SitesCollection()

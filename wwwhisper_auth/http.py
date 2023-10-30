@@ -62,18 +62,21 @@ class HttpResponseOK(HttpResponse):
 
 
 class HttpResponseOKJson(HttpResponse):
+    """Response with status 200 and a JSON body."""
     def __init__(self, attributes_dict):
         super().__init__(json.dumps(attributes_dict),
                          content_type=JSON_MIME_TYPE,
                          status=200)
 
 class HttpResponseOKHtml(HttpResponse):
+    """Response with status 200 and an HTML body."""
     def __init__(self, body):
         super().__init__(body,
                          content_type=HTML_MIME_TYPE,
                          status=200)
 
 class HttpResponseOKJs(HttpResponse):
+    """Response with status 200 and a JavaScript body."""
     def __init__(self, body):
         super().__init__(body,
                          content_type=JS_MIME_TYPE,
@@ -162,18 +165,21 @@ class HttpResponseLimitExceeded(HttpResponse):
         super().__init__(message, content_type=TEXT_MIME_TYPE, status=400)
 
 class HttpResponseNotFound(HttpResponse):
+    """Response with status 404 and a text body containing an error message."""
 
     def __init__(self, message):
         logger.debug('Not found %s', message)
         super().__init__(message, content_type=TEXT_MIME_TYPE, status=404)
 
 class HttpResponseServiceUnavailable(HttpResponse):
+    """Response with status 503 and a text body containing an error message."""
 
     def __init__(self, message):
         logger.warning('Service unavailable %s', message)
         super().__init__(message, content_type=TEXT_MIME_TYPE, status=503)
 
 class HttpResponseInternalError(HttpResponse):
+    """Response with status 500 and a text body containing an error message."""
 
     def __init__(self, message):
         logger.warning('Internal error %s', message)
