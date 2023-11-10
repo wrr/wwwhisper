@@ -6,7 +6,7 @@
 import logging
 
 from django.conf import settings
-from django.conf.urls import include, url
+from django.urls import include, re_path
 
 from wwwhisper_auth.assets import read_asset, HtmlFileView, JsFileView
 
@@ -16,7 +16,7 @@ def _add_suffix(suffix):
     return f'^{settings.WWWHISPER_PATH_PREFIX}{suffix}'
 
 def _url(path, *args, **kwargs):
-    return url(_add_suffix(path), *args, **kwargs)
+    return re_path(_add_suffix(path), *args, **kwargs)
 
 urlpatterns = [
     _url(r'auth/api/', include('wwwhisper_auth.urls')),

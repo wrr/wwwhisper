@@ -4,10 +4,11 @@
 # pylint: disable=missing-module-docstring
 
 from django.conf import settings
-from django.conf.urls import url
 from django.http import HttpResponse
 from django.test import TestCase, override_settings
 from django.test.client import Client
+from django.urls import re_path
+
 from wwwhisper_auth.http import accepts_html
 from wwwhisper_auth.http import RestView
 from wwwhisper_auth.http import HttpResponseNotAuthenticated
@@ -29,8 +30,8 @@ class TestView2(RestView):
         return HttpResponse(url_arg, status=298)
 
 urlpatterns = [
-    url(r'^testview/$', TestView.as_view()),
-    url(r'^testview2/(?P<url_arg>[a-z]+)/$', TestView2.as_view())]
+    re_path(r'^testview/$', TestView.as_view()),
+    re_path(r'^testview2/(?P<url_arg>[a-z]+)/$', TestView2.as_view())]
 
 @override_settings(ROOT_URLCONF='wwwhisper_auth.tests.tests_http')
 class RestViewTest(HttpTestCase):

@@ -3,31 +3,32 @@
 
 """Urls exposed by the wwwhisper_admin application."""
 
-from django.conf.urls import url
+from django.urls import re_path
+
 from wwwhisper_admin.views import CollectionView, ItemView, SkinView
 from wwwhisper_admin.views import OpenAccessView, AllowedUsersView
 
 urlpatterns = [
-    url(r'^users/$',
+    re_path(r'^users/$',
         CollectionView.as_view(collection_name='users')),
-    url(r'^users/(?P<uuid>[0-9a-z-]+)/$',
+    re_path(r'^users/(?P<uuid>[0-9a-z-]+)/$',
         ItemView.as_view(collection_name='users'),
         name='wwwhisper_user'),
-    url(r'^locations/$',
+    re_path(r'^locations/$',
         CollectionView.as_view(collection_name='locations')),
-    url(r'^locations/(?P<uuid>[0-9a-z-]+)/$',
+    re_path(r'^locations/(?P<uuid>[0-9a-z-]+)/$',
         ItemView.as_view(collection_name='locations'),
         name='wwwhisper_location'),
-    url(r'^locations/(?P<location_uuid>[0-9a-z-]+)/allowed-users/' +
+    re_path(r'^locations/(?P<location_uuid>[0-9a-z-]+)/allowed-users/' +
         '(?P<user_uuid>[0-9a-z-]+)/$',
         AllowedUsersView.as_view(),
         name='wwwhisper_allowed_user'),
-    url(r'^locations/(?P<location_uuid>[0-9a-z-]+)/open-access/$',
+    re_path(r'^locations/(?P<location_uuid>[0-9a-z-]+)/open-access/$',
         OpenAccessView.as_view()),
-    url(r'^aliases/$',
+    re_path(r'^aliases/$',
         CollectionView.as_view(collection_name='aliases')),
-    url(r'^aliases/(?P<uuid>[0-9a-z-]+)/$',
+    re_path(r'^aliases/(?P<uuid>[0-9a-z-]+)/$',
         ItemView.as_view(collection_name='aliases'),
         name='wwwhisper_alias'),
-    url(r'^skin/$', SkinView.as_view())
+    re_path(r'^skin/$', SkinView.as_view())
 ]
