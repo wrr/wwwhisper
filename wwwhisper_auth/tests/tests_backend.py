@@ -30,29 +30,26 @@ class VerifiedEmailBackendTest(TestCase):
 
     def test_token_invalid(self):
         _user = self.site.users.create_item(TEST_USER_EMAIL)
-        self.assertRaisesRegex(AuthenticationError,
-                               'Token invalid or expired',
-                               self.backend.authenticate,
-                               HttpRequest(),
-                               self.site,
-                               self.user_token() + 'x')
+        with self.assertRaisesRegex(AuthenticationError,
+                                    'Token invalid or expired'):
+            self.backend.authenticate(HttpRequest(),
+                                      self.site,
+                                      self.user_token() + 'x')
 
     def test_token_for_different_site(self):
         other_site = self.sites.create_item('OtherSite')
         other_site.users.create_item(TEST_USER_EMAIL)
         self.site.users.create_item(TEST_USER_EMAIL)
         token = generate_login_token(other_site, TEST_USER_EMAIL)
-        self.assertRaisesRegex(AuthenticationError,
-                               'Token invalid or expired',
-                               self.backend.authenticate,
-                               HttpRequest(),
-                               self.site,
-                               token)
+        with self.assertRaisesRegex(AuthenticationError,
+                                    'Token invalid or expired'):
+            self.backend.authenticate(HttpRequest(),
+                                      self.site,
+                                      token)
 
     def test_no_such_user(self):
-        self.assertRaisesRegex(AuthenticationError,
-                               'Token invalid or expired',
-                               self.backend.authenticate,
-                               HttpRequest(),
-                               self.site,
-                               self.user_token())
+        with self.assertRaisesRegex(AuthenticationError,
+                                    'Token invalid or expired'):
+            self.backend.authenticate(HttpRequest(),
+                                      self.site,
+                                      self.user_token())

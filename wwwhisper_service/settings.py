@@ -219,6 +219,7 @@ LOGGING = {
         }
     }
 
+# pylint: disable=used-before-assignment
 if not SECRET_KEY:
     raise django.core.exceptions.ImproperlyConfigured(
         'DJANGO_SECRET_KEY environment variable not set')
