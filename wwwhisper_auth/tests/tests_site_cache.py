@@ -7,6 +7,7 @@ from unittest.mock import Mock
 
 from django.test import TestCase
 
+from wwwhisper_auth.models import Site
 from wwwhisper_auth.site_cache import CachingSitesCollection
 from wwwhisper_auth.site_cache import SiteCache
 
@@ -27,7 +28,7 @@ class SiteCacheTest(TestCase):
         self.cache = SiteCache(self.updater)
 
     def test_cache(self):
-        site = Mock()
+        site = Mock(spec_set=Site)
         site.site_id = 'foo'
         self.assertIsNone(self.cache.get('foo'))
         self.cache.insert(site)
@@ -37,7 +38,7 @@ class SiteCacheTest(TestCase):
         self.assertIsNone(self.cache.get('foo'))
 
     def test_cache_obsolete(self):
-        site = Mock()
+        site = Mock(spec_set=Site)
         site.site_id = 'foo'
         self.cache.insert(site)
         self.assertEqual(site, self.cache.get('foo'))
