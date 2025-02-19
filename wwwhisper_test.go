@@ -128,3 +128,25 @@ func TestAppRequestLoginNeeded(t *testing.T) {
 		t.Fatal("App request made")
 	}
 }
+
+func TestAuthPathAllowed(t *testing.T) {
+	testEnv := newTestEnv()
+	defer testEnv.dispose()
+
+	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
+		if req.URL.Path != "/wwwhisper/auth/login" {
+			t.Fatal("Invalid request path", req.URL.Path)
+		}
+		rw.Write([]byte("login response"))
+	}
+
+	resp, err := http.Get(testEnv.ProtectedUrl + "/wwwhisper/auth/login")
+	expectedBody := "login response"
+	assertResponse(t, resp, err, http.StatusOK, &expectedBody)
+	if testEnv.AuthCount != 1 {
+		t.Fatal("Auth request not made")
+	}
+	if testEnv.AppCount != 0 {
+		t.Fatal("App request made")
+	}
+}
