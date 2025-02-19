@@ -12,9 +12,12 @@ import (
 type TestEnv struct {
 	ProtectedUrl       string
 	appServer          *httptest.Server
+	AppHandler         func(http.ResponseWriter, *http.Request)
 	wwwhisperServer    *httptest.Server
+	AuthHandler        func(http.ResponseWriter, *http.Request)
 	protectedAppServer *httptest.Server
 	AuthCount          int
+	AppCount           int
 }
 
 func (env *TestEnv) dispose() {
@@ -25,15 +28,20 @@ func (env *TestEnv) dispose() {
 
 func newTestEnv() *TestEnv {
 	var env TestEnv
-	env.appServer = httptest.NewServer(
-		http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			rw.Write([]byte("Hello world"))
-		}))
-	env.wwwhisperServer = httptest.NewServer(
-		http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			env.AuthCount++
-			rw.Write([]byte("allowed"))
-		}))
+	env.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
+		rw.Write([]byte("Hello world"))
+	}
+	env.appServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		env.AppCount++
+		env.AppHandler(rw, req)
+	}))
+	env.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
+		rw.Write([]byte("allowed"))
+	}
+	env.wwwhisperServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		env.AuthCount++
+		env.AuthHandler(rw, req)
+	}))
 
 	options := &slog.HandlerOptions{}
 	handler := slog.NewTextHandler(os.Stderr, options)
@@ -70,10 +78,24 @@ func TestAppRequestAllowed(t *testing.T) {
 	testEnv := newTestEnv()
 	defer testEnv.dispose()
 
-	resp, err := http.Get(testEnv.ProtectedUrl)
+	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
+		if req.URL.Path != "/wwwhisper/auth/api/is-authorized/" {
+			t.Fatal("Invalid auth request path", req.URL.Path)
+		}
+		queryArg := req.URL.Query().Get("path")
+		if queryArg == "" || queryArg != "/hello" {
+			t.Fatal("Auth request argument invalid", queryArg)
+		}
+		rw.Write([]byte("allowed"))
+	}
+
+	resp, err := http.Get(testEnv.ProtectedUrl + "/hello")
 	expectedBody := "Hello world"
 	assertResponse(t, resp, err, http.StatusOK, &expectedBody)
 	if testEnv.AuthCount != 1 {
 		t.Fatal("Auth request not made")
+	}
+	if testEnv.AppCount != 1 {
+		t.Fatal("App request not made")
 	}
 }
