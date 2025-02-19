@@ -1,28 +1,30 @@
 package main
 
 import (
+	"io"
 	"io/ioutil"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 )
 
 type TestEnv struct {
+	appServer  *httptest.Server
+	AppHandler func(http.ResponseWriter, *http.Request)
+	AppCount   int
+
+	authServer  *httptest.Server
+	AuthHandler func(http.ResponseWriter, *http.Request)
+	AuthCount   int
+
 	ProtectedUrl       string
-	appServer          *httptest.Server
-	AppHandler         func(http.ResponseWriter, *http.Request)
-	wwwhisperServer    *httptest.Server
-	AuthHandler        func(http.ResponseWriter, *http.Request)
 	protectedAppServer *httptest.Server
-	AuthCount          int
-	AppCount           int
 }
 
 func (env *TestEnv) dispose() {
 	defer env.appServer.Close()
-	defer env.wwwhisperServer.Close()
+	defer env.authServer.Close()
 	defer env.protectedAppServer.Close()
 }
 
@@ -38,17 +40,17 @@ func newTestEnv() *TestEnv {
 	env.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
 		rw.Write([]byte("allowed"))
 	}
-	env.wwwhisperServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+	env.authServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		env.AuthCount++
 		env.AuthHandler(rw, req)
 	}))
 
 	options := &slog.HandlerOptions{}
-	handler := slog.NewTextHandler(os.Stderr, options)
+	handler := slog.NewTextHandler(io.Discard, options)
 	log := slog.New(handler)
 
 	env.protectedAppServer = httptest.NewServer(
-		WWWhisper(env.wwwhisperServer.URL, log, ProxyHandler(env.appServer.URL, log)))
+		WWWhisper(env.authServer.URL, log, ProxyHandler(env.appServer.URL, log)))
 	env.ProtectedUrl = env.protectedAppServer.URL
 	return &env
 }

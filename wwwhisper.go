@@ -72,6 +72,7 @@ func WWWhisper(wwwhisperURL string, log *slog.Logger, h http.Handler) http.Handl
 	client := &http.Client{}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// TODO: cleanup logs
 		log.Info("request IP", "path", r.URL.Path, "ip", r.RemoteAddr)
 		var requestURL, requestMethod string
 		handledByWWWhisper := false
