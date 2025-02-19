@@ -14,6 +14,7 @@ type TestEnv struct {
 	appServer          *httptest.Server
 	wwwhisperServer    *httptest.Server
 	protectedAppServer *httptest.Server
+	AuthCount          int
 }
 
 func (env *TestEnv) dispose() {
@@ -30,6 +31,7 @@ func newTestEnv() *TestEnv {
 		}))
 	env.wwwhisperServer = httptest.NewServer(
 		http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			env.AuthCount++
 			rw.Write([]byte("allowed"))
 		}))
 
@@ -45,21 +47,21 @@ func newTestEnv() *TestEnv {
 
 func assertResponse(t *testing.T, resp *http.Response, err error, expectedStatus int, expectedBody *string) {
 	if err != nil {
-		t.Fatalf("Failed to make request: %v", err)
+		t.Fatal("Failed to make request:", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != expectedStatus {
-		t.Errorf("Expected status %v; got %v", expectedStatus, resp.StatusCode)
+		t.Fatalf("Expected status %v; got %v", expectedStatus, resp.StatusCode)
 	}
 
 	if expectedBody != nil {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			t.Fatalf("Failed to read response body: %v", err)
+			t.Fatal("Failed to read response body:", err)
 		}
 		if string(body) != *expectedBody {
-			t.Errorf("Expected body %s; got %s", *expectedBody, string(body))
+			t.Fatalf("Expected body %s; got %s", *expectedBody, string(body))
 		}
 	}
 }
@@ -71,4 +73,7 @@ func TestAppRequestAllowed(t *testing.T) {
 	resp, err := http.Get(testEnv.ProtectedUrl)
 	expectedBody := "Hello world"
 	assertResponse(t, resp, err, http.StatusOK, &expectedBody)
+	if testEnv.AuthCount != 1 {
+		t.Fatal("Auth request not made")
+	}
 }
