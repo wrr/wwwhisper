@@ -96,6 +96,7 @@ func WWWhisper(wwwhisperURL string, log *slog.Logger, h http.Handler) http.Handl
 		// TODO: cleanup logs
 		log.Info("wwwhisper request", "path", r.URL.Path)
 		if strings.HasPrefix(r.URL.Path, "/wwwhisper/auth/") {
+			// login/logout/send-token etc. always allowed, doesn't require authorization.
 			wwwhisperHandler.ServeHTTP(w, r)
 			return
 		}
@@ -107,16 +108,20 @@ func WWWhisper(wwwhisperURL string, log *slog.Logger, h http.Handler) http.Handl
 			return
 		}
 		defer authResp.Body.Close()
-		if authResp.StatusCode == http.StatusOK {
-			log.Info("Access granted")
-			h.ServeHTTP(w, r)
+		if authResp.StatusCode != http.StatusOK {
+			log.Info("Access denied")
+			err = copyResponse(authResp, w)
+			if err != nil {
+				log.Error("Error copying auth response", "error", err)
+			}
 			return
 		}
-		log.Info("Access denied")
 
-		err = copyResponse(authResp, w)
-		if err != nil {
-			log.Error("Error copying auth response", "error", err)
+		log.Info("Access granted")
+		if strings.HasPrefix(r.URL.Path, "/wwwhisper/") {
+			wwwhisperHandler.ServeHTTP(w, r)
+		} else {
+			h.ServeHTTP(w, r)
 		}
 	})
 }

@@ -34,15 +34,15 @@ func newTestEnv() *TestEnv {
 		rw.Write([]byte("Hello world"))
 	}
 	env.appServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		env.AppCount++
 		env.AppHandler(rw, req)
+		env.AppCount++
 	}))
 	env.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
 		rw.Write([]byte("allowed"))
 	}
 	env.authServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		env.AuthCount++
 		env.AuthHandler(rw, req)
+		env.AuthCount++
 	}))
 
 	options := &slog.HandlerOptions{}
@@ -71,7 +71,7 @@ func assertResponse(t *testing.T, resp *http.Response, err error, expectedStatus
 			t.Fatal("Failed to read response body:", err)
 		}
 		if string(body) != *expectedBody {
-			t.Fatalf("Expected body %s; got %s", *expectedBody, string(body))
+			t.Fatalf("Expected body '%s'; got '%s'", *expectedBody, string(body))
 		}
 	}
 }
@@ -81,12 +81,12 @@ func TestAppRequestAllowed(t *testing.T) {
 	defer testEnv.dispose()
 
 	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
-		if req.URL.Path != "/wwwhisper/auth/api/is-authorized/" {
-			t.Fatal("Invalid auth request path", req.URL.Path)
-		}
-		queryArg := req.URL.Query().Get("path")
-		if queryArg == "" || queryArg != "/hello" {
-			t.Fatal("Auth request argument invalid", queryArg)
+		if req.URL.RequestURI() != "/wwwhisper/auth/api/is-authorized/?path=/hello" {
+			// No t.Fatal in request handlers because go panic recovery
+			// reruns panicked handlers and causes test error to be printed
+			// twice
+			t.Error("Invalid auth request URI", req.URL.RequestURI())
+			return
 		}
 		rw.Write([]byte("allowed"))
 	}
@@ -107,12 +107,9 @@ func TestAppRequestLoginNeeded(t *testing.T) {
 	defer testEnv.dispose()
 
 	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
-		if req.URL.Path != "/wwwhisper/auth/api/is-authorized/" {
-			t.Fatal("Invalid auth request path", req.URL.Path)
-		}
-		queryArg := req.URL.Query().Get("path")
-		if queryArg == "" || queryArg != "/foobar" {
-			t.Fatal("Auth request argument invalid", queryArg)
+		if req.URL.RequestURI() != "/wwwhisper/auth/api/is-authorized/?path=/foobar" {
+			t.Error("Invalid auth request URI", req.URL.RequestURI())
+			return
 		}
 		rw.WriteHeader(http.StatusUnauthorized)
 		rw.Write([]byte("login required"))
@@ -135,7 +132,8 @@ func TestAuthPathAllowed(t *testing.T) {
 
 	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
 		if req.URL.Path != "/wwwhisper/auth/login" {
-			t.Fatal("Invalid request path", req.URL.Path)
+			t.Error("Invalid request path", req.URL.Path)
+			return
 		}
 		rw.Write([]byte("login response"))
 	}
@@ -145,6 +143,37 @@ func TestAuthPathAllowed(t *testing.T) {
 	assertResponse(t, resp, err, http.StatusOK, &expectedBody)
 	if testEnv.AuthCount != 1 {
 		t.Fatal("Auth request not made")
+	}
+	if testEnv.AppCount != 0 {
+		t.Fatal("App request made")
+	}
+}
+
+func TestAdminPathAllowed(t *testing.T) {
+	testEnv := newTestEnv()
+	defer testEnv.dispose()
+
+	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
+		if testEnv.AuthCount == 0 {
+			if req.URL.RequestURI() != "/wwwhisper/auth/api/is-authorized/?path=/wwwhisper/admin/x" {
+				t.Error("Invalid auth request URI", req.URL.RequestURI())
+				return
+			}
+			rw.WriteHeader(http.StatusOK)
+		} else {
+			if req.URL.RequestURI() != "/wwwhisper/admin/x?foo=bar" {
+				t.Error("Invalid admin request URI", req.URL.RequestURI())
+				return
+			}
+			rw.Write([]byte("admin page"))
+		}
+	}
+
+	resp, err := http.Get(testEnv.ProtectedUrl + "/wwwhisper/admin/x?foo=bar")
+	expectedBody := "admin page"
+	assertResponse(t, resp, err, http.StatusOK, &expectedBody)
+	if testEnv.AuthCount != 2 {
+		t.Fatal("Auth requests not made")
 	}
 	if testEnv.AppCount != 0 {
 		t.Fatal("App request made")
