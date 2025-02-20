@@ -29,6 +29,14 @@ func copyResponse(resp *http.Response, w http.ResponseWriter) error {
 	return err
 }
 
+func serverError(log *slog.Logger, w http.ResponseWriter, msg string, err error) {
+	msg = "Internal server error: " + msg
+	log.Error(msg + "; " + err.Error())
+	// Do not return err.Error() to the user as it can contain sensitive
+	// data.
+	http.Error(w, msg, http.StatusInternalServerError)
+}
+
 func ProxyHandler(dstURL string, log *slog.Logger) http.Handler {
 	client := &http.Client{}
 	parts := strings.SplitN(dstURL, "://", 2)
@@ -53,7 +61,7 @@ func ProxyHandler(dstURL string, log *slog.Logger) http.Handler {
 			r.Body,
 		)
 		if err != nil {
-			http.Error(w, "Error creating request to app: "+err.Error(), http.StatusInternalServerError)
+			serverError(log, w, "app request creation", err)
 			return
 		}
 
@@ -61,7 +69,7 @@ func ProxyHandler(dstURL string, log *slog.Logger) http.Handler {
 
 		resp, err := client.Do(subReq)
 		if err != nil {
-			http.Error(w, "Error making request to app: "+err.Error(), http.StatusInternalServerError)
+			serverError(log, w, "app request", err)
 			return
 		}
 		defer resp.Body.Close()
@@ -69,7 +77,7 @@ func ProxyHandler(dstURL string, log *slog.Logger) http.Handler {
 		err = copyResponse(resp, w)
 		if err != nil {
 			// TODO: veify and comment - can't return a response because headers were already written.
-			log.Error("Error copying proxied response", "error", err)
+			log.Error("Error copying proxied response: " + err.Error())
 		}
 	})
 }
@@ -102,9 +110,7 @@ func WWWhisper(wwwhisperURL string, log *slog.Logger, h http.Handler) http.Handl
 		}
 		authResp, err := makeAuthRequest(r)
 		if err != nil {
-			// TODO: messages, ':' needed?
-			log.Error("auth request error:", "error", err)
-			http.Error(w, "Auth request error:"+err.Error(), http.StatusInternalServerError)
+			serverError(log, w, "auth request", err)
 			return
 		}
 		defer authResp.Body.Close()
@@ -112,7 +118,7 @@ func WWWhisper(wwwhisperURL string, log *slog.Logger, h http.Handler) http.Handl
 			log.Info("Access denied")
 			err = copyResponse(authResp, w)
 			if err != nil {
-				log.Error("Error copying auth response", "error", err)
+				log.Error("Error copying auth response: " + err.Error())
 			}
 			return
 		}
