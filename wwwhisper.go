@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"log/slog"
@@ -10,6 +9,25 @@ import (
 	"strings"
 	"time"
 )
+
+func copyRequestHeaders(src *http.Request, dst *http.Request) {
+	for key, values := range src.Header {
+		for _, value := range values {
+			dst.Header.Add(key, value)
+		}
+	}
+}
+
+func copyResponse(resp *http.Response, w http.ResponseWriter) error {
+	for key, values := range resp.Header {
+		for _, value := range values {
+			w.Header().Add(key, value)
+		}
+	}
+	w.WriteHeader(resp.StatusCode)
+	_, err := io.Copy(w, resp.Body)
+	return err
+}
 
 func ProxyHandler(dstURL string, log *slog.Logger) http.Handler {
 	client := &http.Client{}
@@ -28,7 +46,7 @@ func ProxyHandler(dstURL string, log *slog.Logger) http.Handler {
 		targetURL.Host = dstHost
 		targetURL.Scheme = dstScheme
 
-		newReq, err := http.NewRequestWithContext(
+		subReq, err := http.NewRequestWithContext(
 			r.Context(),
 			r.Method,
 			targetURL.String(),
@@ -39,100 +57,67 @@ func ProxyHandler(dstURL string, log *slog.Logger) http.Handler {
 			return
 		}
 
-		for key, values := range r.Header {
-			for _, value := range values {
-				newReq.Header.Add(key, value)
-			}
-		}
+		copyRequestHeaders(r, subReq)
 
-		resp, err := client.Do(newReq)
+		resp, err := client.Do(subReq)
 		if err != nil {
 			http.Error(w, "Error making request to app: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		defer resp.Body.Close()
 
-		for key, values := range resp.Header {
-			for _, value := range values {
-				w.Header().Add(key, value)
-			}
-		}
-
-		w.WriteHeader(resp.StatusCode)
-
-		if _, err := io.Copy(w, resp.Body); err != nil {
-			log.Error("Error copying response", "error", err)
+		err = copyResponse(resp, w)
+		if err != nil {
+			// TODO: veify and comment - can't return a response because headers were already written.
+			log.Error("Error copying proxied response", "error", err)
 		}
 	})
 }
 
 func WWWhisper(wwwhisperURL string, log *slog.Logger, h http.Handler) http.Handler {
-	authPath := "/wwwhisper/auth/api/is-authorized/"
+	authURL := wwwhisperURL + "/wwwhisper/auth/api/is-authorized/"
 	// TODO: OK to reuse?
 	client := &http.Client{}
+	wwwhisperHandler := ProxyHandler(wwwhisperURL, log)
+
+	makeAuthRequest := func(r *http.Request) (*http.Response, error) {
+		// TODO: which path
+		authReq, err := http.NewRequest("GET", authURL+"?path="+r.URL.Path, nil)
+		if err != nil {
+			return nil, err
+		}
+		copyRequestHeaders(r, authReq)
+		// TODO: Site-Url and tests
+		authReq.Header.Set("Site-Url", "http://localhost:8080")
+		return client.Do(authReq)
+	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// TODO: cleanup logs
-		log.Info("request IP", "path", r.URL.Path, "ip", r.RemoteAddr)
-		var requestURL, requestMethod string
-		handledByWWWhisper := false
-		var bodyReader io.Reader
+		log.Info("wwwhisper request", "path", r.URL.Path)
 		if strings.HasPrefix(r.URL.Path, "/wwwhisper/auth/") {
-			requestURL = wwwhisperURL + r.URL.Path
-			requestMethod = r.Method
-			handledByWWWhisper = true
-			if requestMethod == "POST" || requestMethod == "PUT" {
-				bodyBytes, err := io.ReadAll(r.Body)
-				// TODO: polish error handling
-				if err != nil {
-					log.Error("Error reading request body", "error", err)
-					http.Error(w, "Unable to read request body", http.StatusBadRequest)
-					return
-				}
-				r.Body.Close()
-				bodyReader = bytes.NewReader(bodyBytes)
-			}
-		} else {
-			requestURL = wwwhisperURL + authPath + "?path=" + r.URL.Path
-			requestMethod = "GET"
+			wwwhisperHandler.ServeHTTP(w, r)
+			return
 		}
-		log.Info("Subrequest", "method", requestMethod, "url", requestURL)
-		// TODO: rename req sub_req
-		req, err := http.NewRequest(requestMethod, requestURL, bodyReader)
+		authResp, err := makeAuthRequest(r)
 		if err != nil {
 			// TODO: messages, ':' needed?
-			log.Error("Error creating request:", "error", err)
-			return
-		}
-		// TODO: do not copy all?
-		for key, values := range r.Header {
-			for _, value := range values {
-				req.Header.Add(key, value)
-			}
-		}
-		req.Header.Set("Site-Url", "http://localhost:8080")
-		resp, err := client.Do(req)
-		if err != nil {
 			log.Error("auth request error:", "error", err)
+			http.Error(w, "Auth request error:"+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		defer resp.Body.Close()
-		if !handledByWWWhisper {
-			if resp.StatusCode == http.StatusOK {
-				log.Info("Access granted")
-				h.ServeHTTP(w, r)
-				return
-			}
-			log.Info("Access denied")
+		defer authResp.Body.Close()
+		if authResp.StatusCode == http.StatusOK {
+			log.Info("Access granted")
+			h.ServeHTTP(w, r)
+			return
 		}
+		log.Info("Access denied")
 
-		for key, values := range resp.Header {
-			for _, value := range values {
-				w.Header().Add(key, value)
-			}
+		err = copyResponse(authResp, w)
+		if err != nil {
+			log.Error("Error copying auth response", "error", err)
 		}
-		w.WriteHeader(resp.StatusCode)
-		io.Copy(w, resp.Body)
 	})
 }
 
