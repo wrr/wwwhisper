@@ -1,11 +1,15 @@
 package main
 
 import (
+	"encoding/base64"
+	"errors"
 	"io"
 	"io/ioutil"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 )
 
@@ -28,7 +32,36 @@ func (env *TestEnv) dispose() {
 	defer env.protectedAppServer.Close()
 }
 
-func newTestEnv() *TestEnv {
+const wwwhisperUsername = "alice"
+const wwwhisperPassword = "sometestpassword"
+
+func checkBasicAuthCredentials(authHeader string) error {
+	if authHeader == "" {
+		return errors.New("header missing")
+	}
+	const prefix = "Basic "
+	if !strings.HasPrefix(authHeader, prefix) {
+		return errors.New("header invalid prefix")
+	}
+	encodedCreds := strings.TrimPrefix(authHeader, prefix)
+	decodedBytes, err := base64.StdEncoding.DecodeString(encodedCreds)
+	if err != nil {
+		return errors.New("credentials decoding failed")
+	}
+	creds := strings.SplitN(string(decodedBytes), ":", 2)
+	if len(creds) != 2 {
+		return errors.New("credentials invalid format")
+	}
+
+	username, password := creds[0], creds[1]
+
+	if username != wwwhisperUsername || password != wwwhisperPassword {
+		return errors.New("credentials do not match")
+	}
+	return nil
+}
+
+func newTestEnv(t *testing.T) *TestEnv {
 	var env TestEnv
 	env.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
 		rw.Write([]byte("Hello world"))
@@ -41,6 +74,11 @@ func newTestEnv() *TestEnv {
 		rw.Write([]byte("allowed"))
 	}
 	env.authServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		err := checkBasicAuthCredentials(req.Header.Get("Authorization"))
+		if err != nil {
+			t.Error("Auth request basic auth:", err)
+			return
+		}
 		env.AuthHandler(rw, req)
 		env.AuthCount++
 	}))
@@ -49,8 +87,10 @@ func newTestEnv() *TestEnv {
 	handler := slog.NewTextHandler(io.Discard, options)
 	log := slog.New(handler)
 
+	parsedUrl, _ := url.Parse(env.authServer.URL)
+	parsedUrl.User = url.UserPassword(wwwhisperUsername, wwwhisperPassword)
 	env.protectedAppServer = httptest.NewServer(
-		WWWhisper(env.authServer.URL, log, ProxyHandler(env.appServer.URL, log)))
+		WWWhisper(parsedUrl.String(), log, ProxyHandler(env.appServer.URL, log)))
 	env.ProtectedUrl = env.protectedAppServer.URL
 	return &env
 }
@@ -77,7 +117,7 @@ func assertResponse(t *testing.T, resp *http.Response, err error, expectedStatus
 }
 
 func TestAppRequestAllowed(t *testing.T) {
-	testEnv := newTestEnv()
+	testEnv := newTestEnv(t)
 	defer testEnv.dispose()
 
 	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
@@ -103,7 +143,7 @@ func TestAppRequestAllowed(t *testing.T) {
 }
 
 func TestAppRequestLoginNeeded(t *testing.T) {
-	testEnv := newTestEnv()
+	testEnv := newTestEnv(t)
 	defer testEnv.dispose()
 
 	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
@@ -127,7 +167,7 @@ func TestAppRequestLoginNeeded(t *testing.T) {
 }
 
 func TestAuthPathAllowed(t *testing.T) {
-	testEnv := newTestEnv()
+	testEnv := newTestEnv(t)
 	defer testEnv.dispose()
 
 	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
@@ -150,7 +190,7 @@ func TestAuthPathAllowed(t *testing.T) {
 }
 
 func TestAdminPathAllowed(t *testing.T) {
-	testEnv := newTestEnv()
+	testEnv := newTestEnv(t)
 	defer testEnv.dispose()
 
 	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {

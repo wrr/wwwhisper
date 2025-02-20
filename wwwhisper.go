@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -37,22 +38,20 @@ func serverError(log *slog.Logger, w http.ResponseWriter, msg string, err error)
 	http.Error(w, msg, http.StatusInternalServerError)
 }
 
-func ProxyHandler(dstURL string, log *slog.Logger) http.Handler {
+func ProxyHandler(dstUrlStr string, log *slog.Logger) http.Handler {
 	client := &http.Client{}
-	parts := strings.SplitN(dstURL, "://", 2)
-	if len(parts) != 2 {
-		// TODO: nicer error handling
-		panic("Scheme missing in the app URL")
+	dstUrl, err := url.Parse(dstUrlStr)
+	if err != nil {
+		// TODO: nicer error reporting
+		panic("Error parsing " + dstUrlStr)
 	}
-	dstScheme := parts[0]
-	dstHost := parts[1]
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		targetURL := *r.URL
 
-		// TODO: parse scheme from the host
-		targetURL.Host = dstHost
-		targetURL.Scheme = dstScheme
+		targetURL.Scheme = dstUrl.Scheme
+		targetURL.User = dstUrl.User
+		targetURL.Host = dstUrl.Host
 
 		subReq, err := http.NewRequestWithContext(
 			r.Context(),
