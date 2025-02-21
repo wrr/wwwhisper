@@ -1,10 +1,12 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"strings"
@@ -50,49 +52,40 @@ func setSiteUrlHeader(dst *http.Request, incoming *http.Request) {
 	dst.Header.Set("Site-Url", scheme+"://"+incoming.Host)
 }
 
+func encodeBasicAuth(username string, password string) string {
+	toEncode := username + ":" + password
+	return "Basic " + base64.StdEncoding.EncodeToString([]byte(toEncode))
+}
+
+func getBasicAuthCredentials(url *url.URL) string {
+	username := url.User.Username()
+	password, is_password_set := url.User.Password()
+	if !is_password_set {
+		return ""
+	}
+	return encodeBasicAuth(username, password)
+}
+
 func ProxyHandler(dstUrlStr string, log *slog.Logger, setSiteUrl bool) http.Handler {
-	client := &http.Client{}
 	dstUrl, err := url.Parse(dstUrlStr)
 	if err != nil {
-		// TODO: nicer error reporting
+		// TODO: propel error reporting
 		panic("Error parsing " + dstUrlStr)
 	}
+	proxy := httputil.NewSingleHostReverseProxy(dstUrl)
+	credentials := getBasicAuthCredentials(dstUrl)
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		targetURL := *r.URL
-
-		targetURL.Scheme = dstUrl.Scheme
-		targetURL.User = dstUrl.User
-		targetURL.Host = dstUrl.Host
-
-		subReq, err := http.NewRequestWithContext(
-			r.Context(),
-			r.Method,
-			targetURL.String(),
-			r.Body,
-		)
-		if err != nil {
-			serverError(log, w, "app request creation", err)
-			return
-		}
-
-		copyRequestHeaders(subReq, r)
+	originalDirector := proxy.Director
+	proxy.Director = func(req *http.Request) {
 		if setSiteUrl {
-			setSiteUrlHeader(subReq, r)
+			setSiteUrlHeader(req, req)
 		}
-		resp, err := client.Do(subReq)
-		if err != nil {
-			serverError(log, w, "app request", err)
-			return
+		if credentials != "" {
+			req.Header.Set("Authorization", credentials)
 		}
-		defer resp.Body.Close()
-
-		err = copyResponse(w, resp)
-		if err != nil {
-			// TODO: veify and comment - can't return a response because headers were already written.
-			log.Error("Error copying proxied response: " + err.Error())
-		}
-	})
+		originalDirector(req)
+	}
+	return proxy
 }
 
 func WWWhisper(wwwhisperURL string, log *slog.Logger, h http.Handler) http.Handler {
