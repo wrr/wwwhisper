@@ -230,3 +230,51 @@ func TestAdminPathAllowed(t *testing.T) {
 		t.Fatal("App request made")
 	}
 }
+
+func TestAdminPostRequest(t *testing.T) {
+	testEnv := newTestEnv(t)
+	defer testEnv.dispose()
+
+	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
+		siteUrl := req.Header.Get("Site-Url")
+		if siteUrl != testEnv.ProtectedUrl {
+			t.Error("Invalid Site-Url header", siteUrl)
+			return
+		}
+
+		if testEnv.AuthCount == 0 {
+			if req.URL.RequestURI() != "/wwwhisper/auth/api/is-authorized/?path=/wwwhisper/admin/submit" {
+				t.Error("Invalid auth request URI", req.URL.RequestURI())
+				return
+			}
+			rw.WriteHeader(http.StatusOK)
+		} else {
+			if req.Method != "POST" {
+				t.Error("Invalid request Method", req.Method)
+			}
+			if req.URL.RequestURI() != "/wwwhisper/admin/submit" {
+				t.Error("Invalid admin request URI", req.URL.RequestURI())
+				return
+			}
+			if req.Header.Get("Content-Type") != "text/plain" {
+				t.Error("Invalid content encoding", req.Header.Get("Content-Type"))
+			}
+			body, err := io.ReadAll(req.Body)
+			if err != nil || string(body) != "post-data" {
+				t.Error("Invalid requst body", string(body), err)
+			}
+			rw.Write([]byte("OK"))
+		}
+	}
+
+	postUrl := testEnv.ProtectedUrl + "/wwwhisper/admin/submit"
+	resp, err := http.Post(postUrl, "text/plain", strings.NewReader("post-data"))
+	expectedBody := "OK"
+	assertResponse(t, resp, err, http.StatusOK, &expectedBody)
+	if testEnv.AuthCount != 2 {
+		t.Fatal("Auth requests not made")
+	}
+	if testEnv.AppCount != 0 {
+		t.Fatal("App request made")
+	}
+}
