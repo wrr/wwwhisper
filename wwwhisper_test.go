@@ -90,7 +90,7 @@ func newTestEnv(t *testing.T) *TestEnv {
 	parsedUrl, _ := url.Parse(env.authServer.URL)
 	parsedUrl.User = url.UserPassword(wwwhisperUsername, wwwhisperPassword)
 	env.protectedAppServer = httptest.NewServer(
-		WWWhisper(parsedUrl.String(), log, ProxyHandler(env.appServer.URL, log)))
+		WWWhisper(parsedUrl.String(), log, ProxyHandler(env.appServer.URL, log, false)))
 	env.ProtectedUrl = env.protectedAppServer.URL
 	return &env
 }
@@ -121,6 +121,11 @@ func TestAppRequestAllowed(t *testing.T) {
 	defer testEnv.dispose()
 
 	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
+		siteUrl := req.Header.Get("Site-Url")
+		if siteUrl != testEnv.ProtectedUrl {
+			t.Error("Invalid Site-Url header", siteUrl)
+			return
+		}
 		if req.URL.RequestURI() != "/wwwhisper/auth/api/is-authorized/?path=/hello" {
 			// No t.Fatal in request handlers because go panic recovery
 			// reruns panicked handlers and causes test error to be printed
@@ -194,6 +199,12 @@ func TestAdminPathAllowed(t *testing.T) {
 	defer testEnv.dispose()
 
 	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
+		siteUrl := req.Header.Get("Site-Url")
+		if siteUrl != testEnv.ProtectedUrl {
+			t.Error("Invalid Site-Url header", siteUrl)
+			return
+		}
+
 		if testEnv.AuthCount == 0 {
 			if req.URL.RequestURI() != "/wwwhisper/auth/api/is-authorized/?path=/wwwhisper/admin/x" {
 				t.Error("Invalid auth request URI", req.URL.RequestURI())

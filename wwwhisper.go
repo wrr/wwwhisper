@@ -38,7 +38,19 @@ func serverError(log *slog.Logger, w http.ResponseWriter, msg string, err error)
 	http.Error(w, msg, http.StatusInternalServerError)
 }
 
-func ProxyHandler(dstUrlStr string, log *slog.Logger) http.Handler {
+func setSiteUrlHeader(dst *http.Request, incoming *http.Request) {
+	scheme := incoming.Header.Get("X-Forwarded-Proto")
+	if scheme == "" {
+		if incoming.TLS != nil {
+			scheme = "https"
+		} else {
+			scheme = "http"
+		}
+	}
+	dst.Header.Set("Site-Url", scheme+"://"+incoming.Host)
+}
+
+func ProxyHandler(dstUrlStr string, log *slog.Logger, setSiteUrl bool) http.Handler {
 	client := &http.Client{}
 	dstUrl, err := url.Parse(dstUrlStr)
 	if err != nil {
@@ -65,7 +77,9 @@ func ProxyHandler(dstUrlStr string, log *slog.Logger) http.Handler {
 		}
 
 		copyRequestHeaders(subReq, r)
-
+		if setSiteUrl {
+			setSiteUrlHeader(subReq, r)
+		}
 		resp, err := client.Do(subReq)
 		if err != nil {
 			serverError(log, w, "app request", err)
@@ -85,7 +99,7 @@ func WWWhisper(wwwhisperURL string, log *slog.Logger, h http.Handler) http.Handl
 	authURL := wwwhisperURL + "/wwwhisper/auth/api/is-authorized/"
 	// TODO: OK to reuse?
 	client := &http.Client{}
-	wwwhisperHandler := ProxyHandler(wwwhisperURL, log)
+	wwwhisperHandler := ProxyHandler(wwwhisperURL, log, true)
 
 	makeAuthRequest := func(r *http.Request) (*http.Response, error) {
 		// TODO: which path
@@ -94,8 +108,7 @@ func WWWhisper(wwwhisperURL string, log *slog.Logger, h http.Handler) http.Handl
 			return nil, err
 		}
 		copyRequestHeaders(authReq, r)
-		// TODO: Site-Url and tests
-		authReq.Header.Set("Site-Url", "http://localhost:8080")
+		setSiteUrlHeader(authReq, r)
 		return client.Do(authReq)
 	}
 
@@ -158,7 +171,7 @@ func main() {
 	}
 	handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{})
 	log := slog.New(handler)
-	mux.Handle("/", WWWhisper(wwwhisperURL, log, ProxyHandler(dstURL, log)))
+	mux.Handle("/", WWWhisper(wwwhisperURL, log, ProxyHandler(dstURL, log, false)))
 
 	err := s.ListenAndServe()
 	if err != nil {
