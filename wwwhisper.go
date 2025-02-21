@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func copyRequestHeaders(src *http.Request, dst *http.Request) {
+func copyRequestHeaders(dst *http.Request, src *http.Request) {
 	for key, values := range src.Header {
 		for _, value := range values {
 			dst.Header.Add(key, value)
@@ -19,14 +19,14 @@ func copyRequestHeaders(src *http.Request, dst *http.Request) {
 	}
 }
 
-func copyResponse(resp *http.Response, w http.ResponseWriter) error {
-	for key, values := range resp.Header {
+func copyResponse(w http.ResponseWriter, src *http.Response) error {
+	for key, values := range src.Header {
 		for _, value := range values {
 			w.Header().Add(key, value)
 		}
 	}
-	w.WriteHeader(resp.StatusCode)
-	_, err := io.Copy(w, resp.Body)
+	w.WriteHeader(src.StatusCode)
+	_, err := io.Copy(w, src.Body)
 	return err
 }
 
@@ -64,7 +64,7 @@ func ProxyHandler(dstUrlStr string, log *slog.Logger) http.Handler {
 			return
 		}
 
-		copyRequestHeaders(r, subReq)
+		copyRequestHeaders(subReq, r)
 
 		resp, err := client.Do(subReq)
 		if err != nil {
@@ -73,7 +73,7 @@ func ProxyHandler(dstUrlStr string, log *slog.Logger) http.Handler {
 		}
 		defer resp.Body.Close()
 
-		err = copyResponse(resp, w)
+		err = copyResponse(w, resp)
 		if err != nil {
 			// TODO: veify and comment - can't return a response because headers were already written.
 			log.Error("Error copying proxied response: " + err.Error())
@@ -93,7 +93,7 @@ func WWWhisper(wwwhisperURL string, log *slog.Logger, h http.Handler) http.Handl
 		if err != nil {
 			return nil, err
 		}
-		copyRequestHeaders(r, authReq)
+		copyRequestHeaders(authReq, r)
 		// TODO: Site-Url and tests
 		authReq.Header.Set("Site-Url", "http://localhost:8080")
 		return client.Do(authReq)
@@ -115,7 +115,7 @@ func WWWhisper(wwwhisperURL string, log *slog.Logger, h http.Handler) http.Handl
 		defer authResp.Body.Close()
 		if authResp.StatusCode != http.StatusOK {
 			log.Info("Access denied")
-			err = copyResponse(authResp, w)
+			err = copyResponse(w, authResp)
 			if err != nil {
 				log.Error("Error copying auth response: " + err.Error())
 			}
