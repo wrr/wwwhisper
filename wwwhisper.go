@@ -9,6 +9,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"path"
 	"strings"
 	"time"
 )
@@ -88,15 +89,39 @@ func ProxyHandler(dstUrlStr string, log *slog.Logger, setSiteUrl bool) http.Hand
 	return proxy
 }
 
+func normalize(url *url.URL) {
+	path_in := url.Path
+	path_out := path.Clean(path_in)
+	if strings.HasSuffix(path_in, "/") && !strings.HasSuffix(path_out, "/") {
+		path_out += "/"
+	}
+	if !strings.HasPrefix(path_out, "/") {
+		path_out = "/" + path_out
+	}
+	url.Path = path_out
+	// if RawPath is empty it is assumed to be equal to Path
+	// (RequestURI() will just use Path and will not contain any escaped
+	// elements).
+	//
+	// This approach makes it impossible to use wwwhisper for apps that
+	// encode data in paths, paths are always authenticated and then
+	// passed to the app as decoded, the information which parts were
+	// encoded is lost. This is to ensure auth layer and app interpret
+	// the path in the same way. For example a request to /admin/%2E%2E/
+	// is normalized as the request to the root document /, and app never sees
+	// the original /admin/%2E%2E/ path.
+	url.RawPath = ""
+}
+
 func WWWhisper(wwwhisperURL string, log *slog.Logger, h http.Handler) http.Handler {
-	authURL := wwwhisperURL + "/wwwhisper/auth/api/is-authorized/"
+	authURL := wwwhisperURL + "/wwwhisper/auth/api/is-authorized/?path="
 	// TODO: OK to reuse?
 	client := &http.Client{}
 	wwwhisperHandler := ProxyHandler(wwwhisperURL, log, true)
 
 	makeAuthRequest := func(r *http.Request) (*http.Response, error) {
-		// TODO: which path
-		authReq, err := http.NewRequest("GET", authURL+"?path="+r.URL.Path, nil)
+		// .Path has escape characters decoded (/ instead of %2F)
+		authReq, err := http.NewRequest("GET", authURL+r.URL.Path, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -106,6 +131,7 @@ func WWWhisper(wwwhisperURL string, log *slog.Logger, h http.Handler) http.Handl
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		normalize(r.URL)
 		// TODO: cleanup logs
 		log.Info("wwwhisper request", "path", r.URL.Path)
 		if strings.HasPrefix(r.URL.Path, "/wwwhisper/auth/") {

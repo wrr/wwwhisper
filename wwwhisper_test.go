@@ -35,6 +35,10 @@ func (env *TestEnv) dispose() {
 const wwwhisperUsername = "alice"
 const wwwhisperPassword = "sometestpassword"
 
+func authQuery(path string) string {
+	return "/wwwhisper/auth/api/is-authorized/?path=" + path
+}
+
 func checkBasicAuthCredentials(authHeader string) error {
 	if authHeader == "" {
 		return errors.New("header missing")
@@ -126,7 +130,7 @@ func TestAppRequestAllowed(t *testing.T) {
 			t.Error("Invalid Site-Url header", siteUrl)
 			return
 		}
-		if req.URL.RequestURI() != "/wwwhisper/auth/api/is-authorized/?path=/hello" {
+		if req.URL.RequestURI() != authQuery("/hello") {
 			// No t.Fatal in request handlers because go panic recovery
 			// reruns panicked handlers and causes test error to be printed
 			// twice
@@ -152,7 +156,7 @@ func TestAppRequestLoginNeeded(t *testing.T) {
 	defer testEnv.dispose()
 
 	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
-		if req.URL.RequestURI() != "/wwwhisper/auth/api/is-authorized/?path=/foobar" {
+		if req.URL.RequestURI() != authQuery("/foobar") {
 			t.Error("Invalid auth request URI", req.URL.RequestURI())
 			return
 		}
@@ -194,6 +198,55 @@ func TestAuthPathAllowed(t *testing.T) {
 	}
 }
 
+func TestPathNormalization(t *testing.T) {
+	test_cases := []struct {
+		path_in  string
+		path_out string
+	}{
+		{"/", "/"},
+		{"/foo/bar", "/foo/bar"},
+		{"/foo/bar/", "/foo/bar/"},
+		{"/auth/api/login/../../../foo/", "/foo/"},
+		{"//", "/"},
+		{"", "/"},
+		{"/../", "/"},
+		{"/./././", "/"},
+		{"/./././", "/"},
+		{"/foo/./bar/../../bar", "/bar"},
+		{"/foo/./bar/%2E%2E/%2E%2E/bar", "/bar"},
+		{"/./././/", "/"},
+		{"/x/y%2Fz", "/x/y/z"},
+		{"", "/"},
+		{"///", "/"},
+	}
+	var expected_path string
+	testEnv := newTestEnv(t)
+	defer testEnv.dispose()
+	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
+		if req.URL.RequestURI() != authQuery(expected_path) {
+			t.Error("Invalid auth request path", req.URL.RequestURI(), expected_path)
+			return
+		}
+		rw.Write([]byte("allowed"))
+	}
+	testEnv.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
+		if req.URL.RequestURI() != expected_path {
+			t.Error("Invalid app request path", req.URL.RequestURI(), expected_path)
+			return
+		}
+		rw.Write([]byte("ok"))
+	}
+
+	for _, test := range test_cases {
+		t.Run("path normalization["+test.path_in+"]", func(t *testing.T) {
+			expected_path = test.path_out
+			resp, err := http.Get(testEnv.ProtectedUrl + test.path_in)
+			expectedBody := "ok"
+			assertResponse(t, resp, err, http.StatusOK, &expectedBody)
+		})
+	}
+}
+
 func TestAdminPathAllowed(t *testing.T) {
 	testEnv := newTestEnv(t)
 	defer testEnv.dispose()
@@ -206,7 +259,7 @@ func TestAdminPathAllowed(t *testing.T) {
 		}
 
 		if testEnv.AuthCount == 0 {
-			if req.URL.RequestURI() != "/wwwhisper/auth/api/is-authorized/?path=/wwwhisper/admin/x" {
+			if req.URL.RequestURI() != authQuery("/wwwhisper/admin/x") {
 				t.Error("Invalid auth request URI", req.URL.RequestURI())
 				return
 			}
@@ -243,7 +296,7 @@ func TestAdminPostRequest(t *testing.T) {
 		}
 
 		if testEnv.AuthCount == 0 {
-			if req.URL.RequestURI() != "/wwwhisper/auth/api/is-authorized/?path=/wwwhisper/admin/submit" {
+			if req.URL.RequestURI() != authQuery("/wwwhisper/admin/submit") {
 				t.Error("Invalid auth request URI", req.URL.RequestURI())
 				return
 			}
