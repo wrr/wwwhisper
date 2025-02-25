@@ -386,5 +386,37 @@ func TestProxyVersionPassed(t *testing.T) {
 	if testEnv.AppCount != 1 {
 		t.Fatal("App request  made")
 	}
+}
 
+func TestRedirectPassedFromAppToClient(t *testing.T) {
+	testEnv := newTestEnv(t)
+	defer testEnv.dispose()
+
+	testEnv.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
+		rw.Header().Add("location", "https://localhost:9999/foo/bar")
+		rw.WriteHeader(302)
+		rw.Write([]byte("redirect"))
+	}
+
+	// Not using http.Get() because it follows redirects.
+	req, _ := http.NewRequest("GET", testEnv.ProtectedUrl+"/foobar", nil)
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			// Disable following HTTP redirects.
+			return http.ErrUseLastResponse
+		},
+	}
+	resp, err := client.Do(req)
+	expectedBody := "redirect"
+	assertResponse(t, resp, err, 302, &expectedBody)
+	location := resp.Header.Get("location")
+	if location != "https://localhost:9999/foo/bar" {
+		t.Fatal("Location header not returned to client", location)
+	}
+	if testEnv.AuthCount != 1 {
+		t.Fatal("Auth request not made")
+	}
+	if testEnv.AppCount != 1 {
+		t.Fatal("App request not made")
+	}
 }
