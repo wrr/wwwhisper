@@ -331,3 +331,60 @@ func TestAdminPostRequest(t *testing.T) {
 		t.Fatal("App request made")
 	}
 }
+
+func TestProxyVersionPassed(t *testing.T) {
+	testEnv := newTestEnv(t)
+	defer testEnv.dispose()
+
+	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
+		userAgent := req.Header.Get("User-Agent")
+		// Custom User Agent is only passed with the
+		// /wwwhisper/auth/is-authorized request, all other requests
+		// should receive the original User Agent.
+		if strings.Contains(req.URL.RequestURI(), "/is-authorized") {
+			if req.Header.Get("User-Agent") != "go-"+Version {
+				t.Error("Invalid is-authorized user agent", userAgent)
+			}
+		} else {
+			if req.Header.Get("User-Agent") != "test-agent" {
+				t.Error("Invalid auth user agent", userAgent)
+			}
+		}
+
+		rw.Write([]byte("auth response"))
+	}
+	testEnv.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
+		userAgent := req.Header.Get("User-Agent")
+		if req.Header.Get("User-Agent") != "test-agent" {
+			t.Error("Invalid app user agent", userAgent)
+		}
+		rw.Write([]byte("hello"))
+	}
+	req, _ := http.NewRequest("GET", testEnv.ProtectedUrl, nil)
+	req.Header.Set("User-Agent", "test-agent")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	expectedBody := "hello"
+
+	assertResponse(t, resp, err, http.StatusOK, &expectedBody)
+	if testEnv.AuthCount != 1 {
+		t.Fatal("Auth request not made")
+	}
+	if testEnv.AppCount != 1 {
+		t.Fatal("App request not made")
+	}
+
+	// /wwwhisper/admin requests should also carry the original User Agent
+	req, _ = http.NewRequest("GET", testEnv.ProtectedUrl+"/wwwhisper/admin/", nil)
+	req.Header.Set("User-Agent", "test-agent")
+	resp, err = client.Do(req)
+	expectedBody = "auth response"
+	assertResponse(t, resp, err, http.StatusOK, &expectedBody)
+	if testEnv.AuthCount != 3 {
+		t.Fatal("Auth requests not made")
+	}
+	if testEnv.AppCount != 1 {
+		t.Fatal("App request  made")
+	}
+
+}

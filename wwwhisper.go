@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+const Version string = "1.0.0"
+
 func copyRequestHeaders(dst *http.Request, src *http.Request) {
 	for key, values := range src.Header {
 		for _, value := range values {
@@ -127,6 +129,7 @@ func WWWhisper(wwwhisperURL string, log *slog.Logger, h http.Handler) http.Handl
 		}
 		copyRequestHeaders(authReq, r)
 		setSiteUrlHeader(authReq, r)
+		authReq.Header.Set("User-Agent", "go-"+Version)
 		return client.Do(authReq)
 	}
 
