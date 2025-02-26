@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -15,6 +16,9 @@ import (
 )
 
 const Version string = "1.0.0"
+const overlayToInject = `
+<script src="/wwwhisper/auth/iframe.js"></script>
+`
 
 func copyRequestHeaders(dst *http.Request, src *http.Request) {
 	for key, values := range src.Header {
@@ -69,7 +73,36 @@ func getBasicAuthCredentials(url *url.URL) string {
 	return encodeBasicAuth(username, password)
 }
 
-func ProxyHandler(dstUrlStr string, log *slog.Logger, setSiteUrl bool) http.Handler {
+func injectOverlay(resp *http.Response) error {
+	contentType := resp.Header.Get("Content-Type")
+	if !strings.Contains(strings.ToLower(contentType), "text/html") ||
+		resp.Header.Get("Content-Encoding") != "" {
+		// Inject only to not compressed HTML responses.
+		return nil
+	}
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+
+	htmlString := string(bodyBytes)
+	// Inject before the </body> tag
+	tagIndex := strings.LastIndex(strings.ToLower(htmlString), "</body>")
+	if tagIndex != -1 {
+		htmlString = htmlString[:tagIndex] + overlayToInject + htmlString[tagIndex:]
+	}
+
+	bodyBytes = []byte(htmlString)
+	resp.Header.Set("Content-Length", fmt.Sprint(len(bodyBytes)))
+	resp.ContentLength = int64(len(bodyBytes))
+
+	resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+	return nil
+}
+
+func ProxyHandler(dstUrlStr string, log *slog.Logger, proxyToWwwhisper bool) http.Handler {
 	dstUrl, err := url.Parse(dstUrlStr)
 	if err != nil {
 		// TODO: propel error reporting
@@ -80,13 +113,20 @@ func ProxyHandler(dstUrlStr string, log *slog.Logger, setSiteUrl bool) http.Hand
 
 	originalDirector := proxy.Director
 	proxy.Director = func(req *http.Request) {
-		if setSiteUrl {
+		if proxyToWwwhisper {
 			setSiteUrlHeader(req, req)
 		}
 		if credentials != "" {
 			req.Header.Set("Authorization", credentials)
 		}
 		originalDirector(req)
+	}
+
+	// wwwhisper html responses already have the logout overlay added.
+	if !proxyToWwwhisper {
+		proxy.ModifyResponse = func(resp *http.Response) error {
+			return injectOverlay(resp)
+		}
 	}
 	return proxy
 }

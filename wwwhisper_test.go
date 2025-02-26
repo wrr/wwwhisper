@@ -1,6 +1,7 @@
 package main
 
 import (
+	"compress/gzip"
 	"encoding/base64"
 	"errors"
 	"io"
@@ -419,4 +420,62 @@ func TestRedirectPassedFromAppToClient(t *testing.T) {
 	if testEnv.AppCount != 1 {
 		t.Fatal("App request not made")
 	}
+}
+
+func TestIframeInjection(t *testing.T) {
+	testEnv := newTestEnv(t)
+	defer testEnv.dispose()
+	responseUnmodified := "<html><body>foo</body></html>"
+
+	testEnv.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
+		rw.Header().Add("Content-Type", "text/html")
+		rw.WriteHeader(http.StatusOK)
+		rw.Write([]byte(responseUnmodified))
+	}
+	resp, err := http.Get(testEnv.ProtectedUrl + "/foo")
+	expectedBody := "<html><body>foo\n" +
+		"<script src=\"/wwwhisper/auth/iframe.js\"></script>\n" +
+		"</body></html>"
+	assertResponse(t, resp, err, 200, &expectedBody)
+
+	// Iframe should not be injected to not HTML responses
+	testEnv.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
+		rw.Header().Add("Content-Type", "text/plain")
+		rw.WriteHeader(http.StatusOK)
+		rw.Write([]byte(responseUnmodified))
+	}
+	resp, err = http.Get(testEnv.ProtectedUrl + "/foo")
+	assertResponse(t, resp, err, 200, &responseUnmodified)
+
+	// Iframe should not be injected to gzipped HTML responses
+	testEnv.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
+		rw.Header().Add("Content-Type", "text/html")
+		rw.Header().Add("Content-Encoding", "gzip")
+		rw.WriteHeader(http.StatusOK)
+
+		gz := gzip.NewWriter(rw)
+		defer gz.Close()
+		gz.Write([]byte(responseUnmodified))
+	}
+	resp, err = http.Get(testEnv.ProtectedUrl + "/foo")
+	assertResponse(t, resp, err, 200, &responseUnmodified)
+
+	// Iframe should not be injected HTML responses without the closing </body> tag.
+	responseNoBody := "<html><head>foo</head></html>"
+	testEnv.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
+		rw.Header().Add("Content-Type", "text/plain")
+		rw.WriteHeader(http.StatusOK)
+		rw.Write([]byte(responseNoBody))
+	}
+	resp, err = http.Get(testEnv.ProtectedUrl + "/foo")
+	assertResponse(t, resp, err, 200, &responseNoBody)
+
+	// Iframe should not be injected wwwhisper backend responses.
+	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
+		rw.Header().Add("Content-Type", "text/html")
+		rw.WriteHeader(http.StatusOK)
+		rw.Write([]byte(responseUnmodified))
+	}
+	resp, err = http.Get(testEnv.ProtectedUrl + "/wwwhisper/admin")
+	assertResponse(t, resp, err, 200, &responseUnmodified)
 }
