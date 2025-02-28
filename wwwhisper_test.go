@@ -106,7 +106,16 @@ func assertResponse(t *testing.T, resp *http.Response, err error, expectedStatus
 	}
 }
 
+func clearEnv() {
+	os.Unsetenv("WWWHISPER_URL")
+	os.Unsetenv("PORT")
+	os.Unsetenv("PROXY_TO_PORT")
+}
+
 func TestEnvVariablesRequired(t *testing.T) {
+	clearEnv()
+	defer clearEnv()
+
 	err := run()
 	expected := "WWWHISPER_URL environment variable is not set"
 	if err == nil || err.Error() != expected {
