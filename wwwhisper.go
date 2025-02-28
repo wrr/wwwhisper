@@ -48,7 +48,7 @@ func serverError(log *slog.Logger, w http.ResponseWriter, msg string, err error)
 	http.Error(w, msg, http.StatusInternalServerError)
 }
 
-func setSiteUrlHeader(dst *http.Request, incoming *http.Request) {
+func setSiteURLHeader(dst *http.Request, incoming *http.Request) {
 	scheme := incoming.Header.Get("X-Forwarded-Proto")
 	if scheme == "" {
 		if incoming.TLS != nil {
@@ -103,19 +103,19 @@ func injectOverlay(resp *http.Response) error {
 	return nil
 }
 
-func ProxyHandler(dstUrlStr string, log *slog.Logger, proxyToWwwhisper bool) http.Handler {
-	dstUrl, err := url.Parse(dstUrlStr)
+func ProxyHandler(dstURLStr string, log *slog.Logger, proxyToWwwhisper bool) http.Handler {
+	dstURL, err := url.Parse(dstURLStr)
 	if err != nil {
 		// TODO: propel error reporting
-		panic("Error parsing " + dstUrlStr)
+		panic("Error parsing " + dstURLStr)
 	}
-	proxy := httputil.NewSingleHostReverseProxy(dstUrl)
-	credentials := getBasicAuthCredentials(dstUrl)
+	proxy := httputil.NewSingleHostReverseProxy(dstURL)
+	credentials := getBasicAuthCredentials(dstURL)
 
 	originalDirector := proxy.Director
 	proxy.Director = func(req *http.Request) {
 		if proxyToWwwhisper {
-			setSiteUrlHeader(req, req)
+			setSiteURLHeader(req, req)
 		}
 		if credentials != "" {
 			req.Header.Set("Authorization", credentials)
@@ -169,7 +169,7 @@ func WWWhisper(wwwhisperURL string, log *slog.Logger, h http.Handler) http.Handl
 			return nil, err
 		}
 		copyRequestHeaders(authReq, r)
-		setSiteUrlHeader(authReq, r)
+		setSiteURLHeader(authReq, r)
 		authReq.Header.Set("User-Agent", "go-"+Version)
 		return client.Do(authReq)
 	}

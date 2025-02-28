@@ -23,7 +23,7 @@ type TestEnv struct {
 	AuthHandler func(http.ResponseWriter, *http.Request)
 	AuthCount   int
 
-	ProtectedUrl       string
+	ProtectedURL       string
 	protectedAppServer *httptest.Server
 }
 
@@ -77,11 +77,11 @@ func newTestEnv(t *testing.T) *TestEnv {
 	handler := slog.NewTextHandler(io.Discard, options)
 	log := slog.New(handler)
 
-	parsedUrl, _ := url.Parse(env.authServer.URL)
-	parsedUrl.User = url.UserPassword(wwwhisperUsername, wwwhisperPassword)
+	parsedURL, _ := url.Parse(env.authServer.URL)
+	parsedURL.User = url.UserPassword(wwwhisperUsername, wwwhisperPassword)
 	env.protectedAppServer = httptest.NewServer(
-		WWWhisper(parsedUrl.String(), log, ProxyHandler(env.appServer.URL, log, false)))
-	env.ProtectedUrl = env.protectedAppServer.URL
+		WWWhisper(parsedURL.String(), log, ProxyHandler(env.appServer.URL, log, false)))
+	env.ProtectedURL = env.protectedAppServer.URL
 	return &env
 }
 
@@ -142,9 +142,9 @@ func TestAppRequestAllowed(t *testing.T) {
 	defer testEnv.dispose()
 
 	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
-		siteUrl := req.Header.Get("Site-Url")
-		if siteUrl != testEnv.ProtectedUrl {
-			t.Error("Invalid Site-Url header", siteUrl)
+		siteURL := req.Header.Get("Site-Url")
+		if siteURL != testEnv.ProtectedURL {
+			t.Error("Invalid Site-Url header", siteURL)
 			return
 		}
 		if req.URL.RequestURI() != authQuery("/hello") {
@@ -157,7 +157,7 @@ func TestAppRequestAllowed(t *testing.T) {
 		rw.Write([]byte("allowed"))
 	}
 
-	resp, err := http.Get(testEnv.ProtectedUrl + "/hello")
+	resp, err := http.Get(testEnv.ProtectedURL + "/hello")
 	expectedBody := "Hello world"
 	assertResponse(t, resp, err, http.StatusOK, &expectedBody)
 	if testEnv.AuthCount != 1 {
@@ -181,7 +181,7 @@ func TestAppRequestLoginNeeded(t *testing.T) {
 		rw.Write([]byte("login required"))
 	}
 
-	resp, err := http.Get(testEnv.ProtectedUrl + "/foobar")
+	resp, err := http.Get(testEnv.ProtectedURL + "/foobar")
 	expectedBody := "login required"
 	assertResponse(t, resp, err, http.StatusUnauthorized, &expectedBody)
 	if testEnv.AuthCount != 1 {
@@ -204,7 +204,7 @@ func TestAuthPathAllowed(t *testing.T) {
 		rw.Write([]byte("login response"))
 	}
 
-	resp, err := http.Get(testEnv.ProtectedUrl + "/wwwhisper/auth/login")
+	resp, err := http.Get(testEnv.ProtectedURL + "/wwwhisper/auth/login")
 	expectedBody := "login response"
 	assertResponse(t, resp, err, http.StatusOK, &expectedBody)
 	if testEnv.AuthCount != 1 {
@@ -257,7 +257,7 @@ func TestPathNormalization(t *testing.T) {
 	for _, test := range test_cases {
 		t.Run("path normalization["+test.path_in+"]", func(t *testing.T) {
 			expected_path = test.path_out
-			resp, err := http.Get(testEnv.ProtectedUrl + test.path_in)
+			resp, err := http.Get(testEnv.ProtectedURL + test.path_in)
 			expectedBody := "ok"
 			assertResponse(t, resp, err, http.StatusOK, &expectedBody)
 		})
@@ -269,9 +269,9 @@ func TestAdminPathAllowed(t *testing.T) {
 	defer testEnv.dispose()
 
 	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
-		siteUrl := req.Header.Get("Site-Url")
-		if siteUrl != testEnv.ProtectedUrl {
-			t.Error("Invalid Site-Url header", siteUrl)
+		siteURL := req.Header.Get("Site-Url")
+		if siteURL != testEnv.ProtectedURL {
+			t.Error("Invalid Site-Url header", siteURL)
 			return
 		}
 
@@ -290,7 +290,7 @@ func TestAdminPathAllowed(t *testing.T) {
 		}
 	}
 
-	resp, err := http.Get(testEnv.ProtectedUrl + "/wwwhisper/admin/x?foo=bar")
+	resp, err := http.Get(testEnv.ProtectedURL + "/wwwhisper/admin/x?foo=bar")
 	expectedBody := "admin page"
 	assertResponse(t, resp, err, http.StatusOK, &expectedBody)
 	if testEnv.AuthCount != 2 {
@@ -306,9 +306,9 @@ func TestAdminPostRequest(t *testing.T) {
 	defer testEnv.dispose()
 
 	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
-		siteUrl := req.Header.Get("Site-Url")
-		if siteUrl != testEnv.ProtectedUrl {
-			t.Error("Invalid Site-Url header", siteUrl)
+		siteURL := req.Header.Get("Site-Url")
+		if siteURL != testEnv.ProtectedURL {
+			t.Error("Invalid Site-Url header", siteURL)
 			return
 		}
 
@@ -337,8 +337,8 @@ func TestAdminPostRequest(t *testing.T) {
 		}
 	}
 
-	postUrl := testEnv.ProtectedUrl + "/wwwhisper/admin/submit"
-	resp, err := http.Post(postUrl, "text/plain", strings.NewReader("post-data"))
+	postURL := testEnv.ProtectedURL + "/wwwhisper/admin/submit"
+	resp, err := http.Post(postURL, "text/plain", strings.NewReader("post-data"))
 	expectedBody := "OK"
 	assertResponse(t, resp, err, http.StatusOK, &expectedBody)
 	if testEnv.AuthCount != 2 {
@@ -377,7 +377,7 @@ func TestProxyVersionPassed(t *testing.T) {
 		}
 		rw.Write([]byte("hello"))
 	}
-	req, _ := http.NewRequest("GET", testEnv.ProtectedUrl, nil)
+	req, _ := http.NewRequest("GET", testEnv.ProtectedURL, nil)
 	req.Header.Set("User-Agent", "test-agent")
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -392,7 +392,7 @@ func TestProxyVersionPassed(t *testing.T) {
 	}
 
 	// /wwwhisper/admin requests should also carry the original User Agent
-	req, _ = http.NewRequest("GET", testEnv.ProtectedUrl+"/wwwhisper/admin/", nil)
+	req, _ = http.NewRequest("GET", testEnv.ProtectedURL+"/wwwhisper/admin/", nil)
 	req.Header.Set("User-Agent", "test-agent")
 	resp, err = client.Do(req)
 	expectedBody = "auth response"
@@ -416,7 +416,7 @@ func TestRedirectPassedFromAppToClient(t *testing.T) {
 	}
 
 	// Not using http.Get() because it follows redirects.
-	req, _ := http.NewRequest("GET", testEnv.ProtectedUrl+"/foobar", nil)
+	req, _ := http.NewRequest("GET", testEnv.ProtectedURL+"/foobar", nil)
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			// Disable following HTTP redirects.
@@ -448,7 +448,7 @@ func TestIframeInjection(t *testing.T) {
 		rw.WriteHeader(http.StatusOK)
 		rw.Write([]byte(responseUnmodified))
 	}
-	resp, err := http.Get(testEnv.ProtectedUrl + "/foo")
+	resp, err := http.Get(testEnv.ProtectedURL + "/foo")
 	expectedBody := "<html><body>foo\n" +
 		"<script src=\"/wwwhisper/auth/iframe.js\"></script>\n" +
 		"</body></html>"
@@ -460,7 +460,7 @@ func TestIframeInjection(t *testing.T) {
 		rw.WriteHeader(http.StatusOK)
 		rw.Write([]byte(responseUnmodified))
 	}
-	resp, err = http.Get(testEnv.ProtectedUrl + "/foo")
+	resp, err = http.Get(testEnv.ProtectedURL + "/foo")
 	assertResponse(t, resp, err, 200, &responseUnmodified)
 
 	// Iframe should not be injected to gzipped HTML responses
@@ -473,7 +473,7 @@ func TestIframeInjection(t *testing.T) {
 		defer gz.Close()
 		gz.Write([]byte(responseUnmodified))
 	}
-	resp, err = http.Get(testEnv.ProtectedUrl + "/foo")
+	resp, err = http.Get(testEnv.ProtectedURL + "/foo")
 	assertResponse(t, resp, err, 200, &responseUnmodified)
 
 	// Iframe should not be injected HTML responses without the closing </body> tag.
@@ -483,7 +483,7 @@ func TestIframeInjection(t *testing.T) {
 		rw.WriteHeader(http.StatusOK)
 		rw.Write([]byte(responseNoBody))
 	}
-	resp, err = http.Get(testEnv.ProtectedUrl + "/foo")
+	resp, err = http.Get(testEnv.ProtectedURL + "/foo")
 	assertResponse(t, resp, err, 200, &responseNoBody)
 
 	// Iframe should not be injected wwwhisper backend responses.
@@ -492,6 +492,6 @@ func TestIframeInjection(t *testing.T) {
 		rw.WriteHeader(http.StatusOK)
 		rw.Write([]byte(responseUnmodified))
 	}
-	resp, err = http.Get(testEnv.ProtectedUrl + "/wwwhisper/admin")
+	resp, err = http.Get(testEnv.ProtectedURL + "/wwwhisper/admin")
 	assertResponse(t, resp, err, 200, &responseUnmodified)
 }
