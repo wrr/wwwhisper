@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -206,39 +207,52 @@ func WWWhisper(wwwhisperURL string, log *slog.Logger, h http.Handler) http.Handl
 	})
 }
 
-func die(message string) {
-	fmt.Fprintln(os.Stderr, message)
-	os.Exit(1)
-}
-
-func main() {
-	wwwhisperURL := os.Getenv("WWWHISPER_URL")
-	if wwwhisperURL == "" {
-		die("WWWHISPER_URL environment variable is not set")
-	}
-
-	appPort := os.Getenv("APP_PORT")
-	if appPort == "" {
-		die("APP_PORT environment variable is not set")
-	}
-	dstURL := "http://localhost:" + appPort
+func Run(wwwhisperURL string, protectedAppPort string, proxyToPort string) error {
+	proxyToURL := "http://localhost:" + proxyToPort
 
 	mux := http.NewServeMux()
 	// TODO: tune timeouts
 	s := http.Server{
-		Addr:         ":8080",
+		Addr:         ":" + protectedAppPort,
 		ReadTimeout:  20 * time.Second,
 		WriteTimeout: 20 * time.Second,
 		Handler:      mux,
 	}
 	handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{})
 	log := slog.New(handler)
-	mux.Handle("/", WWWhisper(wwwhisperURL, log, ProxyHandler(dstURL, log, false)))
+	mux.Handle("/", WWWhisper(wwwhisperURL, log, ProxyHandler(proxyToURL, log, false)))
 
 	err := s.ListenAndServe()
+	if err != http.ErrServerClosed {
+		return err
+	}
+	return nil
+}
+
+func run() error {
+	wwwhisperURL := os.Getenv("WWWHISPER_URL")
+	if wwwhisperURL == "" {
+		return errors.New("WWWHISPER_URL environment variable is not set")
+	}
+	protectedAppPort := os.Getenv("PORT")
+	if protectedAppPort == "" {
+		return errors.New("PORT environment variable is not set")
+	}
+	appPort := os.Getenv("PROXY_TO_PORT")
+	if appPort == "" {
+		return errors.New("PROXY_TO_PORT environment variable is not set")
+	}
+	return Run(wwwhisperURL, protectedAppPort, appPort)
+}
+
+func die(message string) {
+	fmt.Fprintln(os.Stderr, "Error:", message)
+	os.Exit(1)
+}
+
+func main() {
+	err := run()
 	if err != nil {
-		if err != http.ErrServerClosed {
-			panic(err)
-		}
+		die(err.Error())
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 )
@@ -102,6 +103,37 @@ func assertResponse(t *testing.T, resp *http.Response, err error, expectedStatus
 		if string(body) != *expectedBody {
 			t.Fatalf("Expected body '%s'; got '%s'", *expectedBody, string(body))
 		}
+	}
+}
+
+func TestEnvVariablesRequired(t *testing.T) {
+	err := run()
+	expected := "WWWHISPER_URL environment variable is not set"
+	if err == nil || err.Error() != expected {
+		t.Fatal("Expected error is missing:", err)
+	}
+
+	os.Setenv("WWWHISPER_URL", "https://example.com")
+	err = run()
+	expected = "PORT environment variable is not set"
+	if err == nil || err.Error() != expected {
+		t.Fatal("Expected error is missing:", err)
+	}
+
+	// Invalid port to ensure the final run() fails.
+	os.Setenv("PORT", "1000000")
+	err = run()
+	expected = "PROXY_TO_PORT environment variable is not set"
+	if err == nil || err.Error() != expected {
+		t.Fatal("Expected error is missing:", err)
+	}
+
+	os.Setenv("PROXY_TO_PORT", "999")
+	// All requires environment variables are set, but PORT is too large
+	// so the server should fail to bind it.
+	err = run()
+	if err == nil || !strings.Contains(err.Error(), "invalid port") {
+		t.Fatal("Expected error is missing:", err)
 	}
 }
 
