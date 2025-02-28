@@ -2,7 +2,6 @@ package main
 
 import (
 	"compress/gzip"
-	"encoding/base64"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -40,26 +39,11 @@ func authQuery(path string) string {
 	return "/wwwhisper/auth/api/is-authorized/?path=" + path
 }
 
-func checkBasicAuthCredentials(authHeader string) error {
-	if authHeader == "" {
-		return errors.New("header missing")
+func checkBasicAuthCredentials(req *http.Request) error {
+	username, password, ok := req.BasicAuth()
+	if !ok {
+		return errors.New("credentials missing")
 	}
-	const prefix = "Basic "
-	if !strings.HasPrefix(authHeader, prefix) {
-		return errors.New("header invalid prefix")
-	}
-	encodedCreds := strings.TrimPrefix(authHeader, prefix)
-	decodedBytes, err := base64.StdEncoding.DecodeString(encodedCreds)
-	if err != nil {
-		return errors.New("credentials decoding failed")
-	}
-	creds := strings.SplitN(string(decodedBytes), ":", 2)
-	if len(creds) != 2 {
-		return errors.New("credentials invalid format")
-	}
-
-	username, password := creds[0], creds[1]
-
 	if username != wwwhisperUsername || password != wwwhisperPassword {
 		return errors.New("credentials do not match")
 	}
@@ -79,7 +63,7 @@ func newTestEnv(t *testing.T) *TestEnv {
 		rw.Write([]byte("allowed"))
 	}
 	env.authServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		err := checkBasicAuthCredentials(req.Header.Get("Authorization"))
+		err := checkBasicAuthCredentials(req)
 		if err != nil {
 			t.Error("Auth request basic auth:", err)
 			return
