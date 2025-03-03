@@ -14,6 +14,9 @@ import (
 	"testing"
 )
 
+const wwwhisperUsername = "alice"
+const wwwhisperPassword = "sometestpassword"
+
 type TestEnv struct {
 	appServer  *httptest.Server
 	AppHandler func(http.ResponseWriter, *http.Request)
@@ -32,9 +35,6 @@ func (env *TestEnv) dispose() {
 	defer env.authServer.Close()
 	defer env.protectedAppServer.Close()
 }
-
-const wwwhisperUsername = "alice"
-const wwwhisperPassword = "sometestpassword"
 
 func authQuery(path string) string {
 	return "/wwwhisper/auth/api/is-authorized/?path=" + path
@@ -77,10 +77,14 @@ func newTestEnv(t *testing.T) *TestEnv {
 	handler := slog.NewTextHandler(io.Discard, options)
 	log := slog.New(handler)
 
-	parsedURL, _ := url.Parse(env.authServer.URL)
-	parsedURL.User = url.UserPassword(wwwhisperUsername, wwwhisperPassword)
-	env.protectedAppServer = httptest.NewServer(
-		WWWhisper(parsedURL.String(), log, ProxyHandler(env.appServer.URL, log, false)))
+	appUrlParsed, _ := url.Parse(env.appServer.URL)
+	appHandler := NewProxyHandler(appUrlParsed, log, false)
+
+	wwwhisperURL, _ := url.Parse(env.authServer.URL)
+	wwwhisperURL.User = url.UserPassword(wwwhisperUsername, wwwhisperPassword)
+	authHandler := NewAuthHandler(wwwhisperURL, log, appHandler)
+
+	env.protectedAppServer = httptest.NewServer(authHandler)
 	env.ProtectedURL = env.protectedAppServer.URL
 	return &env
 }
@@ -144,6 +148,27 @@ func TestEnvVariablesRequired(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "invalid port") {
 		t.Fatal("Expected error is missing:", err)
 	}
+}
+
+func TestRunArgsValidation(t *testing.T) {
+	err := Run("https://wwwhi sper.io", "8080", "8000")
+	expected := "wwwhisper url has invalid format: https://wwwhi sper.io"
+	if err == nil || !strings.Contains(err.Error(), expected) {
+		t.Fatal("Expected error is missing:", err)
+	}
+
+	err = Run("https://wwwhisper.io", "8080", "invalidPort")
+	expected = "App port has invalid format: invalidPort;"
+	if err == nil || !strings.Contains(err.Error(), expected) {
+		t.Fatal("Expected error is missing:", err)
+	}
+
+	err = Run("https://wwwhisper.io", "invalidPort", "8000")
+	expected = "tcp/invalidPort"
+	if err == nil || !strings.Contains(err.Error(), expected) {
+		t.Fatal("Expected error is missing:", err)
+	}
+
 }
 
 func TestAppRequestAllowed(t *testing.T) {
@@ -216,6 +241,29 @@ func TestAuthPathAllowed(t *testing.T) {
 	resp, err := http.Get(testEnv.ProtectedURL + "/wwwhisper/auth/login")
 	expectedBody := "login response"
 	assertResponse(t, resp, err, http.StatusOK, &expectedBody)
+	if testEnv.AuthCount != 1 {
+		t.Fatal("Auth request not made")
+	}
+	if testEnv.AppCount != 0 {
+		t.Fatal("App request made")
+	}
+}
+
+func TestAuthRequestNonHttpError(t *testing.T) {
+	testEnv := newTestEnv(t)
+	defer testEnv.dispose()
+
+	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
+		// Invalid location header should result in a low level request
+		// error returned by the Go client lib, not an HTTP error code.
+		rw.Header().Add("location", "https://inv alid")
+		rw.WriteHeader(302)
+	}
+
+	resp, err := http.Get(testEnv.ProtectedURL + "/foo")
+	expectedBody := "Internal server error: auth request\n"
+	assertResponse(t, resp, err, 500, &expectedBody)
+
 	if testEnv.AuthCount != 1 {
 		t.Fatal("Auth request not made")
 	}

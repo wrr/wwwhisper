@@ -103,14 +103,9 @@ func injectOverlay(resp *http.Response) error {
 	return nil
 }
 
-func ProxyHandler(dstURLStr string, log *slog.Logger, proxyToWwwhisper bool) http.Handler {
-	dstURL, err := url.Parse(dstURLStr)
-	if err != nil {
-		// TODO: propel error reporting
-		panic("Error parsing " + dstURLStr)
-	}
-	proxy := httputil.NewSingleHostReverseProxy(dstURL)
-	credentials := getBasicAuthCredentials(dstURL)
+func NewProxyHandler(target *url.URL, log *slog.Logger, proxyToWwwhisper bool) http.Handler {
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	credentials := getBasicAuthCredentials(target)
 
 	originalDirector := proxy.Director
 	proxy.Director = func(req *http.Request) {
@@ -156,16 +151,19 @@ func normalize(url *url.URL) {
 	url.RawPath = ""
 }
 
-func WWWhisper(wwwhisperURL string, log *slog.Logger, h http.Handler) http.Handler {
-	authURL := wwwhisperURL + "/wwwhisper/auth/api/is-authorized/?path="
+func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Handler) http.Handler {
+	authURL := wwwhisperURL.String() + "/wwwhisper/auth/api/is-authorized/?path="
 	// TODO: OK to reuse?
 	client := &http.Client{}
-	wwwhisperHandler := ProxyHandler(wwwhisperURL, log, true)
+	wwwhisperHandler := NewProxyHandler(wwwhisperURL, log, true)
 
 	makeAuthRequest := func(r *http.Request) (*http.Response, error) {
 		// .Path has escape characters decoded (/ instead of %2F)
 		authReq, err := http.NewRequest("GET", authURL+r.URL.Path, nil)
 		if err != nil {
+			// This should never happen: method is hardcoded to GET, authURL
+			// is for sure parsable because if comes from the already parsed
+			// url.URL, other errors are not reported by NewRequest, but client.Do
 			return nil, err
 		}
 		copyRequestHeaders(authReq, r)
@@ -202,13 +200,21 @@ func WWWhisper(wwwhisperURL string, log *slog.Logger, h http.Handler) http.Handl
 		if strings.HasPrefix(r.URL.Path, "/wwwhisper/") {
 			wwwhisperHandler.ServeHTTP(w, r)
 		} else {
-			h.ServeHTTP(w, r)
+			appHandler.ServeHTTP(w, r)
 		}
 	})
 }
 
 func Run(wwwhisperURL string, protectedAppPort string, proxyToPort string) error {
-	proxyToURL := "http://localhost:" + proxyToPort
+	wwwhisperURLParsed, err := url.Parse(wwwhisperURL)
+	if err != nil {
+		return fmt.Errorf("wwwhisper url has invalid format: %s; %w", wwwhisperURL, err)
+	}
+
+	proxyTarget, err := url.Parse("http://localhost:" + proxyToPort)
+	if err != nil {
+		return fmt.Errorf("App port has invalid format: %s; %w", proxyToPort, err)
+	}
 
 	mux := http.NewServeMux()
 	// TODO: tune timeouts
@@ -220,9 +226,10 @@ func Run(wwwhisperURL string, protectedAppPort string, proxyToPort string) error
 	}
 	handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{})
 	log := slog.New(handler)
-	mux.Handle("/", WWWhisper(wwwhisperURL, log, ProxyHandler(proxyToURL, log, false)))
+	appHandler := NewProxyHandler(proxyTarget, log, false)
+	mux.Handle("/", NewAuthHandler(wwwhisperURLParsed, log, appHandler))
 
-	err := s.ListenAndServe()
+	err = s.ListenAndServe()
 	if err != http.ErrServerClosed {
 		return err
 	}
