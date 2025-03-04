@@ -155,8 +155,11 @@ func normalize(url *url.URL) {
 
 func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Handler) http.Handler {
 	authURL := wwwhisperURL.String() + "/wwwhisper/auth/api/is-authorized/?path="
-	// TODO: OK to reuse?
-	client := &http.Client{}
+	authClient := &http.Client{
+		Jar:     nil,
+		Timeout: 20 * time.Second,
+	}
+
 	wwwhisperProxy := NewReverseProxy(wwwhisperURL, log, true)
 
 	makeAuthRequest := func(r *http.Request) (*http.Response, error) {
@@ -171,7 +174,7 @@ func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 		copyRequestHeaders(authReq, r)
 		setSiteURLHeader(authReq, r)
 		authReq.Header.Set("User-Agent", "go-"+Version)
-		return client.Do(authReq)
+		return authClient.Do(authReq)
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
