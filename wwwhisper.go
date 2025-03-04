@@ -103,8 +103,10 @@ func injectOverlay(resp *http.Response) error {
 	return nil
 }
 
-func NewProxyHandler(target *url.URL, log *slog.Logger, proxyToWwwhisper bool) http.Handler {
+func NewReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool) *httputil.ReverseProxy {
 	proxy := httputil.NewSingleHostReverseProxy(target)
+	// TODO: convert log to log.Logger or maybe do not use slog at all?
+	// proxy.ErrorLog = log
 	credentials := getBasicAuthCredentials(target)
 
 	originalDirector := proxy.Director
@@ -155,7 +157,7 @@ func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 	authURL := wwwhisperURL.String() + "/wwwhisper/auth/api/is-authorized/?path="
 	// TODO: OK to reuse?
 	client := &http.Client{}
-	wwwhisperHandler := NewProxyHandler(wwwhisperURL, log, true)
+	wwwhisperProxy := NewReverseProxy(wwwhisperURL, log, true)
 
 	makeAuthRequest := func(r *http.Request) (*http.Response, error) {
 		// .Path has escape characters decoded (/ instead of %2F)
@@ -178,7 +180,7 @@ func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 		log.Info("wwwhisper request", "path", r.URL.Path)
 		if strings.HasPrefix(r.URL.Path, "/wwwhisper/auth/") {
 			// login/logout/send-token etc. always allowed, doesn't require authorization.
-			wwwhisperHandler.ServeHTTP(w, r)
+			wwwhisperProxy.ServeHTTP(w, r)
 			return
 		}
 		authResp, err := makeAuthRequest(r)
@@ -198,7 +200,7 @@ func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 
 		log.Info("Access granted")
 		if strings.HasPrefix(r.URL.Path, "/wwwhisper/") {
-			wwwhisperHandler.ServeHTTP(w, r)
+			wwwhisperProxy.ServeHTTP(w, r)
 		} else {
 			appHandler.ServeHTTP(w, r)
 		}
@@ -218,6 +220,7 @@ func Run(wwwhisperURL string, protectedAppPort string, proxyToPort string) error
 
 	mux := http.NewServeMux()
 	// TODO: tune timeouts
+	// TODO: set ErrorLogger
 	s := http.Server{
 		Addr:         ":" + protectedAppPort,
 		ReadTimeout:  20 * time.Second,
@@ -226,8 +229,8 @@ func Run(wwwhisperURL string, protectedAppPort string, proxyToPort string) error
 	}
 	handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{})
 	log := slog.New(handler)
-	appHandler := NewProxyHandler(proxyTarget, log, false)
-	mux.Handle("/", NewAuthHandler(wwwhisperURLParsed, log, appHandler))
+	appProxy := NewReverseProxy(proxyTarget, log, false)
+	mux.Handle("/", NewAuthHandler(wwwhisperURLParsed, log, appProxy))
 
 	err = s.ListenAndServe()
 	if err != http.ErrServerClosed {

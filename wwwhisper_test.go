@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"strings"
@@ -28,6 +29,8 @@ type TestEnv struct {
 
 	ProtectedURL       string
 	protectedAppServer *httptest.Server
+
+	AppProxy *httputil.ReverseProxy
 }
 
 func (env *TestEnv) dispose() {
@@ -78,13 +81,13 @@ func newTestEnv(t *testing.T) *TestEnv {
 	log := slog.New(handler)
 
 	appUrlParsed, _ := url.Parse(env.appServer.URL)
-	appHandler := NewProxyHandler(appUrlParsed, log, false)
+	env.AppProxy = NewReverseProxy(appUrlParsed, log, false)
 
 	wwwhisperURL, _ := url.Parse(env.authServer.URL)
 	wwwhisperURL.User = url.UserPassword(wwwhisperUsername, wwwhisperPassword)
-	authHandler := NewAuthHandler(wwwhisperURL, log, appHandler)
+	wwwhisperHandler := NewAuthHandler(wwwhisperURL, log, env.AppProxy)
 
-	env.protectedAppServer = httptest.NewServer(authHandler)
+	env.protectedAppServer = httptest.NewServer(wwwhisperHandler)
 	env.ProtectedURL = env.protectedAppServer.URL
 	return &env
 }
@@ -551,4 +554,36 @@ func TestIframeInjection(t *testing.T) {
 	}
 	resp, err = http.Get(testEnv.ProtectedURL + "/wwwhisper/admin")
 	assertResponse(t, resp, err, 200, &responseUnmodified)
+}
+
+type errorReader struct{}
+
+func (er errorReader) Read(p []byte) (int, error) {
+	return 0, errors.New("body read error")
+}
+func (er errorReader) Close() error {
+	return nil
+}
+
+func TestIframeInjectionBodyReadFailure(t *testing.T) {
+	testEnv := newTestEnv(t)
+	defer testEnv.dispose()
+	modifyResponseOrig := testEnv.AppProxy.ModifyResponse
+	testEnv.AppProxy.ModifyResponse = func(resp *http.Response) error {
+		resp.Body = errorReader{}
+		return modifyResponseOrig(resp)
+	}
+
+	responseUnmodified := "<html><body>foo</body></html>"
+	testEnv.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
+		rw.Header().Add("Content-Type", "text/html")
+		rw.WriteHeader(http.StatusOK)
+		rw.Write([]byte(responseUnmodified))
+	}
+
+	// Error returned by the default AppProxy.ErrorHandler
+	// when ModifyResponse returns an error.
+	expectedBody := ""
+	resp, err := http.Get(testEnv.ProtectedURL + "/foo")
+	assertResponse(t, resp, err, 502, &expectedBody)
 }
