@@ -153,6 +153,24 @@ func normalize(url *url.URL) {
 	url.RawPath = ""
 }
 
+// ResponseWriter which captures http status for logging purposes.
+type statusCapturingWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (rw *statusCapturingWriter) WriteHeader(status int) {
+	rw.status = status
+	rw.ResponseWriter.WriteHeader(status)
+}
+
+func wrapResponseWriter(rw http.ResponseWriter) *statusCapturingWriter {
+	return &statusCapturingWriter{
+		ResponseWriter: rw,
+		status:         http.StatusOK,
+	}
+}
+
 func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Handler) http.Handler {
 	authURL := wwwhisperURL.String() + "/wwwhisper/auth/api/is-authorized/?path="
 	authClient := &http.Client{
@@ -177,35 +195,50 @@ func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 		return authClient.Do(authReq)
 	}
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		normalize(r.URL)
-		// TODO: cleanup logs
-		log.Info("wwwhisper request", "path", r.URL.Path)
-		if strings.HasPrefix(r.URL.Path, "/wwwhisper/auth/") {
+	return http.HandlerFunc(func(origWriter http.ResponseWriter, req *http.Request) {
+		start := time.Now()
+		var rw *statusCapturingWriter = wrapResponseWriter(origWriter)
+		normalize(req.URL)
+
+		auth_status := ""
+		defer func() {
+			duration := time.Since(start)
+			log.Info("wwwhisper",
+				slog.String("method", req.Method),
+				slog.String("path", req.URL.Path),
+				slog.String("auth", auth_status),
+				slog.Int("status", rw.status),
+				slog.Duration("timer", duration),
+			)
+		}()
+
+		if strings.HasPrefix(req.URL.Path, "/wwwhisper/auth/") {
 			// login/logout/send-token etc. always allowed, doesn't require authorization.
-			wwwhisperProxy.ServeHTTP(w, r)
+			auth_status = "open"
+			wwwhisperProxy.ServeHTTP(rw, req)
 			return
 		}
-		authResp, err := makeAuthRequest(r)
+		authResp, err := makeAuthRequest(req)
 		if err != nil {
-			serverError(log, w, "auth request", err)
+			auth_status = "failed"
+			serverError(log, rw, "auth request", err)
 			return
 		}
 		defer authResp.Body.Close()
 		if authResp.StatusCode != http.StatusOK {
-			log.Info("Access denied")
-			err = copyResponse(w, authResp)
+			auth_status = "denied"
+			err = copyResponse(rw, authResp)
 			if err != nil {
 				log.Error("Error copying auth response: " + err.Error())
 			}
 			return
 		}
 
-		log.Info("Access granted")
-		if strings.HasPrefix(r.URL.Path, "/wwwhisper/") {
-			wwwhisperProxy.ServeHTTP(w, r)
+		auth_status = "granted"
+		if strings.HasPrefix(req.URL.Path, "/wwwhisper/") {
+			wwwhisperProxy.ServeHTTP(rw, req)
 		} else {
-			appHandler.ServeHTTP(w, r)
+			appHandler.ServeHTTP(rw, req)
 		}
 	})
 }
