@@ -77,7 +77,7 @@ func newTestEnv(t *testing.T) *TestEnv {
 	}))
 
 	options := &slog.HandlerOptions{}
-	handler := slog.NewTextHandler(io.Discard, options)
+	handler := slog.NewTextHandler(io.Discard /*os.Stderr*/, options)
 	log := slog.New(handler)
 
 	appUrlParsed, _ := url.Parse(env.appServer.URL)

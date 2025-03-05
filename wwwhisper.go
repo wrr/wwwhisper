@@ -40,14 +40,6 @@ func copyResponse(w http.ResponseWriter, src *http.Response) error {
 	return err
 }
 
-func serverError(log *slog.Logger, w http.ResponseWriter, msg string, err error) {
-	msg = "Internal server error: " + msg
-	log.Error(msg + "; " + err.Error())
-	// Do not return err.Error() to the user as it can contain sensitive
-	// data.
-	http.Error(w, msg, http.StatusInternalServerError)
-}
-
 func setSiteURLHeader(dst *http.Request, incoming *http.Request) {
 	scheme := incoming.Header.Get("X-Forwarded-Proto")
 	if scheme == "" {
@@ -105,8 +97,7 @@ func injectOverlay(resp *http.Response) error {
 
 func NewReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool) *httputil.ReverseProxy {
 	proxy := httputil.NewSingleHostReverseProxy(target)
-	// TODO: convert log to log.Logger or maybe do not use slog at all?
-	// proxy.ErrorLog = log
+	proxy.ErrorLog = slog.NewLogLogger(log.Handler(), slog.LevelError)
 	credentials := getBasicAuthCredentials(target)
 
 	originalDirector := proxy.Director
@@ -221,7 +212,10 @@ func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 		authResp, err := makeAuthRequest(req)
 		if err != nil {
 			auth_status = "failed"
-			serverError(log, rw, "auth request", err)
+			log.Warn("wwwhisper", "error", err.Error())
+			// Do not return err.Error() to the user as it can contain sensitive
+			// data.
+			http.Error(rw, "Internal server error: auth request", http.StatusInternalServerError)
 			return
 		}
 		defer authResp.Body.Close()
@@ -254,17 +248,18 @@ func Run(wwwhisperURL string, protectedAppPort string, proxyToPort string) error
 		return fmt.Errorf("App port has invalid format: %s; %w", proxyToPort, err)
 	}
 
+	handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{})
+	log := slog.New(handler)
+
 	mux := http.NewServeMux()
 	// TODO: tune timeouts
-	// TODO: set ErrorLogger
 	s := http.Server{
 		Addr:         ":" + protectedAppPort,
 		ReadTimeout:  20 * time.Second,
 		WriteTimeout: 20 * time.Second,
 		Handler:      mux,
+		ErrorLog:     slog.NewLogLogger(handler, slog.LevelError),
 	}
-	handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{})
-	log := slog.New(handler)
 	appProxy := NewReverseProxy(proxyTarget, log, false)
 	mux.Handle("/", NewAuthHandler(wwwhisperURLParsed, log, appProxy))
 
