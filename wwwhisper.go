@@ -237,7 +237,7 @@ func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 	})
 }
 
-func Run(wwwhisperURL string, protectedAppPort string, proxyToPort string) error {
+func Run(wwwhisperURL string, protectedAppPort string, proxyToPort string, logLevel slog.Level) error {
 	wwwhisperURLParsed, err := url.Parse(wwwhisperURL)
 	if err != nil {
 		return fmt.Errorf("wwwhisper url has invalid format: %s; %w", wwwhisperURL, err)
@@ -248,7 +248,7 @@ func Run(wwwhisperURL string, protectedAppPort string, proxyToPort string) error
 		return fmt.Errorf("App port has invalid format: %s; %w", proxyToPort, err)
 	}
 
-	handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{})
+	handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: logLevel})
 	log := slog.New(handler)
 
 	mux := http.NewServeMux()
@@ -270,6 +270,25 @@ func Run(wwwhisperURL string, protectedAppPort string, proxyToPort string) error
 	return nil
 }
 
+func stringToLogLevel(logLevelStr string) slog.Level {
+	switch strings.ToLower(logLevelStr) {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn", "":
+		// default if WWWHISPER_LOG is not set
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	case "off":
+		return slog.LevelError + 1
+	default:
+		// Use Info if logLevelStr is set to any other string
+		return slog.LevelInfo
+	}
+}
+
 func run() error {
 	wwwhisperURL := os.Getenv("WWWHISPER_URL")
 	if wwwhisperURL == "" {
@@ -283,7 +302,8 @@ func run() error {
 	if appPort == "" {
 		return errors.New("PROXY_TO_PORT environment variable is not set")
 	}
-	return Run(wwwhisperURL, protectedAppPort, appPort)
+	logLevel := stringToLogLevel(os.Getenv("WWWHISPER_LOG"))
+	return Run(wwwhisperURL, protectedAppPort, appPort, logLevel)
 }
 
 func die(message string) {

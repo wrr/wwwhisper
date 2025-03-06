@@ -154,19 +154,19 @@ func TestEnvVariablesRequired(t *testing.T) {
 }
 
 func TestRunArgsValidation(t *testing.T) {
-	err := Run("https://wwwhi sper.io", "8080", "8000")
+	err := Run("https://wwwhi sper.io", "8080", "8000", slog.LevelError)
 	expected := "wwwhisper url has invalid format: https://wwwhi sper.io"
 	if err == nil || !strings.Contains(err.Error(), expected) {
 		t.Fatal("Expected error is missing:", err)
 	}
 
-	err = Run("https://wwwhisper.io", "8080", "invalidPort")
+	err = Run("https://wwwhisper.io", "8080", "invalidPort", slog.LevelError)
 	expected = "App port has invalid format: invalidPort;"
 	if err == nil || !strings.Contains(err.Error(), expected) {
 		t.Fatal("Expected error is missing:", err)
 	}
 
-	err = Run("https://wwwhisper.io", "invalidPort", "8000")
+	err = Run("https://wwwhisper.io", "invalidPort", "8000", slog.LevelError)
 	expected = "tcp/invalidPort"
 	if err == nil || !strings.Contains(err.Error(), expected) {
 		t.Fatal("Expected error is missing:", err)
@@ -315,7 +315,7 @@ func TestPathNormalization(t *testing.T) {
 	}
 
 	for _, test := range test_cases {
-		t.Run("path normalization["+test.path_in+"]", func(t *testing.T) {
+		t.Run("["+test.path_in+"]", func(t *testing.T) {
 			expected_path = test.path_out
 			resp, err := http.Get(testEnv.ProtectedURL + test.path_in)
 			expectedBody := "ok"
@@ -586,4 +586,33 @@ func TestIframeInjectionBodyReadFailure(t *testing.T) {
 	expectedBody := ""
 	resp, err := http.Get(testEnv.ProtectedURL + "/foo")
 	assertResponse(t, resp, err, 502, &expectedBody)
+}
+
+func TestStringToLogLevel(t *testing.T) {
+	test_cases := []struct {
+		level_in  string
+		level_out slog.Level
+	}{
+		// All levels are case insensitive.
+		{"debug", slog.LevelDebug},
+		{"DEBUG", slog.LevelDebug},
+		{"deBuG", slog.LevelDebug},
+		{"info", slog.LevelInfo},
+		{"warn", slog.LevelWarn},
+		{"", slog.LevelWarn},
+		{"error", slog.LevelError},
+		{"off", slog.LevelError + 1},
+		// Any not recognized setting is mapped to info
+		{"on", slog.LevelInfo},
+		{"1", slog.LevelInfo},
+	}
+
+	for _, test := range test_cases {
+		t.Run(test.level_in, func(t *testing.T) {
+			out := stringToLogLevel(test.level_in)
+			if test.level_out != out {
+				t.Errorf("expected: %s, got: %s", test.level_out, out)
+			}
+		})
+	}
 }
