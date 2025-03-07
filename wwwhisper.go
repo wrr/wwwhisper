@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log/slog"
@@ -16,7 +17,7 @@ import (
 	"time"
 )
 
-const Version string = "1.0.0"
+const Version string = "1.0.1"
 const overlayToInject = `
 <script src="/wwwhisper/auth/iframe.js"></script>
 `
@@ -312,7 +313,30 @@ func die(message string) {
 }
 
 func main() {
-	err := run()
+	versionFlag := flag.Bool("version", false, "Print the program version")
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "wwwhisper authorization reverse proxy\n")
+		fmt.Fprintf(os.Stderr, "Options:\n")
+		flag.PrintDefaults()
+	}
+	err := flag.CommandLine.Parse(os.Args[1:])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n\n", err)
+		flag.Usage()
+		os.Exit(1)
+	}
+	if flag.NArg() > 0 {
+		fmt.Fprintf(os.Stderr, "Error: unrecognized arguments: %v\n\n", flag.Args())
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	if *versionFlag {
+		fmt.Println(Version)
+		return
+	}
+
+	err = run()
 	if err != nil {
 		die(err.Error())
 	}
