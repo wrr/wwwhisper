@@ -3,16 +3,21 @@ package main
 import (
 	"compress/gzip"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 )
 
 const wwwhisperUsername = "alice"
@@ -52,6 +57,32 @@ func checkBasicAuthCredentials(req *http.Request) error {
 		return errors.New("credentials do not match")
 	}
 	return nil
+}
+
+func findPortToListen(t *testing.T, rangeStart int) int {
+	for port := rangeStart; port < 65535; port++ {
+		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+		if err == nil {
+			listener.Close()
+			return port
+		}
+	}
+	t.Fatalf("Failed to find available port")
+	return 0
+}
+
+func waitPortListen(t *testing.T, port int) {
+	target := fmt.Sprintf("localhost:%d", port)
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		conn, err := net.DialTimeout("tcp", target, time.Second)
+		if err == nil {
+			conn.Close()
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	t.Fatalf("Port %d didn't open", port)
 }
 
 func newTestEnv(t *testing.T) *TestEnv {
@@ -171,7 +202,25 @@ func TestRunArgsValidation(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), expected) {
 		t.Fatal("Expected error is missing:", err)
 	}
+}
 
+func TestSignalTermination(t *testing.T) {
+	serverStatus := make(chan error, 1)
+	serverPort := findPortToListen(t, 10000)
+	go func() {
+		serverStatus <- Run("https://wwwhisper.io", strconv.Itoa(serverPort), "0", slog.LevelError)
+	}()
+	// Wait for the server to start accepting connections because then
+	// the signal handler is for sure registered.
+	waitPortListen(t, serverPort)
+
+	process, _ := os.FindProcess(os.Getpid())
+	process.Signal(syscall.SIGTERM)
+
+	err := <-serverStatus
+	if err != nil {
+		t.Fatal("Unexpected error", err)
+	}
 }
 
 func TestAppRequestAllowed(t *testing.T) {

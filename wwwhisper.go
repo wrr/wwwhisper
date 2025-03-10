@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"errors"
 	"flag"
@@ -12,8 +13,10 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"os/signal"
 	"path"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -254,7 +257,7 @@ func Run(wwwhisperURL string, protectedAppPort string, proxyToPort string, logLe
 
 	mux := http.NewServeMux()
 	// TODO: tune timeouts
-	s := http.Server{
+	server := http.Server{
 		Addr:         ":" + protectedAppPort,
 		ReadTimeout:  20 * time.Second,
 		WriteTimeout: 20 * time.Second,
@@ -264,11 +267,34 @@ func Run(wwwhisperURL string, protectedAppPort string, proxyToPort string, logLe
 	appProxy := NewReverseProxy(proxyTarget, log, false)
 	mux.Handle("/", NewAuthHandler(wwwhisperURLParsed, log, appProxy))
 
-	err = s.ListenAndServe()
-	if err != http.ErrServerClosed {
+	serverStatus := make(chan error, 1)
+
+	// Gracefully cancel on signal.
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		err := server.ListenAndServe()
+		if err != http.ErrServerClosed {
+			serverStatus <- err
+		}
+		serverStatus <- nil
+	}()
+
+	select {
+	case err := <-serverStatus:
+		return err
+	case _ = <-sigChan:
+		break
+	}
+	// Singal received, shutdown the server.
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err = server.Shutdown(ctx); err != nil {
 		return err
 	}
-	return nil
+	// Wait for the server exit status.
+	return <-serverStatus
 }
 
 func stringToLogLevel(logLevelStr string) slog.Level {
