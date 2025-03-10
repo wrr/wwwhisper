@@ -241,7 +241,15 @@ func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 	})
 }
 
-func Run(wwwhisperURL string, protectedAppPort string, proxyToPort string, logLevel slog.Level) error {
+func Run(pidFilePath string, wwwhisperURL string, protectedAppPort string, proxyToPort string, logLevel slog.Level) error {
+	if pidFilePath != "" {
+		pidStr := fmt.Sprintf("%d\n", os.Getpid())
+		if err := os.WriteFile(pidFilePath, []byte(pidStr), 0400); err != nil {
+			return fmt.Errorf("Error writing PID to file %s: %w\n", pidFilePath, err)
+		}
+		defer os.Remove(pidFilePath)
+	}
+
 	wwwhisperURLParsed, err := url.Parse(wwwhisperURL)
 	if err != nil {
 		return fmt.Errorf("wwwhisper url has invalid format: %s; %w", wwwhisperURL, err)
@@ -285,6 +293,7 @@ func Run(wwwhisperURL string, protectedAppPort string, proxyToPort string, logLe
 	case err := <-serverStatus:
 		return err
 	case _ = <-sigChan:
+		log.Info("Signal received, terminating the server")
 		break
 	}
 	// Singal received, shutdown the server.
@@ -316,7 +325,7 @@ func stringToLogLevel(logLevelStr string) slog.Level {
 	}
 }
 
-func run() error {
+func run(pidFilePath string) error {
 	wwwhisperURL := os.Getenv("WWWHISPER_URL")
 	if wwwhisperURL == "" {
 		return errors.New("WWWHISPER_URL environment variable is not set")
@@ -330,7 +339,7 @@ func run() error {
 		return errors.New("PROXY_TO_PORT environment variable is not set")
 	}
 	logLevel := stringToLogLevel(os.Getenv("WWWHISPER_LOG"))
-	return Run(wwwhisperURL, protectedAppPort, appPort, logLevel)
+	return Run(pidFilePath, wwwhisperURL, protectedAppPort, appPort, logLevel)
 }
 
 func die(message string) {
@@ -339,6 +348,8 @@ func die(message string) {
 }
 
 func main() {
+	pidFileFlag := flag.String("pidfile", "", "Path to file where process ID is written.\n"+
+		"The file is removed when the program terminates.")
 	versionFlag := flag.Bool("version", false, "Print the program version")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "wwwhisper authorization reverse proxy\n")
@@ -362,7 +373,7 @@ func main() {
 		return
 	}
 
-	err = run()
+	err = run(*pidFileFlag)
 	if err != nil {
 		die(err.Error())
 	}

@@ -13,6 +13,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -85,6 +86,12 @@ func waitPortListen(t *testing.T, port int) {
 	t.Fatalf("Port %d didn't open", port)
 }
 
+func genTempFilePath() string {
+	tempDir := os.TempDir()
+	fname := fmt.Sprintf("wwwhisper-test-%d", time.Now().UnixNano())
+	return filepath.Join(tempDir, fname)
+}
+
 func newTestEnv(t *testing.T) *TestEnv {
 	var env TestEnv
 	env.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
@@ -154,14 +161,14 @@ func TestEnvVariablesRequired(t *testing.T) {
 	clearEnv()
 	defer clearEnv()
 
-	err := run()
+	err := run("")
 	expected := "WWWHISPER_URL environment variable is not set"
 	if err == nil || err.Error() != expected {
 		t.Fatal("Expected error is missing:", err)
 	}
 
 	os.Setenv("WWWHISPER_URL", "https://example.com")
-	err = run()
+	err = run("")
 	expected = "PORT environment variable is not set"
 	if err == nil || err.Error() != expected {
 		t.Fatal("Expected error is missing:", err)
@@ -169,7 +176,7 @@ func TestEnvVariablesRequired(t *testing.T) {
 
 	// Invalid port to ensure the final run() fails.
 	os.Setenv("PORT", "1000000")
-	err = run()
+	err = run("")
 	expected = "PROXY_TO_PORT environment variable is not set"
 	if err == nil || err.Error() != expected {
 		t.Fatal("Expected error is missing:", err)
@@ -178,26 +185,26 @@ func TestEnvVariablesRequired(t *testing.T) {
 	os.Setenv("PROXY_TO_PORT", "999")
 	// All requires environment variables are set, but PORT is too large
 	// so the server should fail to bind it.
-	err = run()
+	err = run("")
 	if err == nil || !strings.Contains(err.Error(), "invalid port") {
 		t.Fatal("Expected error is missing:", err)
 	}
 }
 
 func TestRunArgsValidation(t *testing.T) {
-	err := Run("https://wwwhi sper.io", "8080", "8000", slog.LevelError)
+	err := Run("", "https://wwwhi sper.io", "8080", "8000", slog.LevelError)
 	expected := "wwwhisper url has invalid format: https://wwwhi sper.io"
 	if err == nil || !strings.Contains(err.Error(), expected) {
 		t.Fatal("Expected error is missing:", err)
 	}
 
-	err = Run("https://wwwhisper.io", "8080", "invalidPort", slog.LevelError)
+	err = Run("", "https://wwwhisper.io", "8080", "invalidPort", slog.LevelError)
 	expected = "App port has invalid format: invalidPort;"
 	if err == nil || !strings.Contains(err.Error(), expected) {
 		t.Fatal("Expected error is missing:", err)
 	}
 
-	err = Run("https://wwwhisper.io", "invalidPort", "8000", slog.LevelError)
+	err = Run("", "https://wwwhisper.io", "invalidPort", "8000", slog.LevelError)
 	expected = "tcp/invalidPort"
 	if err == nil || !strings.Contains(err.Error(), expected) {
 		t.Fatal("Expected error is missing:", err)
@@ -208,7 +215,7 @@ func TestSignalTermination(t *testing.T) {
 	serverStatus := make(chan error, 1)
 	serverPort := findPortToListen(t, 10000)
 	go func() {
-		serverStatus <- Run("https://wwwhisper.io", strconv.Itoa(serverPort), "0", slog.LevelError)
+		serverStatus <- Run("", "https://wwwhisper.io", strconv.Itoa(serverPort), "0", slog.LevelError)
 	}()
 	// Wait for the server to start accepting connections because then
 	// the signal handler is for sure registered.
@@ -220,6 +227,47 @@ func TestSignalTermination(t *testing.T) {
 	err := <-serverStatus
 	if err != nil {
 		t.Fatal("Unexpected error", err)
+	}
+}
+
+func TestPidFile(t *testing.T) {
+	pidFilePath := genTempFilePath()
+	serverStatus := make(chan error, 1)
+	serverPort := findPortToListen(t, 10000)
+	go func() {
+		serverStatus <- Run(pidFilePath, "https://wwwhisper.io", strconv.Itoa(serverPort), "0", slog.LevelError)
+	}()
+	waitPortListen(t, serverPort)
+
+	pidFileContent, err := ioutil.ReadFile(pidFilePath)
+	if err != nil {
+		t.Fatal("Error reading pid file")
+	}
+	pidStr := strings.TrimSpace(string(pidFileContent))
+	pid, _ := strconv.Atoi(pidStr)
+	if pid != os.Getpid() {
+		t.Fatal("Pid file content invalid: ", pid)
+	}
+
+	process, _ := os.FindProcess(pid)
+	process.Signal(syscall.SIGTERM)
+
+	err = <-serverStatus
+	if err != nil {
+		t.Fatal("Unexpected error", err)
+	}
+
+	_, err = ioutil.ReadFile(pidFilePath)
+	if !os.IsNotExist(err) {
+		t.Fatal("Pid file not removed", err)
+	}
+}
+
+func TestPidFileCreationError(t *testing.T) {
+	// Pass not writable file as the pid file path
+	err := Run("/proc/uptime", "https://wwwhisper.io", "0", "0", slog.LevelError)
+	if !errors.Is(err, os.ErrPermission) {
+		t.Fatal("Pid file creation error not returned", err)
 	}
 }
 
