@@ -33,7 +33,7 @@ type TestEnv struct {
 	AuthHandler func(http.ResponseWriter, *http.Request)
 	AuthCount   int
 
-	ProtectedURL       string
+	ExternalURL        string
 	protectedAppServer *httptest.Server
 
 	AppProxy *httputil.ReverseProxy
@@ -43,6 +43,11 @@ func (env *TestEnv) dispose() {
 	defer env.appServer.Close()
 	defer env.authServer.Close()
 	defer env.protectedAppServer.Close()
+}
+
+func stringToURL(urlString string) *url.URL {
+	result, _ := url.Parse(urlString)
+	return result
 }
 
 func authQuery(path string) string {
@@ -60,8 +65,8 @@ func checkBasicAuthCredentials(req *http.Request) error {
 	return nil
 }
 
-func findPortToListen(t *testing.T, rangeStart int) int {
-	for port := rangeStart; port < 65535; port++ {
+func findPortToListen(t *testing.T, rangeStart Port) Port {
+	for port := rangeStart; port < 0xffff; port++ {
 		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 		if err == nil {
 			listener.Close()
@@ -72,7 +77,7 @@ func findPortToListen(t *testing.T, rangeStart int) int {
 	return 0
 }
 
-func waitPortListen(t *testing.T, port int) {
+func waitPortListen(t *testing.T, port Port) {
 	target := fmt.Sprintf("localhost:%d", port)
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
@@ -121,12 +126,12 @@ func newTestEnv(t *testing.T) *TestEnv {
 	appUrlParsed, _ := url.Parse(env.appServer.URL)
 	env.AppProxy = NewReverseProxy(appUrlParsed, log, false)
 
-	wwwhisperURL, _ := url.Parse(env.authServer.URL)
+	wwwhisperURL := stringToURL(env.authServer.URL)
 	wwwhisperURL.User = url.UserPassword(wwwhisperUsername, wwwhisperPassword)
 	wwwhisperHandler := NewAuthHandler(wwwhisperURL, log, env.AppProxy)
 
 	env.protectedAppServer = httptest.NewServer(wwwhisperHandler)
-	env.ProtectedURL = env.protectedAppServer.URL
+	env.ExternalURL = env.protectedAppServer.URL
 	return &env
 }
 
@@ -153,73 +158,115 @@ func assertResponse(t *testing.T, resp *http.Response, err error, expectedStatus
 
 func clearEnv() {
 	os.Unsetenv("WWWHISPER_URL")
+	os.Unsetenv("WWWHISPER_LOG")
 	os.Unsetenv("PORT")
 	os.Unsetenv("PROXY_TO_PORT")
 }
 
-func TestEnvVariablesRequired(t *testing.T) {
+func TestCreateConfig(t *testing.T) {
 	clearEnv()
 	defer clearEnv()
 
-	err := run("")
+	_, err := createConfig("")
 	expected := "WWWHISPER_URL environment variable is not set"
 	if err == nil || err.Error() != expected {
-		t.Fatal("Expected error is missing:", err)
+		t.Fatal("Unexpected error:", err)
+	}
+
+	os.Setenv("WWWHISPER_URL", "https://example.com:-1")
+	_, err = createConfig("")
+	expected = "WWWHISPER_URL has invalid format: "
+	if err == nil || !strings.HasPrefix(err.Error(), expected) {
+		t.Fatal("Unexpected error:", err)
 	}
 
 	os.Setenv("WWWHISPER_URL", "https://example.com")
-	err = run("")
+	_, err = createConfig("")
 	expected = "PORT environment variable is not set"
 	if err == nil || err.Error() != expected {
-		t.Fatal("Expected error is missing:", err)
+		t.Fatal("Unexpected error:", err)
 	}
 
-	// Invalid port to ensure the final run() fails.
-	os.Setenv("PORT", "1000000")
-	err = run("")
+	os.Setenv("PORT", "70000")
+	_, err = createConfig("")
+	expected = "PORT environment variable is invalid: port number out of range 70000"
+	if err == nil || err.Error() != expected {
+		t.Fatal("Unexpected error:", err)
+	}
+
+	os.Setenv("PORT", "5000")
+	_, err = createConfig("")
 	expected = "PROXY_TO_PORT environment variable is not set"
 	if err == nil || err.Error() != expected {
-		t.Fatal("Expected error is missing:", err)
+		t.Fatal("Unexpected error:", err)
+	}
+
+	os.Setenv("PROXY_TO_PORT", "foo")
+	_, err = createConfig("")
+	expected = "PROXY_TO_PORT environment variable is invalid: failed to convert foo to port number"
+	if err == nil || !strings.HasPrefix(err.Error(), expected) {
+		t.Fatal("Unexpected error:", err)
 	}
 
 	os.Setenv("PROXY_TO_PORT", "999")
-	// All requires environment variables are set, but PORT is too large
-	// so the server should fail to bind it.
-	err = run("")
-	if err == nil || !strings.Contains(err.Error(), "invalid port") {
-		t.Fatal("Expected error is missing:", err)
+	cfg, _ := createConfig("/tmp/foo")
+
+	if cfg.PidFilePath != "/tmp/foo" {
+		t.Fatal("pidFilePath invalid", cfg.PidFilePath)
+	}
+
+	if cfg.WwwhisperURL.String() != "https://example.com" {
+		t.Fatal("WwhisperURL invalid", cfg.WwwhisperURL)
+	}
+
+	if cfg.LogLevel != slog.LevelWarn {
+		t.Fatal("LogLevel invalid", cfg.LogLevel)
+	}
+	if cfg.ExternalPort != 5000 {
+		t.Fatal("ExternalPort invalid", cfg.ExternalPort)
+	}
+	if cfg.ProxyToPort != 999 {
+		t.Fatal("ProxyToPort port invalid", cfg.ProxyToPort)
+	}
+
+	os.Setenv("WWWHISPER_LOG", "info")
+	cfg, _ = createConfig("/tmp/foo")
+	if cfg.LogLevel != slog.LevelInfo {
+		t.Fatal("LogLevel invalid", cfg.LogLevel)
 	}
 }
 
-func TestRunArgsValidation(t *testing.T) {
-	err := Run("", "https://wwwhi sper.io", "8080", "8000", slog.LevelError)
-	expected := "wwwhisper url has invalid format: https://wwwhi sper.io"
-	if err == nil || !strings.Contains(err.Error(), expected) {
-		t.Fatal("Expected error is missing:", err)
+func TestRunServerStartError(t *testing.T) {
+	config := Config{
+		WwwhisperURL: stringToURL("https://wwwhisper.io"),
+		// Should fail to bind
+		ExternalPort: 1,
+		ProxyToPort:  8000,
+		LogLevel:     slog.LevelError,
 	}
-
-	err = Run("", "https://wwwhisper.io", "8080", "invalidPort", slog.LevelError)
-	expected = "App port has invalid format: invalidPort;"
-	if err == nil || !strings.Contains(err.Error(), expected) {
-		t.Fatal("Expected error is missing:", err)
-	}
-
-	err = Run("", "https://wwwhisper.io", "invalidPort", "8000", slog.LevelError)
-	expected = "tcp/invalidPort"
-	if err == nil || !strings.Contains(err.Error(), expected) {
-		t.Fatal("Expected error is missing:", err)
+	err := Run(config)
+	expected := "listen tcp"
+	if !errors.Is(err, os.ErrPermission) ||
+		!strings.Contains(err.Error(), expected) {
+		t.Fatal("Unexpected error:", err)
 	}
 }
 
 func TestSignalTermination(t *testing.T) {
+	config := Config{
+		WwwhisperURL: stringToURL("https://wwwhisper.io"),
+		ExternalPort: findPortToListen(t, 10000),
+		ProxyToPort:  0,
+		LogLevel:     slog.LevelError,
+	}
 	serverStatus := make(chan error, 1)
-	serverPort := findPortToListen(t, 10000)
+
 	go func() {
-		serverStatus <- Run("", "https://wwwhisper.io", strconv.Itoa(serverPort), "0", slog.LevelError)
+		serverStatus <- Run(config)
 	}()
 	// Wait for the server to start accepting connections because then
 	// the signal handler is for sure registered.
-	waitPortListen(t, serverPort)
+	waitPortListen(t, config.ExternalPort)
 
 	process, _ := os.FindProcess(os.Getpid())
 	process.Signal(syscall.SIGTERM)
@@ -231,15 +278,21 @@ func TestSignalTermination(t *testing.T) {
 }
 
 func TestPidFile(t *testing.T) {
-	pidFilePath := genTempFilePath()
 	serverStatus := make(chan error, 1)
-	serverPort := findPortToListen(t, 10000)
-	go func() {
-		serverStatus <- Run(pidFilePath, "https://wwwhisper.io", strconv.Itoa(serverPort), "0", slog.LevelError)
-	}()
-	waitPortListen(t, serverPort)
+	config := Config{
+		PidFilePath:  genTempFilePath(),
+		WwwhisperURL: stringToURL("https://wwwhisper.io"),
+		ExternalPort: findPortToListen(t, 10000),
+		ProxyToPort:  0,
+		LogLevel:     slog.LevelError,
+	}
 
-	pidFileContent, err := ioutil.ReadFile(pidFilePath)
+	go func() {
+		serverStatus <- Run(config)
+	}()
+	waitPortListen(t, config.ExternalPort)
+
+	pidFileContent, err := ioutil.ReadFile(config.PidFilePath)
 	if err != nil {
 		t.Fatal("Error reading pid file")
 	}
@@ -257,15 +310,23 @@ func TestPidFile(t *testing.T) {
 		t.Fatal("Unexpected error", err)
 	}
 
-	_, err = ioutil.ReadFile(pidFilePath)
+	_, err = ioutil.ReadFile(config.PidFilePath)
 	if !os.IsNotExist(err) {
 		t.Fatal("Pid file not removed", err)
 	}
 }
 
 func TestPidFileCreationError(t *testing.T) {
-	// Pass not writable file as the pid file path
-	err := Run("/proc/uptime", "https://wwwhisper.io", "0", "0", slog.LevelError)
+	config := Config{
+		// Pass not writable file as the pid file path
+		PidFilePath:  "/proc/uptime",
+		WwwhisperURL: stringToURL("https://wwwhisper.io"),
+		ExternalPort: 0,
+		ProxyToPort:  0,
+		LogLevel:     slog.LevelError,
+	}
+
+	err := Run(config)
 	if !errors.Is(err, os.ErrPermission) {
 		t.Fatal("Pid file creation error not returned", err)
 	}
@@ -277,7 +338,7 @@ func TestAppRequestAllowed(t *testing.T) {
 
 	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
 		siteURL := req.Header.Get("Site-Url")
-		if siteURL != testEnv.ProtectedURL {
+		if siteURL != testEnv.ExternalURL {
 			t.Error("Invalid Site-Url header", siteURL)
 			return
 		}
@@ -291,7 +352,7 @@ func TestAppRequestAllowed(t *testing.T) {
 		rw.Write([]byte("allowed"))
 	}
 
-	resp, err := http.Get(testEnv.ProtectedURL + "/hello")
+	resp, err := http.Get(testEnv.ExternalURL + "/hello")
 	expectedBody := "Hello world"
 	assertResponse(t, resp, err, http.StatusOK, &expectedBody)
 	if testEnv.AuthCount != 1 {
@@ -315,7 +376,7 @@ func TestAppRequestLoginNeeded(t *testing.T) {
 		rw.Write([]byte("login required"))
 	}
 
-	resp, err := http.Get(testEnv.ProtectedURL + "/foobar")
+	resp, err := http.Get(testEnv.ExternalURL + "/foobar")
 	expectedBody := "login required"
 	assertResponse(t, resp, err, http.StatusUnauthorized, &expectedBody)
 	if testEnv.AuthCount != 1 {
@@ -338,7 +399,7 @@ func TestAuthPathAllowed(t *testing.T) {
 		rw.Write([]byte("login response"))
 	}
 
-	resp, err := http.Get(testEnv.ProtectedURL + "/wwwhisper/auth/login")
+	resp, err := http.Get(testEnv.ExternalURL + "/wwwhisper/auth/login")
 	expectedBody := "login response"
 	assertResponse(t, resp, err, http.StatusOK, &expectedBody)
 	if testEnv.AuthCount != 1 {
@@ -360,7 +421,7 @@ func TestAuthRequestNonHttpError(t *testing.T) {
 		rw.WriteHeader(302)
 	}
 
-	resp, err := http.Get(testEnv.ProtectedURL + "/foo")
+	resp, err := http.Get(testEnv.ExternalURL + "/foo")
 	expectedBody := "Internal server error: auth request\n"
 	assertResponse(t, resp, err, 500, &expectedBody)
 
@@ -414,7 +475,7 @@ func TestPathNormalization(t *testing.T) {
 	for _, test := range test_cases {
 		t.Run("["+test.path_in+"]", func(t *testing.T) {
 			expected_path = test.path_out
-			resp, err := http.Get(testEnv.ProtectedURL + test.path_in)
+			resp, err := http.Get(testEnv.ExternalURL + test.path_in)
 			expectedBody := "ok"
 			assertResponse(t, resp, err, http.StatusOK, &expectedBody)
 		})
@@ -427,7 +488,7 @@ func TestAdminPathAllowed(t *testing.T) {
 
 	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
 		siteURL := req.Header.Get("Site-Url")
-		if siteURL != testEnv.ProtectedURL {
+		if siteURL != testEnv.ExternalURL {
 			t.Error("Invalid Site-Url header", siteURL)
 			return
 		}
@@ -447,7 +508,7 @@ func TestAdminPathAllowed(t *testing.T) {
 		}
 	}
 
-	resp, err := http.Get(testEnv.ProtectedURL + "/wwwhisper/admin/x?foo=bar")
+	resp, err := http.Get(testEnv.ExternalURL + "/wwwhisper/admin/x?foo=bar")
 	expectedBody := "admin page"
 	assertResponse(t, resp, err, http.StatusOK, &expectedBody)
 	if testEnv.AuthCount != 2 {
@@ -464,7 +525,7 @@ func TestAdminPostRequest(t *testing.T) {
 
 	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
 		siteURL := req.Header.Get("Site-Url")
-		if siteURL != testEnv.ProtectedURL {
+		if siteURL != testEnv.ExternalURL {
 			t.Error("Invalid Site-Url header", siteURL)
 			return
 		}
@@ -494,7 +555,7 @@ func TestAdminPostRequest(t *testing.T) {
 		}
 	}
 
-	postURL := testEnv.ProtectedURL + "/wwwhisper/admin/submit"
+	postURL := testEnv.ExternalURL + "/wwwhisper/admin/submit"
 	resp, err := http.Post(postURL, "text/plain", strings.NewReader("post-data"))
 	expectedBody := "OK"
 	assertResponse(t, resp, err, http.StatusOK, &expectedBody)
@@ -534,7 +595,7 @@ func TestProxyVersionPassed(t *testing.T) {
 		}
 		rw.Write([]byte("hello"))
 	}
-	req, _ := http.NewRequest("GET", testEnv.ProtectedURL, nil)
+	req, _ := http.NewRequest("GET", testEnv.ExternalURL, nil)
 	req.Header.Set("User-Agent", "test-agent")
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -549,7 +610,7 @@ func TestProxyVersionPassed(t *testing.T) {
 	}
 
 	// /wwwhisper/admin requests should also carry the original User Agent
-	req, _ = http.NewRequest("GET", testEnv.ProtectedURL+"/wwwhisper/admin/", nil)
+	req, _ = http.NewRequest("GET", testEnv.ExternalURL+"/wwwhisper/admin/", nil)
 	req.Header.Set("User-Agent", "test-agent")
 	resp, err = client.Do(req)
 	expectedBody = "auth response"
@@ -573,7 +634,7 @@ func TestRedirectPassedFromAppToClient(t *testing.T) {
 	}
 
 	// Not using http.Get() because it follows redirects.
-	req, _ := http.NewRequest("GET", testEnv.ProtectedURL+"/foobar", nil)
+	req, _ := http.NewRequest("GET", testEnv.ExternalURL+"/foobar", nil)
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			// Disable following HTTP redirects.
@@ -605,7 +666,7 @@ func TestIframeInjection(t *testing.T) {
 		rw.WriteHeader(http.StatusOK)
 		rw.Write([]byte(responseUnmodified))
 	}
-	resp, err := http.Get(testEnv.ProtectedURL + "/foo")
+	resp, err := http.Get(testEnv.ExternalURL + "/foo")
 	expectedBody := "<html><body>foo\n" +
 		"<script src=\"/wwwhisper/auth/iframe.js\"></script>\n" +
 		"</body></html>"
@@ -617,7 +678,7 @@ func TestIframeInjection(t *testing.T) {
 		rw.WriteHeader(http.StatusOK)
 		rw.Write([]byte(responseUnmodified))
 	}
-	resp, err = http.Get(testEnv.ProtectedURL + "/foo")
+	resp, err = http.Get(testEnv.ExternalURL + "/foo")
 	assertResponse(t, resp, err, 200, &responseUnmodified)
 
 	// Iframe should not be injected to gzipped HTML responses
@@ -630,7 +691,7 @@ func TestIframeInjection(t *testing.T) {
 		defer gz.Close()
 		gz.Write([]byte(responseUnmodified))
 	}
-	resp, err = http.Get(testEnv.ProtectedURL + "/foo")
+	resp, err = http.Get(testEnv.ExternalURL + "/foo")
 	assertResponse(t, resp, err, 200, &responseUnmodified)
 
 	// Iframe should not be injected HTML responses without the closing </body> tag.
@@ -640,7 +701,7 @@ func TestIframeInjection(t *testing.T) {
 		rw.WriteHeader(http.StatusOK)
 		rw.Write([]byte(responseNoBody))
 	}
-	resp, err = http.Get(testEnv.ProtectedURL + "/foo")
+	resp, err = http.Get(testEnv.ExternalURL + "/foo")
 	assertResponse(t, resp, err, 200, &responseNoBody)
 
 	// Iframe should not be injected wwwhisper backend responses.
@@ -649,7 +710,7 @@ func TestIframeInjection(t *testing.T) {
 		rw.WriteHeader(http.StatusOK)
 		rw.Write([]byte(responseUnmodified))
 	}
-	resp, err = http.Get(testEnv.ProtectedURL + "/wwwhisper/admin")
+	resp, err = http.Get(testEnv.ExternalURL + "/wwwhisper/admin")
 	assertResponse(t, resp, err, 200, &responseUnmodified)
 }
 
@@ -681,8 +742,38 @@ func TestIframeInjectionBodyReadFailure(t *testing.T) {
 	// Error returned by the default AppProxy.ErrorHandler
 	// when ModifyResponse returns an error.
 	expectedBody := ""
-	resp, err := http.Get(testEnv.ProtectedURL + "/foo")
+	resp, err := http.Get(testEnv.ExternalURL + "/foo")
 	assertResponse(t, resp, err, 502, &expectedBody)
+}
+
+func TestStringToPort(t *testing.T) {
+	_, err := stringToPort("foo")
+	expected := "failed to convert foo to port number: "
+	if !strings.HasPrefix(err.Error(), expected) {
+		t.Error("Unexpected output", err)
+	}
+
+	_, err = stringToPort("65536")
+	expected = "port number out of range 65536"
+	if !strings.HasPrefix(err.Error(), expected) {
+		t.Error("Unexpected output", err)
+	}
+
+	_, err = stringToPort("-1")
+	expected = "port number out of range -1"
+	if !strings.HasPrefix(err.Error(), expected) {
+		t.Error("Unexpected output", err)
+	}
+
+	port, err := stringToPort("0")
+	if port != 0 || err != nil {
+		t.Error("Unexpected output", port, err)
+	}
+
+	port, err = stringToPort("65535")
+	if port != 65535 || err != nil {
+		t.Error("Unexpected output", port, err)
+	}
 }
 
 func TestStringToLogLevel(t *testing.T) {

@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -24,6 +25,27 @@ const Version string = "1.0.1"
 const overlayToInject = `
 <script src="/wwwhisper/auth/iframe.js"></script>
 `
+
+type Port uint16
+
+type Config struct {
+	PidFilePath  string
+	WwwhisperURL *url.URL
+	ExternalPort Port
+	ProxyToPort  Port
+	LogLevel     slog.Level
+}
+
+func stringToPort(in string) (Port, error) {
+	inInt, err := strconv.Atoi(in)
+	if err != nil {
+		return 0, fmt.Errorf("failed to convert %s to port number: %w", in, err)
+	}
+	if inInt < 0 || inInt > 0xffff {
+		return 0, fmt.Errorf("port number out of range %d", inInt)
+	}
+	return Port(inInt), nil
+}
 
 func copyRequestHeaders(dst *http.Request, src *http.Request) {
 	for key, values := range src.Header {
@@ -241,39 +263,32 @@ func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 	})
 }
 
-func Run(pidFilePath string, wwwhisperURL string, protectedAppPort string, proxyToPort string, logLevel slog.Level) error {
-	if pidFilePath != "" {
+func Run(cfg Config) error {
+	if cfg.PidFilePath != "" {
 		pidStr := fmt.Sprintf("%d\n", os.Getpid())
-		if err := os.WriteFile(pidFilePath, []byte(pidStr), 0400); err != nil {
-			return fmt.Errorf("Error writing PID to file %s: %w\n", pidFilePath, err)
+		if err := os.WriteFile(cfg.PidFilePath, []byte(pidStr), 0400); err != nil {
+			return fmt.Errorf("Error writing PID to file %s: %w\n", cfg.PidFilePath, err)
 		}
-		defer os.Remove(pidFilePath)
+		defer os.Remove(cfg.PidFilePath)
 	}
 
-	wwwhisperURLParsed, err := url.Parse(wwwhisperURL)
-	if err != nil {
-		return fmt.Errorf("wwwhisper url has invalid format: %s; %w", wwwhisperURL, err)
-	}
+	// error should never happen
+	proxyTarget, _ := url.Parse(fmt.Sprintf("http://localhost:%d", cfg.ProxyToPort))
 
-	proxyTarget, err := url.Parse("http://localhost:" + proxyToPort)
-	if err != nil {
-		return fmt.Errorf("App port has invalid format: %s; %w", proxyToPort, err)
-	}
-
-	handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: logLevel})
+	handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: cfg.LogLevel})
 	log := slog.New(handler)
 
 	mux := http.NewServeMux()
 	// TODO: tune timeouts
 	server := http.Server{
-		Addr:         ":" + protectedAppPort,
+		Addr:         fmt.Sprintf(":%d", cfg.ExternalPort),
 		ReadTimeout:  20 * time.Second,
 		WriteTimeout: 20 * time.Second,
 		Handler:      mux,
 		ErrorLog:     slog.NewLogLogger(handler, slog.LevelError),
 	}
 	appProxy := NewReverseProxy(proxyTarget, log, false)
-	mux.Handle("/", NewAuthHandler(wwwhisperURLParsed, log, appProxy))
+	mux.Handle("/", NewAuthHandler(cfg.WwwhisperURL, log, appProxy))
 
 	serverStatus := make(chan error, 1)
 
@@ -299,7 +314,7 @@ func Run(pidFilePath string, wwwhisperURL string, protectedAppPort string, proxy
 	// Singal received, shutdown the server.
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	if err = server.Shutdown(ctx); err != nil {
+	if err := server.Shutdown(ctx); err != nil {
 		return err
 	}
 	// Wait for the server exit status.
@@ -325,21 +340,43 @@ func stringToLogLevel(logLevelStr string) slog.Level {
 	}
 }
 
-func run(pidFilePath string) error {
+func portFromEnv(envVarName string) (Port, error) {
+	portStr := os.Getenv(envVarName)
+	if portStr == "" {
+		return 0, fmt.Errorf("%s environment variable is not set", envVarName)
+	}
+	port, err := stringToPort(portStr)
+	if err != nil {
+		return 0, fmt.Errorf("%s environment variable is invalid: %w", envVarName, err)
+	}
+	return port, nil
+}
+
+func createConfig(pidFilePath string) (Config, error) {
+	config := Config{
+		PidFilePath: pidFilePath,
+		LogLevel:    stringToLogLevel(os.Getenv("WWWHISPER_LOG")),
+	}
 	wwwhisperURL := os.Getenv("WWWHISPER_URL")
 	if wwwhisperURL == "" {
-		return errors.New("WWWHISPER_URL environment variable is not set")
+		return Config{}, errors.New("WWWHISPER_URL environment variable is not set")
 	}
-	protectedAppPort := os.Getenv("PORT")
-	if protectedAppPort == "" {
-		return errors.New("PORT environment variable is not set")
+
+	var err error
+	config.WwwhisperURL, err = url.Parse(wwwhisperURL)
+	if err != nil {
+		return Config{}, fmt.Errorf("WWWHISPER_URL has invalid format: %s; %w", wwwhisperURL, err)
 	}
-	appPort := os.Getenv("PROXY_TO_PORT")
-	if appPort == "" {
-		return errors.New("PROXY_TO_PORT environment variable is not set")
+
+	config.ExternalPort, err = portFromEnv("PORT")
+	if err != nil {
+		return Config{}, err
 	}
-	logLevel := stringToLogLevel(os.Getenv("WWWHISPER_LOG"))
-	return Run(pidFilePath, wwwhisperURL, protectedAppPort, appPort, logLevel)
+	config.ProxyToPort, err = portFromEnv("PROXY_TO_PORT")
+	if err != nil {
+		return Config{}, err
+	}
+	return config, nil
 }
 
 func die(message string) {
@@ -373,8 +410,12 @@ func main() {
 		return
 	}
 
-	err = run(*pidFileFlag)
+	config, err := createConfig(*pidFileFlag)
+	if err == nil {
+		err = Run(config)
+	}
 	if err != nil {
 		die(err.Error())
 	}
+
 }
