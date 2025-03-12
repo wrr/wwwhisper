@@ -263,7 +263,7 @@ func Run(cfg Config) error {
 	if cfg.PidFilePath != "" {
 		pidStr := fmt.Sprintf("%d\n", os.Getpid())
 		if err := os.WriteFile(cfg.PidFilePath, []byte(pidStr), 0400); err != nil {
-			return fmt.Errorf("Error writing PID to file %s: %w\n", cfg.PidFilePath, err)
+			return fmt.Errorf("Error writing PID file: %v\n", err)
 		}
 		defer os.Remove(cfg.PidFilePath)
 	}
@@ -375,8 +375,8 @@ func newConfig(pidFilePath string) (Config, error) {
 	return config, nil
 }
 
-func die(message string) {
-	fmt.Fprintln(os.Stderr, "Error:", message)
+func die(err error) {
+	fmt.Fprintln(os.Stderr, "Error:", err)
 	os.Exit(1)
 }
 
@@ -391,14 +391,10 @@ func main() {
 	}
 	err := flag.CommandLine.Parse(os.Args[1:])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n\n", err)
-		flag.Usage()
-		os.Exit(1)
+		die(err)
 	}
 	if flag.NArg() > 0 {
-		fmt.Fprintf(os.Stderr, "Error: unrecognized arguments: %v\n\n", flag.Args())
-		flag.Usage()
-		os.Exit(1)
+		die(fmt.Errorf("unrecognized arguments: %v", flag.Args()))
 	}
 
 	if *versionFlag {
@@ -411,7 +407,7 @@ func main() {
 		err = Run(config)
 	}
 	if err != nil {
-		die(err.Error())
+		die(err)
 	}
 
 }

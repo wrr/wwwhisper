@@ -327,7 +327,7 @@ func TestPidFileCreationError(t *testing.T) {
 	}
 
 	err := Run(config)
-	if !errors.Is(err, os.ErrPermission) {
+	if !strings.HasPrefix(err.Error(), "Error writing PID file:") {
 		t.Fatal("Pid file creation error not returned", err)
 	}
 }
