@@ -39,7 +39,7 @@ type Config struct {
 func parsePort(in string) (Port, error) {
 	inInt, err := strconv.Atoi(in)
 	if err != nil {
-		return 0, fmt.Errorf("failed to convert %s to port number: %w", in, err)
+		return 0, fmt.Errorf("failed to convert %s to port number: %v", in, err)
 	}
 	if inInt < 0 || inInt > 0xffff {
 		return 0, fmt.Errorf("port number out of range %d", inInt)
@@ -343,7 +343,7 @@ func portFromEnv(envVarName string) (Port, error) {
 	}
 	port, err := parsePort(portStr)
 	if err != nil {
-		return 0, fmt.Errorf("%s environment variable is invalid: %w", envVarName, err)
+		return 0, fmt.Errorf("%s environment variable is invalid: %v", envVarName, err)
 	}
 	return port, nil
 }
@@ -361,7 +361,7 @@ func newConfig(pidFilePath string) (Config, error) {
 	var err error
 	config.WwwhisperURL, err = url.Parse(wwwhisperURL)
 	if err != nil {
-		return Config{}, fmt.Errorf("WWWHISPER_URL has invalid format: %s; %w", wwwhisperURL, err)
+		return Config{}, fmt.Errorf("WWWHISPER_URL has invalid format: %s; %v", wwwhisperURL, err)
 	}
 
 	config.ExternalPort, err = portFromEnv("PORT")
