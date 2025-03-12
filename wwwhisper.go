@@ -36,7 +36,7 @@ type Config struct {
 	LogLevel     slog.Level
 }
 
-func stringToPort(in string) (Port, error) {
+func parsePort(in string) (Port, error) {
 	inInt, err := strconv.Atoi(in)
 	if err != nil {
 		return 0, fmt.Errorf("failed to convert %s to port number: %w", in, err)
@@ -321,7 +321,7 @@ func Run(cfg Config) error {
 	return <-serverStatus
 }
 
-func stringToLogLevel(logLevelStr string) slog.Level {
+func parseLogLevel(logLevelStr string) slog.Level {
 	switch strings.ToLower(logLevelStr) {
 	case "debug":
 		return slog.LevelDebug
@@ -345,7 +345,7 @@ func portFromEnv(envVarName string) (Port, error) {
 	if portStr == "" {
 		return 0, fmt.Errorf("%s environment variable is not set", envVarName)
 	}
-	port, err := stringToPort(portStr)
+	port, err := parsePort(portStr)
 	if err != nil {
 		return 0, fmt.Errorf("%s environment variable is invalid: %w", envVarName, err)
 	}
@@ -355,7 +355,7 @@ func portFromEnv(envVarName string) (Port, error) {
 func createConfig(pidFilePath string) (Config, error) {
 	config := Config{
 		PidFilePath: pidFilePath,
-		LogLevel:    stringToLogLevel(os.Getenv("WWWHISPER_LOG")),
+		LogLevel:    parseLogLevel(os.Getenv("WWWHISPER_LOG")),
 	}
 	wwwhisperURL := os.Getenv("WWWHISPER_URL")
 	if wwwhisperURL == "" {

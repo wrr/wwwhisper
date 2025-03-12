@@ -45,7 +45,7 @@ func (env *TestEnv) dispose() {
 	defer env.protectedAppServer.Close()
 }
 
-func stringToURL(urlString string) *url.URL {
+func parseURL(urlString string) *url.URL {
 	result, _ := url.Parse(urlString)
 	return result
 }
@@ -126,7 +126,7 @@ func newTestEnv(t *testing.T) *TestEnv {
 	appUrlParsed, _ := url.Parse(env.appServer.URL)
 	env.AppProxy = NewReverseProxy(appUrlParsed, log, false)
 
-	wwwhisperURL := stringToURL(env.authServer.URL)
+	wwwhisperURL := parseURL(env.authServer.URL)
 	wwwhisperURL.User = url.UserPassword(wwwhisperUsername, wwwhisperPassword)
 	wwwhisperHandler := NewAuthHandler(wwwhisperURL, log, env.AppProxy)
 
@@ -238,7 +238,7 @@ func TestCreateConfig(t *testing.T) {
 
 func TestRunServerStartError(t *testing.T) {
 	config := Config{
-		WwwhisperURL: stringToURL("https://wwwhisper.io"),
+		WwwhisperURL: parseURL("https://wwwhisper.io"),
 		// Should fail to bind
 		ExternalPort: 1,
 		ProxyToPort:  8000,
@@ -254,7 +254,7 @@ func TestRunServerStartError(t *testing.T) {
 
 func TestSignalTermination(t *testing.T) {
 	config := Config{
-		WwwhisperURL: stringToURL("https://wwwhisper.io"),
+		WwwhisperURL: parseURL("https://wwwhisper.io"),
 		ExternalPort: findPortToListen(t, 10000),
 		ProxyToPort:  0,
 		LogLevel:     slog.LevelError,
@@ -281,7 +281,7 @@ func TestPidFile(t *testing.T) {
 	serverStatus := make(chan error, 1)
 	config := Config{
 		PidFilePath:  genTempFilePath(),
-		WwwhisperURL: stringToURL("https://wwwhisper.io"),
+		WwwhisperURL: parseURL("https://wwwhisper.io"),
 		ExternalPort: findPortToListen(t, 10000),
 		ProxyToPort:  0,
 		LogLevel:     slog.LevelError,
@@ -320,7 +320,7 @@ func TestPidFileCreationError(t *testing.T) {
 	config := Config{
 		// Pass not writable file as the pid file path
 		PidFilePath:  "/proc/uptime",
-		WwwhisperURL: stringToURL("https://wwwhisper.io"),
+		WwwhisperURL: parseURL("https://wwwhisper.io"),
 		ExternalPort: 0,
 		ProxyToPort:  0,
 		LogLevel:     slog.LevelError,
@@ -747,30 +747,30 @@ func TestIframeInjectionBodyReadFailure(t *testing.T) {
 }
 
 func TestStringToPort(t *testing.T) {
-	_, err := stringToPort("foo")
+	_, err := parsePort("foo")
 	expected := "failed to convert foo to port number: "
 	if !strings.HasPrefix(err.Error(), expected) {
 		t.Error("Unexpected output", err)
 	}
 
-	_, err = stringToPort("65536")
+	_, err = parsePort("65536")
 	expected = "port number out of range 65536"
 	if !strings.HasPrefix(err.Error(), expected) {
 		t.Error("Unexpected output", err)
 	}
 
-	_, err = stringToPort("-1")
+	_, err = parsePort("-1")
 	expected = "port number out of range -1"
 	if !strings.HasPrefix(err.Error(), expected) {
 		t.Error("Unexpected output", err)
 	}
 
-	port, err := stringToPort("0")
+	port, err := parsePort("0")
 	if port != 0 || err != nil {
 		t.Error("Unexpected output", port, err)
 	}
 
-	port, err = stringToPort("65535")
+	port, err = parsePort("65535")
 	if port != 65535 || err != nil {
 		t.Error("Unexpected output", port, err)
 	}
@@ -797,7 +797,7 @@ func TestStringToLogLevel(t *testing.T) {
 
 	for _, test := range test_cases {
 		t.Run(test.level_in, func(t *testing.T) {
-			out := stringToLogLevel(test.level_in)
+			out := parseLogLevel(test.level_in)
 			if test.level_out != out {
 				t.Errorf("expected: %s, got: %s", test.level_out, out)
 			}
