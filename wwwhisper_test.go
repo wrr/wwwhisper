@@ -25,24 +25,24 @@ const wwwhisperUsername = "alice"
 const wwwhisperPassword = "sometestpassword"
 
 type TestEnv struct {
-	appServer  *httptest.Server
+	AppServer  *httptest.Server
 	AppHandler func(http.ResponseWriter, *http.Request)
 	AppCount   int
 
-	authServer  *httptest.Server
+	AuthServer  *httptest.Server
 	AuthHandler func(http.ResponseWriter, *http.Request)
 	AuthCount   int
 
 	ExternalURL        string
-	protectedAppServer *httptest.Server
+	ProtectedAppServer *httptest.Server
 
 	AppProxy *httputil.ReverseProxy
 }
 
 func (env *TestEnv) dispose() {
-	defer env.appServer.Close()
-	defer env.authServer.Close()
-	defer env.protectedAppServer.Close()
+	defer env.AppServer.Close()
+	defer env.AuthServer.Close()
+	defer env.ProtectedAppServer.Close()
 }
 
 func parseURL(urlString string) *url.URL {
@@ -102,14 +102,14 @@ func newTestEnv(t *testing.T) *TestEnv {
 	env.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
 		rw.Write([]byte("Hello world"))
 	}
-	env.appServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+	env.AppServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		env.AppHandler(rw, req)
 		env.AppCount++
 	}))
 	env.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
 		rw.Write([]byte("allowed"))
 	}
-	env.authServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+	env.AuthServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		err := checkBasicAuthCredentials(req)
 		if err != nil {
 			t.Error("Auth request basic auth:", err)
@@ -123,15 +123,15 @@ func newTestEnv(t *testing.T) *TestEnv {
 	handler := slog.NewTextHandler(io.Discard /*os.Stderr*/, options)
 	log := slog.New(handler)
 
-	appUrlParsed, _ := url.Parse(env.appServer.URL)
+	appUrlParsed, _ := url.Parse(env.AppServer.URL)
 	env.AppProxy = NewReverseProxy(appUrlParsed, log, false)
 
-	wwwhisperURL := parseURL(env.authServer.URL)
+	wwwhisperURL := parseURL(env.AuthServer.URL)
 	wwwhisperURL.User = url.UserPassword(wwwhisperUsername, wwwhisperPassword)
 	wwwhisperHandler := NewAuthHandler(wwwhisperURL, log, env.AppProxy)
 
-	env.protectedAppServer = httptest.NewServer(wwwhisperHandler)
-	env.ExternalURL = env.protectedAppServer.URL
+	env.ProtectedAppServer = httptest.NewServer(wwwhisperHandler)
+	env.ExternalURL = env.ProtectedAppServer.URL
 	return &env
 }
 
@@ -163,7 +163,7 @@ func clearEnv() {
 	os.Unsetenv("PROXY_TO_PORT")
 }
 
-func TestCreateConfig(t *testing.T) {
+func TestNewConfig(t *testing.T) {
 	clearEnv()
 	defer clearEnv()
 
@@ -465,6 +465,10 @@ func TestPathNormalization(t *testing.T) {
 		rw.Write([]byte("allowed"))
 	}
 	testEnv.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
+		if req.Host != parseURL(testEnv.ExternalURL).Host {
+			t.Error("Invalid Host header", req.Host, testEnv.ExternalURL)
+		}
+
 		if req.URL.RequestURI() != expected_path {
 			t.Error("Invalid app request path", req.URL.RequestURI(), expected_path)
 			return
@@ -487,6 +491,10 @@ func TestAdminPathAllowed(t *testing.T) {
 	defer testEnv.dispose()
 
 	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
+		if req.Host != parseURL(testEnv.AuthServer.URL).Host {
+			t.Error("Invalid Host header", req.Host, testEnv.AuthServer.URL)
+		}
+
 		siteURL := req.Header.Get("Site-Url")
 		if siteURL != testEnv.ExternalURL {
 			t.Error("Invalid Site-Url header", siteURL)

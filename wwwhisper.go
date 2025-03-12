@@ -126,6 +126,13 @@ func NewReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool) *
 	proxy.Director = func(req *http.Request) {
 		if proxyToWwwhisper {
 			setSiteURLHeader(req, req)
+			// When proxying to wwwhisper the host header needs to contain
+			// hostname parsed from the WWWHISPER_URL, not hostname of the
+			// protected site. Otherwise wwwhisper backend hosting service
+			// (Heroku at this moment) is not able to correctly route the
+			// request (the Site-Url header contains the protected site
+			// hostname).
+			req.Host = target.Host
 		}
 		if credentials != "" {
 			req.Header.Set("Authorization", credentials)
@@ -202,8 +209,10 @@ func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 			// url.URL, other errors are not reported by NewRequest, but client.Do
 			return nil, err
 		}
+		// TODO: not all headers, or perhaps use ReverseProxy also?
 		copyRequestHeaders(authReq, r)
 		setSiteURLHeader(authReq, r)
+		authReq.Host = wwwhisperURL.Host
 		authReq.Header.Set("User-Agent", "go-"+Version)
 		return authClient.Do(authReq)
 	}
