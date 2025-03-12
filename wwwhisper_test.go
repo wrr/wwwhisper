@@ -167,49 +167,49 @@ func TestCreateConfig(t *testing.T) {
 	clearEnv()
 	defer clearEnv()
 
-	_, err := createConfig("")
+	_, err := newConfig("")
 	expected := "WWWHISPER_URL environment variable is not set"
 	if err == nil || err.Error() != expected {
 		t.Fatal("Unexpected error:", err)
 	}
 
 	os.Setenv("WWWHISPER_URL", "https://example.com:-1")
-	_, err = createConfig("")
+	_, err = newConfig("")
 	expected = "WWWHISPER_URL has invalid format: "
 	if err == nil || !strings.HasPrefix(err.Error(), expected) {
 		t.Fatal("Unexpected error:", err)
 	}
 
 	os.Setenv("WWWHISPER_URL", "https://example.com")
-	_, err = createConfig("")
+	_, err = newConfig("")
 	expected = "PORT environment variable is not set"
 	if err == nil || err.Error() != expected {
 		t.Fatal("Unexpected error:", err)
 	}
 
 	os.Setenv("PORT", "70000")
-	_, err = createConfig("")
+	_, err = newConfig("")
 	expected = "PORT environment variable is invalid: port number out of range 70000"
 	if err == nil || err.Error() != expected {
 		t.Fatal("Unexpected error:", err)
 	}
 
 	os.Setenv("PORT", "5000")
-	_, err = createConfig("")
+	_, err = newConfig("")
 	expected = "PROXY_TO_PORT environment variable is not set"
 	if err == nil || err.Error() != expected {
 		t.Fatal("Unexpected error:", err)
 	}
 
 	os.Setenv("PROXY_TO_PORT", "foo")
-	_, err = createConfig("")
+	_, err = newConfig("")
 	expected = "PROXY_TO_PORT environment variable is invalid: failed to convert foo to port number"
 	if err == nil || !strings.HasPrefix(err.Error(), expected) {
 		t.Fatal("Unexpected error:", err)
 	}
 
 	os.Setenv("PROXY_TO_PORT", "999")
-	cfg, _ := createConfig("/tmp/foo")
+	cfg, _ := newConfig("/tmp/foo")
 
 	if cfg.PidFilePath != "/tmp/foo" {
 		t.Fatal("pidFilePath invalid", cfg.PidFilePath)
@@ -230,7 +230,7 @@ func TestCreateConfig(t *testing.T) {
 	}
 
 	os.Setenv("WWWHISPER_LOG", "info")
-	cfg, _ = createConfig("/tmp/foo")
+	cfg, _ = newConfig("/tmp/foo")
 	if cfg.LogLevel != slog.LevelInfo {
 		t.Fatal("LogLevel invalid", cfg.LogLevel)
 	}

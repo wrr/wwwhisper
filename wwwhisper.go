@@ -78,18 +78,14 @@ func setSiteURLHeader(dst *http.Request, incoming *http.Request) {
 	dst.Header.Set("Site-Url", scheme+"://"+incoming.Host)
 }
 
-func encodeBasicAuth(username string, password string) string {
-	toEncode := username + ":" + password
-	return "Basic " + base64.StdEncoding.EncodeToString([]byte(toEncode))
-}
-
-func getBasicAuthCredentials(url *url.URL) string {
+func basicAuthCredentials(url *url.URL) string {
 	username := url.User.Username()
 	password, is_password_set := url.User.Password()
 	if !is_password_set {
 		return ""
 	}
-	return encodeBasicAuth(username, password)
+	toEncode := username + ":" + password
+	return "Basic " + base64.StdEncoding.EncodeToString([]byte(toEncode))
 }
 
 func injectOverlay(resp *http.Response) error {
@@ -124,7 +120,7 @@ func injectOverlay(resp *http.Response) error {
 func NewReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool) *httputil.ReverseProxy {
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	proxy.ErrorLog = slog.NewLogLogger(log.Handler(), slog.LevelError)
-	credentials := getBasicAuthCredentials(target)
+	credentials := basicAuthCredentials(target)
 
 	originalDirector := proxy.Director
 	proxy.Director = func(req *http.Request) {
@@ -352,7 +348,7 @@ func portFromEnv(envVarName string) (Port, error) {
 	return port, nil
 }
 
-func createConfig(pidFilePath string) (Config, error) {
+func newConfig(pidFilePath string) (Config, error) {
 	config := Config{
 		PidFilePath: pidFilePath,
 		LogLevel:    parseLogLevel(os.Getenv("WWWHISPER_LOG")),
@@ -410,7 +406,7 @@ func main() {
 		return
 	}
 
-	config, err := createConfig(*pidFileFlag)
+	config, err := newConfig(*pidFileFlag)
 	if err == nil {
 		err = Run(config)
 	}
