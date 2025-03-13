@@ -342,6 +342,22 @@ func TestAppRequestAllowed(t *testing.T) {
 			t.Error("Invalid Site-Url header", siteURL)
 			return
 		}
+		cookies := req.Header.Get("Cookie")
+		if cookies != "foo=1; bar=xyz" {
+			t.Error("Invalid cookies", cookies)
+			return
+		}
+		accept := req.Header.Get("Accept")
+		if accept != "application/custom" {
+			t.Error("Invalid Accept header", accept)
+			return
+		}
+		custom := req.Header.Get("X-Custom")
+		if custom != "" {
+			t.Error("X-Custom header not removed", custom)
+			return
+		}
+
 		if req.URL.RequestURI() != authQuery("/hello") {
 			// No t.Fatal in request handlers because go panic recovery
 			// reruns panicked handlers and causes test error to be printed
@@ -352,7 +368,14 @@ func TestAppRequestAllowed(t *testing.T) {
 		rw.Write([]byte("allowed"))
 	}
 
-	resp, err := http.Get(testEnv.ExternalURL + "/hello")
+	req, _ := http.NewRequest("GET", testEnv.ExternalURL+"/hello", nil)
+	req.Header.Add("Accept", "application/custom")
+	req.Header.Add("Cookie", "foo=1; bar=xyz")
+	req.Header.Add("Site-Url", "https://should.be.changed")
+	req.Header.Add("X-Custom", "should be removed")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+
 	expectedBody := "Hello world"
 	assertResponse(t, resp, err, http.StatusOK, &expectedBody)
 	if testEnv.AuthCount != 1 {

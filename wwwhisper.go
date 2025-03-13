@@ -47,11 +47,13 @@ func parsePort(in string) (Port, error) {
 	return Port(inInt), nil
 }
 
-func copyRequestHeaders(dst *http.Request, src *http.Request) {
-	for key, values := range src.Header {
-		for _, value := range values {
-			dst.Header.Add(key, value)
-		}
+func copyAuthRequestHeaders(dst *http.Request, src *http.Request) {
+	// Cookies identify the user, Accept is used by the wwwhisper
+	// backend in case request is denied to know if the error returned
+	// should be HTML.
+	forwardedHeaders := []string{"Accept", "Accept-Language", "Cookie"}
+	for _, header := range forwardedHeaders {
+		dst.Header.Set(header, src.Header.Get(header))
 	}
 }
 
@@ -209,8 +211,7 @@ func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 			// url.URL, other errors are not reported by NewRequest, but client.Do
 			return nil, err
 		}
-		// TODO: not all headers, or perhaps use ReverseProxy also?
-		copyRequestHeaders(authReq, r)
+		copyAuthRequestHeaders(authReq, r)
 		setSiteURLHeader(authReq, r)
 		authReq.Host = wwwhisperURL.Host
 		authReq.Header.Set("User-Agent", "go-"+Version)
