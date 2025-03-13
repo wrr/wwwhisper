@@ -36,6 +36,13 @@ type Config struct {
 	LogLevel     slog.Level
 }
 
+// Store HTTP status in context for logging purposes. An alternative
+// is to wrap ResponseWritter to capture the status,
+// but the ResponseWritter implements several optional APIs which
+// makes such wrapping verbose, complex and prone to problems when new such
+// APIs are introduced in future version of net/http.
+type statusCodeKey struct{}
+
 func parsePort(in string) (Port, error) {
 	inInt, err := strconv.Atoi(in)
 	if err != nil {
@@ -82,8 +89,8 @@ func setSiteURLHeader(dst *http.Request, incoming *http.Request) {
 
 func basicAuthCredentials(url *url.URL) string {
 	username := url.User.Username()
-	password, is_password_set := url.User.Password()
-	if !is_password_set {
+	password, isPasswordSet := url.User.Password()
+	if !isPasswordSet {
 		return ""
 	}
 	toEncode := username + ":" + password
@@ -142,25 +149,29 @@ func NewReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool) *
 		originalDirector(req)
 	}
 
-	// wwwhisper html responses already have the logout overlay added.
-	if !proxyToWwwhisper {
-		proxy.ModifyResponse = func(resp *http.Response) error {
+	proxy.ModifyResponse = func(resp *http.Response) error {
+		if statusCode, ok := resp.Request.Context().Value(statusCodeKey{}).(*int); ok {
+			*statusCode = resp.StatusCode
+		}
+		if !proxyToWwwhisper {
+			// wwwhisper HTML responses already have the logout overlay added.
 			return injectOverlay(resp)
 		}
+		return nil
 	}
 	return proxy
 }
 
 func normalize(url *url.URL) {
-	path_in := url.Path
-	path_out := path.Clean(path_in)
-	if strings.HasSuffix(path_in, "/") && !strings.HasSuffix(path_out, "/") {
-		path_out += "/"
+	pathIn := url.Path
+	pahtOut := path.Clean(pathIn)
+	if strings.HasSuffix(pathIn, "/") && !strings.HasSuffix(pahtOut, "/") {
+		pahtOut += "/"
 	}
-	if !strings.HasPrefix(path_out, "/") {
-		path_out = "/" + path_out
+	if !strings.HasPrefix(pahtOut, "/") {
+		pahtOut = "/" + pahtOut
 	}
-	url.Path = path_out
+	url.Path = pahtOut
 	// if RawPath is empty it is assumed to be equal to Path
 	// (RequestURI() will just use Path and will not contain any escaped
 	// elements).
@@ -175,24 +186,6 @@ func normalize(url *url.URL) {
 	url.RawPath = ""
 }
 
-// ResponseWriter which captures http status for logging purposes.
-type statusCapturingWriter struct {
-	http.ResponseWriter
-	status int
-}
-
-func (rw *statusCapturingWriter) WriteHeader(status int) {
-	rw.status = status
-	rw.ResponseWriter.WriteHeader(status)
-}
-
-func wrapResponseWriter(rw http.ResponseWriter) *statusCapturingWriter {
-	return &statusCapturingWriter{
-		ResponseWriter: rw,
-		status:         http.StatusOK,
-	}
-}
-
 func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Handler) http.Handler {
 	authURL := wwwhisperURL.String() + "/wwwhisper/auth/api/is-authorized/?path="
 	authClient := &http.Client{
@@ -203,8 +196,8 @@ func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 	wwwhisperProxy := NewReverseProxy(wwwhisperURL, log, true)
 
 	makeAuthRequest := func(r *http.Request) (*http.Response, error) {
-		// .Path has escape characters decoded (/ instead of %2F)
-		authReq, err := http.NewRequest("GET", authURL+r.URL.Path, nil)
+		// Path has escape characters decoded (/ instead of %2F)
+		authReq, err := http.NewRequestWithContext(r.Context(), "GET", authURL+r.URL.Path, nil)
 		if err != nil {
 			// This should never happen: method is hardcoded to GET, authURL
 			// is for sure parsable because if comes from the already parsed
@@ -218,41 +211,46 @@ func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 		return authClient.Do(authReq)
 	}
 
-	return http.HandlerFunc(func(origWriter http.ResponseWriter, req *http.Request) {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		start := time.Now()
-		var rw *statusCapturingWriter = wrapResponseWriter(origWriter)
 		normalize(req.URL)
 
-		auth_status := ""
+		authStatus := ""
+		statusCode := 0
+		ctx := context.WithValue(req.Context(), statusCodeKey{}, &statusCode)
+		req = req.WithContext(ctx)
+
 		defer func() {
 			duration := time.Since(start)
 			log.Info("wwwhisper",
 				slog.String("method", req.Method),
 				slog.String("path", req.URL.Path),
-				slog.String("auth", auth_status),
-				slog.Int("status", rw.status),
+				slog.String("auth", authStatus),
+				slog.Int("status", statusCode),
 				slog.Duration("timer", duration),
 			)
 		}()
 
 		if strings.HasPrefix(req.URL.Path, "/wwwhisper/auth/") {
 			// login/logout/send-token etc. always allowed, doesn't require authorization.
-			auth_status = "open"
+			authStatus = "open"
 			wwwhisperProxy.ServeHTTP(rw, req)
 			return
 		}
 		authResp, err := makeAuthRequest(req)
 		if err != nil {
-			auth_status = "failed"
+			authStatus = "failed"
+			statusCode = http.StatusInternalServerError
 			log.Warn("wwwhisper", "error", err.Error())
 			// Do not return err.Error() to the user as it can contain sensitive
 			// data.
-			http.Error(rw, "Internal server error: auth request", http.StatusInternalServerError)
+			http.Error(rw, "Internal server error: auth request", statusCode)
 			return
 		}
 		defer authResp.Body.Close()
 		if authResp.StatusCode != http.StatusOK {
-			auth_status = "denied"
+			authStatus = "denied"
+			statusCode = authResp.StatusCode
 			err = copyResponse(rw, authResp)
 			if err != nil {
 				log.Error("Error copying auth response: " + err.Error())
@@ -260,7 +258,7 @@ func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 			return
 		}
 
-		auth_status = "granted"
+		authStatus = "granted"
 		if strings.HasPrefix(req.URL.Path, "/wwwhisper/") {
 			wwwhisperProxy.ServeHTTP(rw, req)
 		} else {
