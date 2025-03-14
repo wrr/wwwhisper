@@ -26,3 +26,7 @@ clean:
 release: build
 	tar -cvzf wwwhisper.tgz wwwhisper
 	cp wwwhisper.tgz ../wwwhisper-heroku-buildpack
+
+# go install golang.org/x/tools/cmd/goimports@latest
+goimports: build
+	goimports -l -w .
