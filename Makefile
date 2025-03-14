@@ -28,5 +28,9 @@ release: build
 	cp wwwhisper.tgz ../wwwhisper-heroku-buildpack
 
 # go install golang.org/x/tools/cmd/goimports@latest
-goimports: build
+imports: build
 	goimports -l -w .
+
+# go install golang.org/x/vuln/cmd/govulncheck@latest
+vulncheck: build
+	govulncheck ./...
