@@ -137,21 +137,21 @@ func newTestEnv(t *testing.T) *TestEnv {
 
 func assertResponse(t *testing.T, resp *http.Response, err error, expectedStatus int, expectedBody *string) {
 	if err != nil {
-		t.Fatal("Failed to make request:", err)
+		t.Error("Failed to make request:", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != expectedStatus {
-		t.Fatalf("Expected status %v; got %v", expectedStatus, resp.StatusCode)
+		t.Errorf("Expected status %v; got %v", expectedStatus, resp.StatusCode)
 	}
 
 	if expectedBody != nil {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			t.Fatal("Failed to read response body:", err)
+			t.Error("Failed to read response body:", err)
 		}
 		if string(body) != *expectedBody {
-			t.Fatalf("Expected body '%s'; got '%s'", *expectedBody, string(body))
+			t.Errorf("Expected body '%s'; got '%s'", *expectedBody, string(body))
 		}
 	}
 }
@@ -357,7 +357,6 @@ func TestAppRequestAllowed(t *testing.T) {
 			t.Error("X-Custom header not removed", custom)
 			return
 		}
-
 		if req.URL.RequestURI() != authQuery("/hello") {
 			// No t.Fatal in request handlers because go panic recovery
 			// reruns panicked handlers and causes test error to be printed
@@ -367,22 +366,51 @@ func TestAppRequestAllowed(t *testing.T) {
 		}
 		rw.Write([]byte("allowed"))
 	}
+	testEnv.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
+		proto := req.Header.Get("X-Forwarded-Proto")
+		if proto != "http" {
+			t.Error("Invalid X-Forwarded-Proto", proto)
+			return
+		}
+		rw.Write([]byte("hello"))
+	}
 
 	req, _ := http.NewRequest("GET", testEnv.ExternalURL+"/hello", nil)
 	req.Header.Add("Accept", "application/custom")
 	req.Header.Add("Cookie", "foo=1; bar=xyz")
 	req.Header.Add("Site-Url", "https://should.be.changed")
 	req.Header.Add("X-Custom", "should be removed")
+	req.Header.Add("X-Forwarded-Proto", "http")
 	client := &http.Client{}
 	resp, err := client.Do(req)
 
-	expectedBody := "Hello world"
+	expectedBody := "hello"
 	assertResponse(t, resp, err, http.StatusOK, &expectedBody)
 	if testEnv.AuthCount != 1 {
 		t.Fatal("Auth request not made")
 	}
 	if testEnv.AppCount != 1 {
 		t.Fatal("App request not made")
+	}
+}
+
+func TestSiteUrlProto(t *testing.T) {
+	testEnv := newTestEnv(t)
+	defer testEnv.dispose()
+	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
+		siteURL := req.Header.Get("Site-Url")
+		if strings.HasSuffix(siteURL, "https://") {
+			t.Error("Site-Url header invalid protocol")
+			return
+		}
+	}
+
+	req, _ := http.NewRequest("GET", testEnv.ExternalURL+"/hello", nil)
+	req.Header.Add("X-Forwarded-Proto", "https")
+	client := &http.Client{}
+	client.Do(req)
+	if testEnv.AuthCount != 1 {
+		t.Fatal("Auth request not made")
 	}
 }
 
@@ -623,6 +651,9 @@ func TestProxyVersionPassed(t *testing.T) {
 		userAgent := req.Header.Get("User-Agent")
 		if req.Header.Get("User-Agent") != "test-agent" {
 			t.Error("Invalid app user agent", userAgent)
+		}
+		if req.Header.Get("Site-Url") != "" {
+			t.Error("Site-Url header passed to the app")
 		}
 		rw.Write([]byte("hello"))
 	}

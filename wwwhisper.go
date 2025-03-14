@@ -127,26 +127,36 @@ func injectOverlay(resp *http.Response) error {
 }
 
 func NewReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool) *httputil.ReverseProxy {
-	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy := &httputil.ReverseProxy{}
 	proxy.ErrorLog = slog.NewLogLogger(log.Handler(), slog.LevelError)
 	credentials := basicAuthCredentials(target)
 
-	originalDirector := proxy.Director
-	proxy.Director = func(req *http.Request) {
+	proxy.Rewrite = func(req *httputil.ProxyRequest) {
+		req.Out.URL.Scheme = target.Scheme
+		req.Out.URL.Host = target.Host
+		req.Out.Header["X-Forwarded-For"] = req.In.Header["X-Forwarded-For"]
+		req.SetXForwarded()
+		// In the chains of proxies (for example on Heroku where wwwhisper
+		// is behind the Heroku router which terminates the HTTPS) pass
+		// the original X-Forwarded-Proto to the app, so the app can
+		// recognize if the client connection used HTTPS.
+		proto := req.In.Header.Get("X-Forwarded-Proto")
+		if len(proto) > 0 {
+			req.Out.Header.Set("X-Forwarded-Proto", proto)
+		}
 		if proxyToWwwhisper {
-			setSiteURLHeader(req, req)
+			setSiteURLHeader(req.Out, req.In)
 			// When proxying to wwwhisper the host header needs to contain
 			// hostname parsed from the WWWHISPER_URL, not hostname of the
 			// protected site. Otherwise wwwhisper backend hosting service
 			// (Heroku at this moment) is not able to correctly route the
 			// request (the Site-Url header contains the protected site
 			// hostname).
-			req.Host = target.Host
+			req.Out.Host = target.Host
 		}
 		if credentials != "" {
-			req.Header.Set("Authorization", credentials)
+			req.Out.Header.Set("Authorization", credentials)
 		}
-		originalDirector(req)
 	}
 
 	proxy.ModifyResponse = func(resp *http.Response) error {
@@ -284,11 +294,11 @@ func Run(cfg Config) error {
 
 	mux := http.NewServeMux()
 	server := http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.ExternalPort),
-		ReadHeaderTimeout:  10 * time.Second,
-		IdleTimeout: 20 * time.Second,
-		Handler:      mux,
-		ErrorLog:     slog.NewLogLogger(handler, slog.LevelError),
+		Addr:              fmt.Sprintf(":%d", cfg.ExternalPort),
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       20 * time.Second,
+		Handler:           mux,
+		ErrorLog:          slog.NewLogLogger(handler, slog.LevelError),
 	}
 	server.SetKeepAlivesEnabled(true)
 
