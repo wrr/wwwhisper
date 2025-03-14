@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log/slog"
 	"net"
 	"net/http"
@@ -146,7 +145,7 @@ func assertResponse(t *testing.T, resp *http.Response, err error, expectedStatus
 	}
 
 	if expectedBody != nil {
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			t.Error("Failed to read response body:", err)
 		}
@@ -292,7 +291,7 @@ func TestPidFile(t *testing.T) {
 	}()
 	waitPortListen(t, config.ExternalPort)
 
-	pidFileContent, err := ioutil.ReadFile(config.PidFilePath)
+	pidFileContent, err := os.ReadFile(config.PidFilePath)
 	if err != nil {
 		t.Fatal("Error reading pid file")
 	}
@@ -310,7 +309,7 @@ func TestPidFile(t *testing.T) {
 		t.Fatal("Unexpected error", err)
 	}
 
-	_, err = ioutil.ReadFile(config.PidFilePath)
+	_, err = os.ReadFile(config.PidFilePath)
 	if !os.IsNotExist(err) {
 		t.Fatal("Pid file not removed", err)
 	}
@@ -397,6 +396,7 @@ func TestAppRequestAllowed(t *testing.T) {
 func TestSiteUrlProto(t *testing.T) {
 	testEnv := newTestEnv(t)
 	defer testEnv.dispose()
+
 	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
 		siteURL := req.Header.Get("Site-Url")
 		if strings.HasSuffix(siteURL, "https://") {

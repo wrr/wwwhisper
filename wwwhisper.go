@@ -281,7 +281,7 @@ func Run(cfg Config) error {
 	if cfg.PidFilePath != "" {
 		pidStr := fmt.Sprintf("%d\n", os.Getpid())
 		if err := os.WriteFile(cfg.PidFilePath, []byte(pidStr), 0400); err != nil {
-			return fmt.Errorf("Error writing PID file: %v\n", err)
+			return fmt.Errorf("error writing PID file: %v", err)
 		}
 		defer os.Remove(cfg.PidFilePath)
 	}
@@ -322,8 +322,8 @@ func Run(cfg Config) error {
 	select {
 	case err := <-serverStatus:
 		return err
-	case _ = <-sigChan:
-		log.Info("Signal received, terminating the server")
+	case <-sigChan:
+		log.Info("signal received, terminating the server")
 		break
 	}
 	// Singal received, shutdown the server.
