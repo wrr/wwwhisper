@@ -14,6 +14,10 @@ build: vet
 test: build
 	go test
 
+# go install honnef.co/go/tools/cmd/staticcheck@latest
+lint: build
+	staticcheck ./...
+
 cover: build
 	go test -v -cover -coverprofile=c.out
 
