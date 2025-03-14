@@ -38,9 +38,9 @@ type Config struct {
 
 // Store HTTP status in context for logging purposes. An alternative
 // is to wrap ResponseWritter to capture the status,
-// but the ResponseWritter implements several optional APIs which
+// but the ResponseWritter implements several optional interfaces which
 // makes such wrapping verbose, complex and prone to problems when new such
-// APIs are introduced in future version of net/http.
+// interfaces are introduced in future version of net/http.
 type statusCodeKey struct{}
 
 func parsePort(in string) (Port, error) {
@@ -283,14 +283,15 @@ func Run(cfg Config) error {
 	log := slog.New(handler)
 
 	mux := http.NewServeMux()
-	// TODO: tune timeouts
 	server := http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.ExternalPort),
-		ReadTimeout:  20 * time.Second,
-		WriteTimeout: 20 * time.Second,
+		ReadHeaderTimeout:  10 * time.Second,
+		IdleTimeout: 20 * time.Second,
 		Handler:      mux,
 		ErrorLog:     slog.NewLogLogger(handler, slog.LevelError),
 	}
+	server.SetKeepAlivesEnabled(true)
+
 	appProxy := NewReverseProxy(proxyTarget, log, false)
 	mux.Handle("/", NewAuthHandler(cfg.WwwhisperURL, log, appProxy))
 
