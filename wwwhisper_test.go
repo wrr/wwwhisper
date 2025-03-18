@@ -443,6 +443,43 @@ func TestAppRequestLoginNeeded(t *testing.T) {
 	}
 }
 
+func TestAuthBackendNotNeededResponseHeadersStripped(t *testing.T) {
+	testEnv := newTestEnv(t)
+	defer testEnv.dispose()
+	authReturn := http.StatusUnauthorized
+
+	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
+		rw.Header().Add("Via", "test-router")
+		rw.Header().Add("Nel", "x")
+		rw.Header().Add("Report-To", "y")
+		rw.Header().Add("Reporting-Endpoints", "z")
+		rw.Header().Add("User", "alice@example.com")
+		rw.WriteHeader(authReturn)
+	}
+
+	// Test two cases:
+	// 1) when access is denied, not needed headers are stripped from the
+	//    is-authorized response that returns access denied
+	// 2) when access is allowed, not neeeded headers are stripped from the
+	//    /wwwhisper/admin response
+	for i := 0; i < 2; i += 1 {
+		resp, err := http.Get(testEnv.ExternalURL + "/wwwhisper/admin")
+		expectedBody := ""
+		assertResponse(t, resp, err, authReturn, &expectedBody)
+		headers := []string{"Via", "Nel", "Report-To", "Reporting-Endpoints", "User"}
+		for _, h := range headers {
+			if resp.Header.Get(h) != "" {
+				t.Error("Header not stripped:", h)
+			}
+		}
+		authReturn = http.StatusOK
+	}
+
+	if testEnv.AuthCount != 3 {
+		t.Fatal("Auth requests not made")
+	}
+}
+
 func TestAuthPathAllowed(t *testing.T) {
 	testEnv := newTestEnv(t)
 	defer testEnv.dispose()

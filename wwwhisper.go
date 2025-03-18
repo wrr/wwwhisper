@@ -37,6 +37,26 @@ type Config struct {
 	LogLevel     slog.Level
 }
 
+// Responses from wwwhisper contain headers added by Heroku router
+// that are also added by the router in front of the app. For the Via
+// header it can be considered OK (although confusing), for
+// Nel/Report-To/Reporting-Endpoints headers the duplication should be
+// removed. We remove all these headers.
+//
+// In addition we drop the User header which is present in 403
+// responses produced by /wwwwhisper/auth/api/is-authorized endpoint.
+// In general, returning the User header is not wrong, the information
+// it contains can be obtained anyway from the
+// /wwwhisper/auth/api/whoami endpoint, but to avoid it being treated
+// as some kind of a public API, we mask the header.
+var headersToDrop = map[string]bool{
+	"Via":                 true,
+	"Nel":                 true,
+	"Report-To":           true,
+	"Reporting-Endpoints": true,
+	"User":                true,
+}
+
 // Store HTTP status in context for logging purposes. An alternative
 // is to wrap ResponseWritter to capture the status,
 // but the ResponseWritter implements several optional interfaces which
@@ -67,6 +87,9 @@ func copyAuthRequestHeaders(dst *http.Request, src *http.Request) {
 
 func copyResponse(w http.ResponseWriter, src *http.Response) error {
 	for key, values := range src.Header {
+		if headersToDrop[key] {
+			continue
+		}
 		for _, value := range values {
 			w.Header().Add(key, value)
 		}
@@ -164,6 +187,11 @@ func NewReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool, n
 		if statusCode, ok := resp.Request.Context().Value(statusCodeKey{}).(*int); ok {
 			*statusCode = resp.StatusCode
 		}
+		if proxyToWwwhisper {
+			for key := range headersToDrop {
+				resp.Header.Del(key)
+			}
+		}
 		if !noOverlay {
 			return injectOverlay(resp)
 		}
@@ -198,9 +226,10 @@ func normalize(url *url.URL) {
 
 func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Handler) http.Handler {
 	authURL := wwwhisperURL.String() + "/wwwhisper/auth/api/is-authorized/?path="
+	// Connection keepalive is on by default.
 	authClient := &http.Client{
 		Jar:     nil,
-		Timeout: 20 * time.Second,
+		Timeout: 7 * time.Second,
 	}
 
 	// wwwhisper HTML responses already have the logout overlay added.
