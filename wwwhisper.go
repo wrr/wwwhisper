@@ -30,6 +30,7 @@ type Port uint16
 
 type Config struct {
 	PidFilePath  string
+	NoOverlay    bool
 	WwwhisperURL *url.URL
 	ExternalPort Port
 	ProxyToPort  Port
@@ -126,7 +127,7 @@ func injectOverlay(resp *http.Response) error {
 	return nil
 }
 
-func NewReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool) *httputil.ReverseProxy {
+func NewReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool, noOverlay bool) *httputil.ReverseProxy {
 	proxy := &httputil.ReverseProxy{}
 	proxy.ErrorLog = slog.NewLogLogger(log.Handler(), slog.LevelError)
 	credentials := basicAuthCredentials(target)
@@ -163,8 +164,7 @@ func NewReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool) *
 		if statusCode, ok := resp.Request.Context().Value(statusCodeKey{}).(*int); ok {
 			*statusCode = resp.StatusCode
 		}
-		if !proxyToWwwhisper {
-			// wwwhisper HTML responses already have the logout overlay added.
+		if !noOverlay {
 			return injectOverlay(resp)
 		}
 		return nil
@@ -203,7 +203,9 @@ func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 		Timeout: 20 * time.Second,
 	}
 
-	wwwhisperProxy := NewReverseProxy(wwwhisperURL, log, true)
+	// wwwhisper HTML responses already have the logout overlay added.
+	noOverlay := true
+	wwwhisperProxy := NewReverseProxy(wwwhisperURL, log, true, noOverlay)
 
 	makeAuthRequest := func(r *http.Request) (*http.Response, error) {
 		// Path has escape characters decoded (/ instead of %2F)
@@ -302,7 +304,7 @@ func Run(cfg Config) error {
 	}
 	server.SetKeepAlivesEnabled(true)
 
-	appProxy := NewReverseProxy(proxyTarget, log, false)
+	appProxy := NewReverseProxy(proxyTarget, log, false, cfg.NoOverlay)
 	mux.Handle("/", NewAuthHandler(cfg.WwwhisperURL, log, appProxy))
 
 	serverStatus := make(chan error, 1)
@@ -368,8 +370,10 @@ func portFromEnv(envVarName string) (Port, error) {
 }
 
 func newConfig(pidFilePath string) (Config, error) {
+	_, noOverlay := os.LookupEnv("WWWHISPER_NO_OVERLAY")
 	config := Config{
 		PidFilePath: pidFilePath,
+		NoOverlay:   noOverlay,
 		LogLevel:    parseLogLevel(os.Getenv("WWWHISPER_LOG")),
 	}
 	wwwhisperURL := os.Getenv("WWWHISPER_URL")

@@ -123,7 +123,7 @@ func newTestEnv(t *testing.T) *TestEnv {
 	log := slog.New(handler)
 
 	appUrlParsed, _ := url.Parse(env.AppServer.URL)
-	env.AppProxy = NewReverseProxy(appUrlParsed, log, false)
+	env.AppProxy = NewReverseProxy(appUrlParsed, log, false, false)
 
 	wwwhisperURL := parseURL(env.AuthServer.URL)
 	wwwhisperURL.User = url.UserPassword(wwwhisperUsername, wwwhisperPassword)
@@ -158,6 +158,7 @@ func assertResponse(t *testing.T, resp *http.Response, err error, expectedStatus
 func clearEnv() {
 	os.Unsetenv("WWWHISPER_URL")
 	os.Unsetenv("WWWHISPER_LOG")
+	os.Unsetenv("WWWHISPER_NO_OVERLAY")
 	os.Unsetenv("PORT")
 	os.Unsetenv("PROXY_TO_PORT")
 }
@@ -209,15 +210,15 @@ func TestNewConfig(t *testing.T) {
 
 	os.Setenv("PROXY_TO_PORT", "999")
 	cfg, _ := newConfig("/tmp/foo")
-
 	if cfg.PidFilePath != "/tmp/foo" {
 		t.Fatal("pidFilePath invalid", cfg.PidFilePath)
 	}
-
+	if cfg.NoOverlay != false {
+		t.Fatal("NoOverlay invalid")
+	}
 	if cfg.WwwhisperURL.String() != "https://example.com" {
 		t.Fatal("WwhisperURL invalid", cfg.WwwhisperURL)
 	}
-
 	if cfg.LogLevel != slog.LevelWarn {
 		t.Fatal("LogLevel invalid", cfg.LogLevel)
 	}
@@ -229,9 +230,13 @@ func TestNewConfig(t *testing.T) {
 	}
 
 	os.Setenv("WWWHISPER_LOG", "info")
+	os.Setenv("WWWHISPER_NO_OVERLAY", "")
 	cfg, _ = newConfig("/tmp/foo")
 	if cfg.LogLevel != slog.LevelInfo {
 		t.Fatal("LogLevel invalid", cfg.LogLevel)
+	}
+	if cfg.NoOverlay != true {
+		t.Fatal("NoOverlay invalid")
 	}
 }
 
@@ -326,7 +331,7 @@ func TestPidFileCreationError(t *testing.T) {
 	}
 
 	err := Run(config)
-	if !strings.HasPrefix(err.Error(), "Error writing PID file:") {
+	if !strings.HasPrefix(err.Error(), "error writing PID file:") {
 		t.Fatal("Pid file creation error not returned", err)
 	}
 }
