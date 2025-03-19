@@ -300,6 +300,14 @@ func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 		}
 
 		authStatus = "granted"
+		// If the client is trying to pass the User header, delete it.
+		req.Header.Del("User")
+		user := authResp.Header.Get("User")
+		if user != "" {
+			// The validated user header is passed to the backend to allow to identify the
+			// logged in user.
+			req.Header.Add("User", user)
+		}
 		if strings.HasPrefix(req.URL.Path, "/wwwhisper/") {
 			wwwhisperProxy.ServeHTTP(rw, req)
 		} else {

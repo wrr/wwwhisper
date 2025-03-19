@@ -480,6 +480,35 @@ func TestAuthBackendNotNeededResponseHeadersStripped(t *testing.T) {
 	}
 }
 
+func TestUserHeaderPassedToApp(t *testing.T) {
+	testEnv := newTestEnv(t)
+	defer testEnv.dispose()
+
+	testEnv.AuthHandler = func(rw http.ResponseWriter, req *http.Request) {
+		rw.Header().Add("User", "alice@example.org")
+		rw.WriteHeader(200)
+		rw.Write([]byte("allowed"))
+	}
+	testEnv.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
+		user := strings.Join(req.Header.Values("User"), "; ")
+		if user != "alice@example.org" {
+			t.Error("Invalid User header", user)
+		}
+		rw.Write([]byte("hello"))
+	}
+
+	req, _ := http.NewRequest("GET", testEnv.ExternalURL+"/hello", nil)
+	// User header that comes from the client should be dropped.
+	req.Header.Add("User", "eve@example.com")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	expectedBody := "hello"
+	assertResponse(t, resp, err, http.StatusOK, &expectedBody)
+	if testEnv.AppCount != 1 {
+		t.Fatal("App request not made")
+	}
+}
+
 func TestAuthPathAllowed(t *testing.T) {
 	testEnv := newTestEnv(t)
 	defer testEnv.dispose()
