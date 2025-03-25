@@ -65,6 +65,7 @@ func checkBasicAuthCredentials(req *http.Request) error {
 }
 
 func findPortToListen(t *testing.T, rangeStart Port) Port {
+	t.Helper()
 	for port := rangeStart; port < 0xffff; port++ {
 		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 		if err == nil {
@@ -77,6 +78,7 @@ func findPortToListen(t *testing.T, rangeStart Port) Port {
 }
 
 func waitPortListen(t *testing.T, port Port) {
+	t.Helper()
 	target := fmt.Sprintf("localhost:%d", port)
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
@@ -97,6 +99,7 @@ func genTempFilePath() string {
 }
 
 func newTestEnv(t *testing.T) *TestEnv {
+	t.Helper()
 	var env TestEnv
 	env.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
 		rw.Write([]byte("Hello world"))
