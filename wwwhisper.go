@@ -452,16 +452,16 @@ func main() {
 		die(fmt.Errorf("unrecognized arguments: %v", flag.Args()))
 	}
 
+	if *versionFlag {
+		fmt.Println(Version)
+		return
+	}
+
 	if *listenFlag == -1 {
 		die(errors.New("missing -listen flag"))
 	}
 	if *proxyToFlag == -1 {
 		die(errors.New("missing -proxyto flag"))
-	}
-
-	if *versionFlag {
-		fmt.Println(Version)
-		return
 	}
 
 	config, err := newConfig(*pidFileFlag, *listenFlag, *proxyToFlag)
