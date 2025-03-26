@@ -163,57 +163,39 @@ func clearEnv() {
 	os.Unsetenv("WWWHISPER_URL")
 	os.Unsetenv("WWWHISPER_LOG")
 	os.Unsetenv("WWWHISPER_NO_OVERLAY")
-	os.Unsetenv("PORT")
-	os.Unsetenv("PROXY_TO_PORT")
 }
 
 func TestNewConfig(t *testing.T) {
 	clearEnv()
 	defer clearEnv()
 
-	_, err := newConfig("")
+	_, err := newConfig("", 80, 8080)
 	expected := "WWWHISPER_URL environment variable is not set"
 	if err == nil || err.Error() != expected {
 		t.Fatal("Unexpected error:", err)
 	}
 
 	os.Setenv("WWWHISPER_URL", "https://example.com:-1")
-	_, err = newConfig("")
+	_, err = newConfig("", 80, 8080)
 	expected = "WWWHISPER_URL has invalid format: "
 	if err == nil || !strings.HasPrefix(err.Error(), expected) {
 		t.Fatal("Unexpected error:", err)
 	}
 
 	os.Setenv("WWWHISPER_URL", "https://example.com")
-	_, err = newConfig("")
-	expected = "PORT environment variable is not set"
+	_, err = newConfig("", 70000, 8080)
+	expected = "port number out of range 70000"
 	if err == nil || err.Error() != expected {
 		t.Fatal("Unexpected error:", err)
 	}
 
-	os.Setenv("PORT", "70000")
-	_, err = newConfig("")
-	expected = "PORT environment variable is invalid: port number out of range 70000"
-	if err == nil || err.Error() != expected {
-		t.Fatal("Unexpected error:", err)
-	}
-
-	os.Setenv("PORT", "5000")
-	_, err = newConfig("")
-	expected = "PROXY_TO_PORT environment variable is not set"
-	if err == nil || err.Error() != expected {
-		t.Fatal("Unexpected error:", err)
-	}
-
-	os.Setenv("PROXY_TO_PORT", "foo")
-	_, err = newConfig("")
-	expected = "PROXY_TO_PORT environment variable is invalid: failed to convert foo to port number"
+	_, err = newConfig("", 80, 80000)
+	expected = "port number out of range 80000"
 	if err == nil || !strings.HasPrefix(err.Error(), expected) {
 		t.Fatal("Unexpected error:", err)
 	}
 
-	os.Setenv("PROXY_TO_PORT", "999")
-	cfg, _ := newConfig("/tmp/foo")
+	cfg, _ := newConfig("/tmp/foo", 80, 8080)
 	if cfg.PidFilePath != "/tmp/foo" {
 		t.Fatal("pidFilePath invalid", cfg.PidFilePath)
 	}
@@ -226,16 +208,16 @@ func TestNewConfig(t *testing.T) {
 	if cfg.LogLevel != slog.LevelWarn {
 		t.Fatal("LogLevel invalid", cfg.LogLevel)
 	}
-	if cfg.ExternalPort != 5000 {
-		t.Fatal("ExternalPort invalid", cfg.ExternalPort)
+	if cfg.Listen != 80 {
+		t.Fatal("ExternalPort invalid", cfg.Listen)
 	}
-	if cfg.ProxyToPort != 999 {
-		t.Fatal("ProxyToPort port invalid", cfg.ProxyToPort)
+	if cfg.ProxyTo != 8080 {
+		t.Fatal("ProxyToPort port invalid", cfg.ProxyTo)
 	}
 
 	os.Setenv("WWWHISPER_LOG", "info")
 	os.Setenv("WWWHISPER_NO_OVERLAY", "")
-	cfg, _ = newConfig("/tmp/foo")
+	cfg, _ = newConfig("/tmp/foo", 80, 8080)
 	if cfg.LogLevel != slog.LevelInfo {
 		t.Fatal("LogLevel invalid", cfg.LogLevel)
 	}
@@ -248,9 +230,9 @@ func TestRunServerStartError(t *testing.T) {
 	config := Config{
 		WwwhisperURL: parseURL("https://wwwhisper.io"),
 		// Should fail to bind
-		ExternalPort: 1,
-		ProxyToPort:  8000,
-		LogLevel:     slog.LevelError,
+		Listen:   1,
+		ProxyTo:  8000,
+		LogLevel: slog.LevelError,
 	}
 	err := Run(config)
 	expected := "listen tcp"
@@ -263,8 +245,8 @@ func TestRunServerStartError(t *testing.T) {
 func TestSignalTermination(t *testing.T) {
 	config := Config{
 		WwwhisperURL: parseURL("https://wwwhisper.io"),
-		ExternalPort: findPortToListen(t, 10000),
-		ProxyToPort:  0,
+		Listen:       findPortToListen(t, 10000),
+		ProxyTo:      0,
 		LogLevel:     slog.LevelError,
 	}
 	serverStatus := make(chan error, 1)
@@ -274,7 +256,7 @@ func TestSignalTermination(t *testing.T) {
 	}()
 	// Wait for the server to start accepting connections because then
 	// the signal handler is for sure registered.
-	waitPortListen(t, config.ExternalPort)
+	waitPortListen(t, config.Listen)
 
 	process, _ := os.FindProcess(os.Getpid())
 	process.Signal(syscall.SIGTERM)
@@ -290,15 +272,15 @@ func TestPidFile(t *testing.T) {
 	config := Config{
 		PidFilePath:  genTempFilePath(),
 		WwwhisperURL: parseURL("https://wwwhisper.io"),
-		ExternalPort: findPortToListen(t, 10000),
-		ProxyToPort:  0,
+		Listen:       findPortToListen(t, 10000),
+		ProxyTo:      0,
 		LogLevel:     slog.LevelError,
 	}
 
 	go func() {
 		serverStatus <- Run(config)
 	}()
-	waitPortListen(t, config.ExternalPort)
+	waitPortListen(t, config.Listen)
 
 	pidFileContent, err := os.ReadFile(config.PidFilePath)
 	if err != nil {
@@ -329,8 +311,8 @@ func TestPidFileCreationError(t *testing.T) {
 		// Pass not writable file as the pid file path
 		PidFilePath:  "/proc/uptime",
 		WwwhisperURL: parseURL("https://wwwhisper.io"),
-		ExternalPort: 0,
-		ProxyToPort:  0,
+		Listen:       0,
+		ProxyTo:      0,
 		LogLevel:     slog.LevelError,
 	}
 
@@ -919,31 +901,25 @@ func TestIframeInjectionBodyReadFailure(t *testing.T) {
 	}
 }
 
-func TestStringToPort(t *testing.T) {
-	_, err := parsePort("foo")
-	expected := "failed to convert foo to port number: "
+func TestIntToPort(t *testing.T) {
+	_, err := intToPort(65536)
+	expected := "port number out of range 65536"
 	if !strings.HasPrefix(err.Error(), expected) {
 		t.Error("Unexpected output", err)
 	}
 
-	_, err = parsePort("65536")
-	expected = "port number out of range 65536"
-	if !strings.HasPrefix(err.Error(), expected) {
-		t.Error("Unexpected output", err)
-	}
-
-	_, err = parsePort("-1")
+	_, err = intToPort(-1)
 	expected = "port number out of range -1"
 	if !strings.HasPrefix(err.Error(), expected) {
 		t.Error("Unexpected output", err)
 	}
 
-	port, err := parsePort("0")
+	port, err := intToPort(0)
 	if port != 0 || err != nil {
 		t.Error("Unexpected output", port, err)
 	}
 
-	port, err = parsePort("65535")
+	port, err = intToPort(65535)
 	if port != 65535 || err != nil {
 		t.Error("Unexpected output", port, err)
 	}

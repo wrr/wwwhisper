@@ -15,7 +15,6 @@ import (
 	"os"
 	"os/signal"
 	"path"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -32,8 +31,8 @@ type Config struct {
 	PidFilePath  string
 	NoOverlay    bool
 	WwwhisperURL *url.URL
-	ExternalPort Port
-	ProxyToPort  Port
+	Listen       Port
+	ProxyTo      Port
 	LogLevel     slog.Level
 }
 
@@ -64,15 +63,12 @@ var headersToDrop = map[string]bool{
 // interfaces are introduced in future version of net/http.
 type statusCodeKey struct{}
 
-func parsePort(in string) (Port, error) {
-	inInt, err := strconv.Atoi(in)
-	if err != nil {
-		return 0, fmt.Errorf("failed to convert %s to port number: %v", in, err)
+func intToPort(in int) (Port, error) {
+	if in < 0 || in > 0xffff {
+		return 0, fmt.Errorf("port number out of range %d", in)
 	}
-	if inInt < 0 || inInt > 0xffff {
-		return 0, fmt.Errorf("port number out of range %d", inInt)
-	}
-	return Port(inInt), nil
+	return Port(in), nil
+
 }
 
 func copyAuthRequestHeaders(dst *http.Request, src *http.Request) {
@@ -328,14 +324,14 @@ func Run(cfg Config) error {
 	}
 
 	// error should never happen
-	proxyTarget, _ := url.Parse(fmt.Sprintf("http://localhost:%d", cfg.ProxyToPort))
+	proxyTarget, _ := url.Parse(fmt.Sprintf("http://localhost:%d", cfg.ProxyTo))
 
 	handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: cfg.LogLevel})
 	log := slog.New(handler)
 
 	mux := http.NewServeMux()
 	server := http.Server{
-		Addr:              fmt.Sprintf(":%d", cfg.ExternalPort),
+		Addr:              fmt.Sprintf(":%d", cfg.Listen),
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       20 * time.Second,
 		Handler:           mux,
@@ -396,19 +392,7 @@ func parseLogLevel(logLevelStr string) slog.Level {
 	}
 }
 
-func portFromEnv(envVarName string) (Port, error) {
-	portStr := os.Getenv(envVarName)
-	if portStr == "" {
-		return 0, fmt.Errorf("%s environment variable is not set", envVarName)
-	}
-	port, err := parsePort(portStr)
-	if err != nil {
-		return 0, fmt.Errorf("%s environment variable is invalid: %v", envVarName, err)
-	}
-	return port, nil
-}
-
-func newConfig(pidFilePath string) (Config, error) {
+func newConfig(pidFilePath string, listen int, proxyTo int) (Config, error) {
 	_, noOverlay := os.LookupEnv("WWWHISPER_NO_OVERLAY")
 	config := Config{
 		PidFilePath: pidFilePath,
@@ -426,11 +410,11 @@ func newConfig(pidFilePath string) (Config, error) {
 		return Config{}, fmt.Errorf("WWWHISPER_URL has invalid format: %s; %v", wwwhisperURL, err)
 	}
 
-	config.ExternalPort, err = portFromEnv("PORT")
+	config.Listen, err = intToPort(listen)
 	if err != nil {
 		return Config{}, err
 	}
-	config.ProxyToPort, err = portFromEnv("PROXY_TO_PORT")
+	config.ProxyTo, err = intToPort(proxyTo)
 	if err != nil {
 		return Config{}, err
 	}
@@ -443,9 +427,18 @@ func die(err error) {
 }
 
 func main() {
+	listenFlag := flag.Int("listen", -1,
+		"Externally accessible local port on which wwwhisper will listen.\n"+
+			"wwwhisper authenticates and authorizes requests incoming to this port.")
+	proxyToFlag := flag.Int("proxyto", -1,
+		"A local port on which a web application listens.\n"+
+			"This port should not be externally accessible, otherwise wwwhisper\n"+
+			"authorization could be bypassed by connecting to this port directly.\n"+
+			"wwwhisper forwards authorized requests to this port.")
 	pidFileFlag := flag.String("pidfile", "", "Path to file where process ID is written.\n"+
 		"The file is removed when the program terminates.")
 	versionFlag := flag.Bool("version", false, "Print the program version")
+
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "wwwhisper authorization reverse proxy\n")
 		fmt.Fprintf(os.Stderr, "Options:\n")
@@ -459,12 +452,19 @@ func main() {
 		die(fmt.Errorf("unrecognized arguments: %v", flag.Args()))
 	}
 
+	if *listenFlag == -1 {
+		die(errors.New("missing -listen flag"))
+	}
+	if *proxyToFlag == -1 {
+		die(errors.New("missing -proxyto flag"))
+	}
+
 	if *versionFlag {
 		fmt.Println(Version)
 		return
 	}
 
-	config, err := newConfig(*pidFileFlag)
+	config, err := newConfig(*pidFileFlag, *listenFlag, *proxyToFlag)
 	if err == nil {
 		err = Run(config)
 	}
