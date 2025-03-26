@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-const Version string = "1.0.1"
+const Version string = "1.0.2"
 const overlayToInject = `
 <script src="/wwwhisper/auth/iframe.js"></script>
 `
@@ -185,6 +185,7 @@ func NewReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool, n
 
 	proxy.ModifyResponse = func(resp *http.Response) error {
 		if statusCode, ok := resp.Request.Context().Value(statusCodeKey{}).(*int); ok {
+			// Stored for logging purposes.
 			*statusCode = resp.StatusCode
 		}
 		if proxyToWwwhisper {
@@ -242,7 +243,8 @@ func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 		if err != nil {
 			// This should never happen: method is hardcoded to GET, authURL
 			// is for sure parsable because if comes from the already parsed
-			// url.URL, other errors are not reported by NewRequest, but client.Do
+			// url.URL, other errors are not reported by NewRequest, but by
+			// client.Do.
 			return nil, err
 		}
 		copyAuthRequestHeaders(authReq, r)
@@ -285,7 +287,7 @@ func NewAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 			log.Warn("wwwhisper", "error", err.Error())
 			// Do not return err.Error() to the user as it can contain sensitive
 			// data.
-			http.Error(rw, "Internal server error: auth request", statusCode)
+			http.Error(rw, "Internal server error (auth)", statusCode)
 			return
 		}
 		defer authResp.Body.Close()

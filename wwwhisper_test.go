@@ -558,7 +558,7 @@ func TestAuthRequestNonHttpError(t *testing.T) {
 	}
 
 	resp, err := http.Get(testEnv.ExternalURL + "/foo")
-	expectedBody := "Internal server error: auth request\n"
+	expectedBody := "Internal server error (auth)\n"
 	if err = checkResponse(resp, err, 500, &expectedBody); err != nil {
 		t.Fatal("Invalid response", err)
 	}
