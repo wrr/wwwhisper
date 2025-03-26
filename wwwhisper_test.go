@@ -172,57 +172,57 @@ func TestNewConfig(t *testing.T) {
 	_, err := newConfig("", 80, 8080)
 	expected := "WWWHISPER_URL environment variable is not set"
 	if err == nil || err.Error() != expected {
-		t.Fatal("Unexpected error:", err)
+		t.Error("Unexpected error:", err)
 	}
 
 	os.Setenv("WWWHISPER_URL", "https://example.com:-1")
 	_, err = newConfig("", 80, 8080)
 	expected = "WWWHISPER_URL has invalid format: "
 	if err == nil || !strings.HasPrefix(err.Error(), expected) {
-		t.Fatal("Unexpected error:", err)
+		t.Error("Unexpected error:", err)
 	}
 
 	os.Setenv("WWWHISPER_URL", "https://example.com")
 	_, err = newConfig("", 70000, 8080)
 	expected = "port number out of range 70000"
 	if err == nil || err.Error() != expected {
-		t.Fatal("Unexpected error:", err)
+		t.Error("Unexpected error:", err)
 	}
 
 	_, err = newConfig("", 80, 80000)
 	expected = "port number out of range 80000"
 	if err == nil || !strings.HasPrefix(err.Error(), expected) {
-		t.Fatal("Unexpected error:", err)
+		t.Error("Unexpected error:", err)
 	}
 
 	cfg, _ := newConfig("/tmp/foo", 80, 8080)
 	if cfg.PidFilePath != "/tmp/foo" {
-		t.Fatal("pidFilePath invalid", cfg.PidFilePath)
+		t.Error("pidFilePath invalid", cfg.PidFilePath)
 	}
 	if cfg.NoOverlay != false {
-		t.Fatal("NoOverlay invalid")
+		t.Error("NoOverlay invalid")
 	}
 	if cfg.WwwhisperURL.String() != "https://example.com" {
-		t.Fatal("WwhisperURL invalid", cfg.WwwhisperURL)
+		t.Error("WwhisperURL invalid", cfg.WwwhisperURL)
 	}
 	if cfg.LogLevel != slog.LevelWarn {
-		t.Fatal("LogLevel invalid", cfg.LogLevel)
+		t.Error("LogLevel invalid", cfg.LogLevel)
 	}
 	if cfg.Listen != 80 {
-		t.Fatal("ExternalPort invalid", cfg.Listen)
+		t.Error("ExternalPort invalid", cfg.Listen)
 	}
 	if cfg.ProxyTo != 8080 {
-		t.Fatal("ProxyToPort port invalid", cfg.ProxyTo)
+		t.Error("ProxyToPort port invalid", cfg.ProxyTo)
 	}
 
 	os.Setenv("WWWHISPER_LOG", "info")
 	os.Setenv("WWWHISPER_NO_OVERLAY", "")
 	cfg, _ = newConfig("/tmp/foo", 80, 8080)
 	if cfg.LogLevel != slog.LevelInfo {
-		t.Fatal("LogLevel invalid", cfg.LogLevel)
+		t.Error("LogLevel invalid", cfg.LogLevel)
 	}
 	if cfg.NoOverlay != true {
-		t.Fatal("NoOverlay invalid")
+		t.Error("NoOverlay invalid")
 	}
 }
 
@@ -238,7 +238,7 @@ func TestRunServerStartError(t *testing.T) {
 	expected := "listen tcp"
 	if !errors.Is(err, os.ErrPermission) ||
 		!strings.Contains(err.Error(), expected) {
-		t.Fatal("Unexpected error:", err)
+		t.Error("Unexpected error:", err)
 	}
 }
 
@@ -263,7 +263,7 @@ func TestSignalTermination(t *testing.T) {
 
 	err := <-serverStatus
 	if err != nil {
-		t.Fatal("Unexpected error", err)
+		t.Error("Unexpected error", err)
 	}
 }
 
@@ -289,7 +289,7 @@ func TestPidFile(t *testing.T) {
 	pidStr := strings.TrimSpace(string(pidFileContent))
 	pid, _ := strconv.Atoi(pidStr)
 	if pid != os.Getpid() {
-		t.Fatal("Pid file content invalid: ", pid)
+		t.Error("Pid file content invalid: ", pid)
 	}
 
 	process, _ := os.FindProcess(pid)
@@ -297,12 +297,12 @@ func TestPidFile(t *testing.T) {
 
 	err = <-serverStatus
 	if err != nil {
-		t.Fatal("Unexpected error", err)
+		t.Error("Unexpected error", err)
 	}
 
 	_, err = os.ReadFile(config.PidFilePath)
 	if !os.IsNotExist(err) {
-		t.Fatal("Pid file not removed", err)
+		t.Error("Pid file not removed", err)
 	}
 }
 
@@ -318,7 +318,7 @@ func TestPidFileCreationError(t *testing.T) {
 
 	err := Run(config)
 	if !strings.HasPrefix(err.Error(), "error writing PID file:") {
-		t.Fatal("Pid file creation error not returned", err)
+		t.Error("Pid file creation error not returned", err)
 	}
 }
 
@@ -348,9 +348,8 @@ func TestAppRequestAllowed(t *testing.T) {
 			return
 		}
 		if req.URL.RequestURI() != authQuery("/hello") {
-			// No t.Fatal in request handlers because go panic recovery
-			// reruns panicked handlers and causes test error to be printed
-			// twice
+			// No t.Fatal, because it can be called only in the main test
+			// function go routine.
 			t.Error("Invalid auth request URI", req.URL.RequestURI())
 			return
 		}
@@ -376,13 +375,13 @@ func TestAppRequestAllowed(t *testing.T) {
 
 	expectedBody := "hello"
 	if err = checkResponse(resp, err, http.StatusOK, &expectedBody); err != nil {
-		t.Fatal("Invalid response", err)
+		t.Error("Invalid response", err)
 	}
 	if testEnv.AuthCount != 1 {
-		t.Fatal("Auth request not made")
+		t.Error("Auth request not made")
 	}
 	if testEnv.AppCount != 1 {
-		t.Fatal("App request not made")
+		t.Error("App request not made")
 	}
 }
 
@@ -403,7 +402,7 @@ func TestSiteUrlProto(t *testing.T) {
 	client := &http.Client{}
 	client.Do(req)
 	if testEnv.AuthCount != 1 {
-		t.Fatal("Auth request not made")
+		t.Error("Auth request not made")
 	}
 }
 
@@ -423,13 +422,13 @@ func TestAppRequestLoginNeeded(t *testing.T) {
 	resp, err := http.Get(testEnv.ExternalURL + "/foobar")
 	expectedBody := "login required"
 	if err = checkResponse(resp, err, http.StatusUnauthorized, &expectedBody); err != nil {
-		t.Fatal("Invalid response", err)
+		t.Error("Invalid response", err)
 	}
 	if testEnv.AuthCount != 1 {
-		t.Fatal("Auth request not made")
+		t.Error("Auth request not made")
 	}
 	if testEnv.AppCount != 0 {
-		t.Fatal("App request made")
+		t.Error("App request made")
 	}
 }
 
@@ -456,7 +455,7 @@ func TestAuthBackendNotNeededResponseHeadersStripped(t *testing.T) {
 		resp, err := http.Get(testEnv.ExternalURL + "/wwwhisper/admin")
 		expectedBody := ""
 		if err = checkResponse(resp, err, authReturn, &expectedBody); err != nil {
-			t.Fatal("Invalid response", err)
+			t.Error("Invalid response", err)
 		}
 		headers := []string{"Via", "Nel", "Report-To", "Reporting-Endpoints", "User"}
 		for _, h := range headers {
@@ -468,7 +467,7 @@ func TestAuthBackendNotNeededResponseHeadersStripped(t *testing.T) {
 	}
 
 	if testEnv.AuthCount != 3 {
-		t.Fatal("Auth requests not made")
+		t.Error("Auth requests not made")
 	}
 }
 
@@ -496,10 +495,10 @@ func TestUserHeaderPassedToApp(t *testing.T) {
 	resp, err := client.Do(req)
 	expectedBody := "hello"
 	if err = checkResponse(resp, err, http.StatusOK, &expectedBody); err != nil {
-		t.Fatal("Invalid response", err)
+		t.Error("Invalid response", err)
 	}
 	if testEnv.AppCount != 1 {
-		t.Fatal("App request not made")
+		t.Error("App request not made")
 	}
 }
 
@@ -518,13 +517,13 @@ func TestAuthPathAllowed(t *testing.T) {
 	resp, err := http.Get(testEnv.ExternalURL + "/wwwhisper/auth/login")
 	expectedBody := "login response"
 	if err = checkResponse(resp, err, http.StatusOK, &expectedBody); err != nil {
-		t.Fatal("Invalid response", err)
+		t.Error("Invalid response", err)
 	}
 	if testEnv.AuthCount != 1 {
-		t.Fatal("Auth request not made")
+		t.Error("Auth request not made")
 	}
 	if testEnv.AppCount != 0 {
-		t.Fatal("App request made")
+		t.Error("App request made")
 	}
 }
 
@@ -542,14 +541,14 @@ func TestAuthRequestNonHttpError(t *testing.T) {
 	resp, err := http.Get(testEnv.ExternalURL + "/foo")
 	expectedBody := "Internal server error (auth)\n"
 	if err = checkResponse(resp, err, 500, &expectedBody); err != nil {
-		t.Fatal("Invalid response", err)
+		t.Error("Invalid response", err)
 	}
 
 	if testEnv.AuthCount != 1 {
-		t.Fatal("Auth request not made")
+		t.Error("Auth request not made")
 	}
 	if testEnv.AppCount != 0 {
-		t.Fatal("App request made")
+		t.Error("App request made")
 	}
 }
 
@@ -602,7 +601,7 @@ func TestPathNormalization(t *testing.T) {
 			resp, err := http.Get(testEnv.ExternalURL + test.path_in)
 			expectedBody := "ok"
 			if err = checkResponse(resp, err, http.StatusOK, &expectedBody); err != nil {
-				t.Fatal("Invalid response", err)
+				t.Error("Invalid response", err)
 			}
 		})
 	}
@@ -641,13 +640,13 @@ func TestAdminPathAllowed(t *testing.T) {
 	resp, err := http.Get(testEnv.ExternalURL + "/wwwhisper/admin/x?foo=bar")
 	expectedBody := "admin page"
 	if err = checkResponse(resp, err, http.StatusOK, &expectedBody); err != nil {
-		t.Fatal("Invalid response", err)
+		t.Error("Invalid response", err)
 	}
 	if testEnv.AuthCount != 2 {
-		t.Fatal("Auth requests not made")
+		t.Error("Auth requests not made")
 	}
 	if testEnv.AppCount != 0 {
-		t.Fatal("App request made")
+		t.Error("App request made")
 	}
 }
 
@@ -691,13 +690,13 @@ func TestAdminPostRequest(t *testing.T) {
 	resp, err := http.Post(postURL, "text/plain", strings.NewReader("post-data"))
 	expectedBody := "OK"
 	if err = checkResponse(resp, err, http.StatusOK, &expectedBody); err != nil {
-		t.Fatal("Invalid response", err)
+		t.Error("Invalid response", err)
 	}
 	if testEnv.AuthCount != 2 {
-		t.Fatal("Auth requests not made")
+		t.Error("Auth requests not made")
 	}
 	if testEnv.AppCount != 0 {
-		t.Fatal("App request made")
+		t.Error("App request made")
 	}
 }
 
@@ -739,13 +738,13 @@ func TestProxyVersionPassed(t *testing.T) {
 	expectedBody := "hello"
 
 	if err = checkResponse(resp, err, http.StatusOK, &expectedBody); err != nil {
-		t.Fatal("Invalid response", err)
+		t.Error("Invalid response", err)
 	}
 	if testEnv.AuthCount != 1 {
-		t.Fatal("Auth request not made")
+		t.Error("Auth request not made")
 	}
 	if testEnv.AppCount != 1 {
-		t.Fatal("App request not made")
+		t.Error("App request not made")
 	}
 
 	// /wwwhisper/admin requests should also carry the original User Agent
@@ -754,13 +753,13 @@ func TestProxyVersionPassed(t *testing.T) {
 	resp, err = client.Do(req)
 	expectedBody = "auth response"
 	if err = checkResponse(resp, err, http.StatusOK, &expectedBody); err != nil {
-		t.Fatal("Invalid response", err)
+		t.Error("Invalid response", err)
 	}
 	if testEnv.AuthCount != 3 {
-		t.Fatal("Auth requests not made")
+		t.Error("Auth requests not made")
 	}
 	if testEnv.AppCount != 1 {
-		t.Fatal("App request  made")
+		t.Error("App request  made")
 	}
 }
 
@@ -785,17 +784,17 @@ func TestRedirectPassedFromAppToClient(t *testing.T) {
 	resp, err := client.Do(req)
 	expectedBody := "redirect"
 	if err = checkResponse(resp, err, 302, &expectedBody); err != nil {
-		t.Fatal("Invalid response", err)
+		t.Error("Invalid response", err)
 	}
 	location := resp.Header.Get("location")
 	if location != "https://localhost:9999/foo/bar" {
-		t.Fatal("Location header not returned to client", location)
+		t.Error("Location header not returned to client", location)
 	}
 	if testEnv.AuthCount != 1 {
-		t.Fatal("Auth request not made")
+		t.Error("Auth request not made")
 	}
 	if testEnv.AppCount != 1 {
-		t.Fatal("App request not made")
+		t.Error("App request not made")
 	}
 }
 
@@ -814,7 +813,7 @@ func TestIframeInjection(t *testing.T) {
 		"<script src=\"/wwwhisper/auth/iframe.js\"></script>\n" +
 		"</body></html>"
 	if err = checkResponse(resp, err, 200, &expectedBody); err != nil {
-		t.Fatal("Invalid response", err)
+		t.Error("Invalid response", err)
 	}
 
 	// Iframe should not be injected to not HTML responses
@@ -825,7 +824,7 @@ func TestIframeInjection(t *testing.T) {
 	}
 	resp, err = http.Get(testEnv.ExternalURL + "/foo")
 	if err = checkResponse(resp, err, 200, &responseUnmodified); err != nil {
-		t.Fatal("Invalid response", err)
+		t.Error("Invalid response", err)
 	}
 
 	// Iframe should not be injected to gzipped HTML responses
@@ -840,7 +839,7 @@ func TestIframeInjection(t *testing.T) {
 	}
 	resp, err = http.Get(testEnv.ExternalURL + "/foo")
 	if err = checkResponse(resp, err, 200, &responseUnmodified); err != nil {
-		t.Fatal("Invalid response", err)
+		t.Error("Invalid response", err)
 	}
 
 	// Iframe should not be injected HTML responses without the closing </body> tag.
@@ -852,7 +851,7 @@ func TestIframeInjection(t *testing.T) {
 	}
 	resp, err = http.Get(testEnv.ExternalURL + "/foo")
 	if err = checkResponse(resp, err, 200, &responseNoBody); err != nil {
-		t.Fatal("Invalid response", err)
+		t.Error("Invalid response", err)
 	}
 
 	// Iframe should not be injected wwwhisper backend responses.
@@ -863,7 +862,7 @@ func TestIframeInjection(t *testing.T) {
 	}
 	resp, err = http.Get(testEnv.ExternalURL + "/wwwhisper/admin")
 	if err = checkResponse(resp, err, 200, &responseUnmodified); err != nil {
-		t.Fatal("Invalid response", err)
+		t.Error("Invalid response", err)
 	}
 }
 
@@ -897,7 +896,7 @@ func TestIframeInjectionBodyReadFailure(t *testing.T) {
 	expectedBody := ""
 	resp, err := http.Get(testEnv.ExternalURL + "/foo")
 	if err = checkResponse(resp, err, 502, &expectedBody); err != nil {
-		t.Fatal("Invalid response", err)
+		t.Error("Invalid response", err)
 	}
 }
 
