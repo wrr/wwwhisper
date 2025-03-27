@@ -428,20 +428,22 @@ func die(err error) {
 
 func main() {
 	listenFlag := flag.Int("listen", -1,
-		"Externally accessible local port on which wwwhisper will listen.\n"+
-			"wwwhisper authenticates and authorizes requests incoming to this port.")
+		`Externally accessible local port on which wwwhisper will listen.
+wwwhisper authenticates and authorizes requests incoming to this port.`)
+
 	proxyToFlag := flag.Int("proxyto", -1,
-		"A local port on which a web application listens.\n"+
-			"This port should not be externally accessible, otherwise wwwhisper\n"+
-			"authorization could be bypassed by connecting to this port directly.\n"+
-			"wwwhisper forwards authorized requests to this port.")
-	pidFileFlag := flag.String("pidfile", "", "Path to file where process ID is written.\n"+
-		"The file is removed when the program terminates.")
+		`A local port on which a web application listens.
+This port should not be externally accessible, otherwise wwwhisper
+authorization could be bypassed by connecting to this port directly.
+wwwhisper forwards authorized requests to this port.`)
+
+	pidFileFlag := flag.String("pidfile", "", `Path to file where process ID is written.
+The file is removed when the program terminates.`)
+
 	versionFlag := flag.Bool("version", false, "Print the program version")
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "wwwhisper authorization reverse proxy\n")
-		fmt.Fprintf(os.Stderr, "Options:\n")
+		fmt.Fprintf(os.Stderr, "wwwhisper authorization reverse proxy\nOptions:\n")
 		flag.PrintDefaults()
 	}
 	err := flag.CommandLine.Parse(os.Args[1:])

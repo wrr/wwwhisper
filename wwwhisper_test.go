@@ -809,9 +809,9 @@ func TestIframeInjection(t *testing.T) {
 		rw.Write([]byte(responseUnmodified))
 	}
 	resp, err := http.Get(testEnv.ExternalURL + "/foo")
-	expectedBody := "<html><body>foo\n" +
-		"<script src=\"/wwwhisper/auth/iframe.js\"></script>\n" +
-		"</body></html>"
+	expectedBody := `<html><body>foo
+<script src="/wwwhisper/auth/iframe.js"></script>
+</body></html>`
 	if err = checkResponse(resp, err, 200, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
 	}

@@ -27,7 +27,7 @@ cover-inspect: cover
 clean:
 	go clean
 
-release: build
+release: test
 	tar -cvzf wwwhisper.tgz wwwhisper
 	cp wwwhisper.tgz ../wwwhisper-heroku-buildpack
 
