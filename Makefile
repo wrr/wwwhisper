@@ -12,14 +12,14 @@ build: vet
 	go build
 
 test: build
-	go test
+	go test ./...
 
 # go install honnef.co/go/tools/cmd/staticcheck@latest
 lint: build
 	staticcheck ./...
 
 cover: build
-	go test -v -cover -coverprofile=c.out
+	go test -v -cover -coverprofile=c.out ./...
 
 cover-inspect: cover
 	go tool cover -html=c.out -o=/home/j/tmp/coverage.html

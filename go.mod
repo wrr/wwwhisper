@@ -1,3 +1,3 @@
-module wwwhisper
+module github.com/wrr/wwwhisper
 
 go 1.23
