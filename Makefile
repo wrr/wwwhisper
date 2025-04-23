@@ -9,9 +9,9 @@ vet: fmt
 	go vet ./...
 
 build: vet
-	go build
+	go build ./cmd/wwwhisper
 
-test: build
+test: vet
 	go test ./...
 
 # go install honnef.co/go/tools/cmd/staticcheck@latest
