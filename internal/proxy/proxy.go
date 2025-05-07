@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"path"
 	"strings"
 	"syscall"
 	"time"
@@ -187,30 +186,6 @@ func newReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool, n
 	return proxy
 }
 
-func normalize(url *url.URL) {
-	pathIn := url.Path
-	pahtOut := path.Clean(pathIn)
-	if strings.HasSuffix(pathIn, "/") && !strings.HasSuffix(pahtOut, "/") {
-		pahtOut += "/"
-	}
-	if !strings.HasPrefix(pahtOut, "/") {
-		pahtOut = "/" + pahtOut
-	}
-	url.Path = pahtOut
-	// if RawPath is empty it is assumed to be equal to Path
-	// (RequestURI() will just use Path and will not contain any escaped
-	// elements).
-	//
-	// This approach makes it impossible to use wwwhisper for apps that
-	// encode data in paths, paths are always authenticated and then
-	// passed to the app as decoded, the information which parts were
-	// encoded is lost. This is to ensure auth layer and app interpret
-	// the path in the same way. For example a request to /admin/%2E%2E/
-	// is normalized as the request to the root document /, and app never sees
-	// the original /admin/%2E%2E/ path.
-	url.RawPath = ""
-}
-
 func newAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Handler) http.Handler {
 	authURL := wwwhisperURL.String() + "/wwwhisper/auth/api/is-authorized/?path="
 	// Connection keepalive is on by default.
@@ -242,7 +217,7 @@ func newAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		start := time.Now()
-		normalize(req.URL)
+		normalizePath(req.URL)
 
 		authStatus := ""
 		statusCode := 0
