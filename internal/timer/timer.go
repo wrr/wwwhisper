@@ -1,0 +1,30 @@
+// Package timer provides a simple timer for tracking when the
+// specific time duration has elapsed.
+package timer
+
+import (
+	"time"
+)
+
+type timer struct {
+	duration time.Duration
+	started  time.Time
+}
+
+// Expired returns true if the timer's duration has elapsed since it was started.
+func (r *timer) Expired() bool {
+	return time.Since(r.started) > r.duration
+}
+
+// Start sets the timer's start time to the current time.
+func (r *timer) Start() {
+	r.started = time.Now()
+}
+
+// NewTimer creates and returns a new timer with the specified duration.
+// Note that the timer is not started automatically.
+func NewTimer(duration time.Duration) *timer {
+	return &timer{
+		duration: duration,
+	}
+}
