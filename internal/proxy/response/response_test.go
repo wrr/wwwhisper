@@ -1,4 +1,4 @@
-package proxy
+package response
 
 import (
 	"testing"

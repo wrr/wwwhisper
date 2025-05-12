@@ -1,37 +1,19 @@
 package proxy
 
-type WhoamiResponse struct {
-	// ModId is an identifier that changes each time the site is
-	// modified (Locations or LoginNeeded page content changes). The
-	// changed ModId allows to detect these changes and refresh the
-	// cached content.
-	ModId   int    `json:"modId"`
-	ID      string `json:"id"`      // Unique identifier of the user.
-	Email   string `json:"email"`   // Email of the user
-	IsAdmin bool   `json:"isAdmin"` // True if the user can access the site admin
-}
-
-type LocationsResponse struct {
-	// See ModId comment in WhoamiResponse. When WhoamiResponse contains
-	// ModId different than the one returned in LocationsResponse, it
-	// indicates that LocationsResponse could have changed and
-	// needs to be refreshed.
-	ModId     int        `json:"modId"`
-	Locations []Location `json:"locations"`
-}
+import "github.com/wrr/wwwhispergo/internal/proxy/response"
 
 type AuthStore interface {
 	// Whoami returns information about the user based on their cookie.
 	// If the user is not authenticated (cookie is not recognized),
-	// Whoami still returns WhoamiResponse with ID and Email set to ''
+	// Whoami still returns response.Whoami with ID and Email set to ''
 	// (no error is returned in such case).
 	// Returns an error if the user information cannot be retrieved.
-	Whoami(cookie string) (*WhoamiResponse, error)
+	Whoami(cookie string) (*response.Whoami, error)
 
 	// Locations returns a list of site locations for which access
 	// control rules are defined.
 	// Returns an error if the locations cannot be retrieved.
-	Locations() (*LocationsResponse, error)
+	Locations() (*response.Locations, error)
 
 	// LoginNeededPage returns the HTML content of a login page. The
 	// page should be returned to users that try to access protected

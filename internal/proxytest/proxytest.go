@@ -3,43 +3,51 @@ package proxytest
 import (
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"testing"
 
-	"github.com/wrr/wwwhispergo/internal/proxy"
+	"github.com/wrr/wwwhispergo/internal/proxy/response"
 )
 
-type Store struct {
-	handler     http.Handler
+type AuthServer struct {
+	server      *httptest.Server
+	URL         *url.URL
 	ModId       int
-	Users       map[string]proxy.WhoamiResponse
-	Locations   []proxy.Location
+	Users       map[string]response.Whoami
+	Locations   []response.Location
 	LoginNeeded string
 	Forbidden   string
 }
 
-func NewStore() *Store {
-	mux := http.NewServeMux()
-	users := make(map[string]proxy.WhoamiResponse)
-	users["alice-cookie"] = proxy.WhoamiResponse{
+func (a *AuthServer) Close() {
+	defer a.server.Close()
+}
+
+func NewAuthServer(t *testing.T) *AuthServer {
+	t.Helper()
+	users := make(map[string]response.Whoami)
+	users["alice-cookie"] = response.Whoami{
 		ID:      "alice",
 		Email:   "alice@example.com",
 		IsAdmin: true,
 	}
-	users["bob-cookie"] = proxy.WhoamiResponse{
+	users["bob-cookie"] = response.Whoami{
 		ID:      "bob",
 		Email:   "bob@example.org",
 		IsAdmin: false,
 	}
 
-	store := &Store{
-		handler: mux,
-		Users:   users,
-		Locations: []proxy.Location{
+	store := &AuthServer{
+		ModId: 23,
+		Users: users,
+		Locations: []response.Location{
 			{
 				Path:       "/",
 				ID:         "loc-root",
 				Self:       "/api/locations/loc-root",
 				OpenAccess: false,
-				AllowedUsers: []proxy.User{
+				AllowedUsers: []response.User{
 					{
 						ID:    "alice",
 						Email: "alice@example.com",
@@ -63,7 +71,7 @@ func NewStore() *Store {
 				Self:       "/api/locations/loc-protected",
 				ID:         "loc-protected",
 				OpenAccess: false,
-				AllowedUsers: []proxy.User{
+				AllowedUsers: []response.User{
 					{
 						ID:    "alice",
 						Email: "alice@example.com",
@@ -76,6 +84,7 @@ func NewStore() *Store {
 		Forbidden:   "<html><body>Forbidden</body></html>",
 	}
 
+	mux := http.NewServeMux()
 	mux.HandleFunc("/api/whoami/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -88,7 +97,7 @@ func NewStore() *Store {
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
 			return
 		}
-		resp := proxy.WhoamiResponse{
+		resp := response.Whoami{
 			ModId: store.ModId,
 		}
 		user, ok := store.Users[requestBody.Cookie]
@@ -110,9 +119,9 @@ func NewStore() *Store {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		resp := proxy.LocationsResponse{
-			ModId:     store.ModId,
-			Locations: store.Locations,
+		resp := response.Locations{
+			ModId:   store.ModId,
+			Entries: store.Locations,
 		}
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			http.Error(w, "Error encoding response", http.StatusInternalServerError)
@@ -139,5 +148,11 @@ func NewStore() *Store {
 		w.Write([]byte(store.Forbidden))
 	})
 
+	store.server = httptest.NewServer(mux)
+	url, err := url.Parse(store.server.URL)
+	if err != nil {
+		t.Fatalf("Failed to parse server URL: %v", err)
+	}
+	store.URL = url
 	return store
 }
