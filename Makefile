@@ -12,7 +12,7 @@ build: vet
 	go build ./cmd/wwwhisper
 
 test: vet
-	go test -v ./...
+	go test ./...
 
 # go install honnef.co/go/tools/cmd/staticcheck@latest
 lint: build

@@ -11,17 +11,26 @@ import (
 )
 
 type AuthServer struct {
-	server      *httptest.Server
-	URL         *url.URL
-	ModId       int
-	Users       map[string]response.Whoami
-	Locations   []response.Location
-	LoginNeeded string
-	Forbidden   string
+	server          *httptest.Server
+	URL             *url.URL
+	ModId           int
+	Users           map[string]response.Whoami
+	Locations       []response.Location
+	LoginNeeded     string
+	Forbidden       string
+	StatusCode      int
+	ContentTypeHTML string
 }
 
 func (a *AuthServer) Close() {
 	defer a.server.Close()
+}
+
+func (a *AuthServer) ReturnInvalidJson() {
+	a.server.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"invalid JSON`))
+	})
 }
 
 func NewAuthServer(t *testing.T) *AuthServer {
@@ -38,7 +47,7 @@ func NewAuthServer(t *testing.T) *AuthServer {
 		IsAdmin: false,
 	}
 
-	store := &AuthServer{
+	server := &AuthServer{
 		ModId: 23,
 		Users: users,
 		Locations: []response.Location{
@@ -80,8 +89,10 @@ func NewAuthServer(t *testing.T) *AuthServer {
 				},
 			},
 		},
-		LoginNeeded: "<html><body>Login needed</body></html>",
-		Forbidden:   "<html><body>Forbidden</body></html>",
+		LoginNeeded:     "<html><body>Login needed</body></html>",
+		Forbidden:       "<html><body>Forbidden</body></html>",
+		StatusCode:      http.StatusOK,
+		ContentTypeHTML: "text/html; charset=utf-8",
 	}
 
 	mux := http.NewServeMux()
@@ -98,15 +109,16 @@ func NewAuthServer(t *testing.T) *AuthServer {
 			return
 		}
 		resp := response.Whoami{
-			ModId: store.ModId,
+			ModId: server.ModId,
 		}
-		user, ok := store.Users[requestBody.Cookie]
+		user, ok := server.Users[requestBody.Cookie]
 		if ok {
 			resp.ID = user.ID
 			resp.Email = user.Email
 			resp.IsAdmin = user.IsAdmin
 		}
 		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(server.StatusCode)
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			http.Error(w, "Error encoding response", http.StatusInternalServerError)
 		}
@@ -119,9 +131,10 @@ func NewAuthServer(t *testing.T) *AuthServer {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(server.StatusCode)
 		resp := response.Locations{
-			ModId:   store.ModId,
-			Entries: store.Locations,
+			ModId:   server.ModId,
+			Entries: server.Locations,
 		}
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			http.Error(w, "Error encoding response", http.StatusInternalServerError)
@@ -134,8 +147,9 @@ func NewAuthServer(t *testing.T) *AuthServer {
 			return
 		}
 
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write([]byte(store.LoginNeeded))
+		w.Header().Set("Content-Type", server.ContentTypeHTML)
+		w.WriteHeader(server.StatusCode)
+		w.Write([]byte(server.LoginNeeded))
 	})
 
 	mux.HandleFunc("/api/forbidden/", func(w http.ResponseWriter, r *http.Request) {
@@ -144,15 +158,16 @@ func NewAuthServer(t *testing.T) *AuthServer {
 			return
 		}
 
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write([]byte(store.Forbidden))
+		w.Header().Set("Content-Type", server.ContentTypeHTML)
+		w.WriteHeader(server.StatusCode)
+		w.Write([]byte(server.Forbidden))
 	})
 
-	store.server = httptest.NewServer(mux)
-	url, err := url.Parse(store.server.URL)
+	server.server = httptest.NewServer(mux)
+	url, err := url.Parse(server.server.URL)
 	if err != nil {
 		t.Fatalf("Failed to parse server URL: %v", err)
 	}
-	store.URL = url
-	return store
+	server.URL = url
+	return server
 }
