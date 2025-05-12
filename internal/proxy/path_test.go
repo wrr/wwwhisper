@@ -7,7 +7,7 @@ import (
 
 func TestNormalizePath(t *testing.T) {
 	testCases := []struct {
-		path_in    string
+		path_in  string
 		path_out string
 	}{
 		{"/", "/"},

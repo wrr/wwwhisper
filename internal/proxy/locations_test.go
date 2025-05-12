@@ -216,7 +216,7 @@ func TestMatchingLocationNoRootEntry(t *testing.T) {
 		t.Run("["+tt.path+"]", func(t *testing.T) {
 			got := MatchingLocation(locations, tt.path)
 			if got == nil {
-				if (tt.expectedID != "") {
+				if tt.expectedID != "" {
 					t.Errorf("MatchingLocation() = nil expected %v", tt.expectedID)
 				}
 				return
