@@ -21,7 +21,7 @@ func (r *timer) Start() {
 	r.started = time.Now()
 }
 
-// NewTimer creates and returns a new timer with the specified duration.
+// NewTimer creates and returns a timer with the specified duration.
 // Note that the timer is not started automatically.
 func NewTimer(duration time.Duration) *timer {
 	return &timer{
