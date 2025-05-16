@@ -2,6 +2,8 @@ package proxytest
 
 import (
 	"encoding/json"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -14,7 +16,7 @@ type AuthServer struct {
 	server          *httptest.Server
 	URL             *url.URL
 	ModId           int
-	Users           map[string]response.Whoami
+	Users           map[string]*response.Whoami
 	Locations       []response.Location
 	LoginNeeded     string
 	Forbidden       string
@@ -35,13 +37,13 @@ func (a *AuthServer) ReturnInvalidJson() {
 
 func NewAuthServer(t *testing.T) *AuthServer {
 	t.Helper()
-	users := make(map[string]response.Whoami)
-	users["alice-cookie"] = response.Whoami{
+	users := make(map[string]*response.Whoami)
+	users["alice-cookie"] = &response.Whoami{
 		ID:      "alice",
 		Email:   "alice@example.com",
 		IsAdmin: true,
 	}
-	users["bob-cookie"] = response.Whoami{
+	users["bob-cookie"] = &response.Whoami{
 		ID:      "bob",
 		Email:   "bob@example.org",
 		IsAdmin: false,
@@ -170,4 +172,10 @@ func NewAuthServer(t *testing.T) *AuthServer {
 	}
 	server.URL = url
 	return server
+}
+
+func NewLogger() *slog.Logger {
+	options := &slog.HandlerOptions{}
+	handler := slog.NewTextHandler(io.Discard /*os.Stderr*/, options)
+	return slog.New(handler)
 }
