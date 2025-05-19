@@ -15,19 +15,19 @@ type fakeTimer struct {
 	t             *testing.T
 	expiredReturn bool
 	factory       func(time.Duration) Timer
-	startCalled   bool
+	startCalled   int
 }
 
 func (ft *fakeTimer) Expired() bool {
 	ft.t.Helper()
-	if !ft.startCalled {
+	if ft.startCalled == 0 {
 		ft.t.Fatalf("Accessing not started timer")
 	}
 	return ft.expiredReturn
 }
 
 func (ft *fakeTimer) Start() {
-	ft.startCalled = true
+	ft.startCalled += 1
 }
 
 func NewFakeTimer(t *testing.T, expired bool) *fakeTimer {
@@ -263,5 +263,69 @@ func TestCachingAuthStore_ForbiddenPage(t *testing.T) {
 	page, err = cachingStore.ForbiddenPage()
 	if err = check(page, err, newPage, ""); err != nil {
 		t.Error(err)
+	}
+}
+
+func TestCachingAuthStore_ModIdTriggersCacheRefresh(t *testing.T) {
+	authServer, timer, cachingStore := newDeps(t)
+	defer authServer.Close()
+
+	checkResponses := func(loginNeeded string, forbidden string, locations *response.Locations) {
+		t.Helper()
+		page, err := cachingStore.LoginNeededPage()
+		if err = check(page, err, loginNeeded, ""); err != nil {
+			t.Error(err)
+		}
+		page, err = cachingStore.ForbiddenPage()
+		if err = check(page, err, forbidden, ""); err != nil {
+			t.Error(err)
+		}
+		l, err := cachingStore.Locations()
+		if err = check(l, err, locations, ""); err != nil {
+			t.Error(err)
+		}
+	}
+
+	origLoginNeeded := authServer.LoginNeeded
+	origForbidden := authServer.Forbidden
+	locations := &response.Locations{
+		ModId:   authServer.ModId,
+		Entries: make([]response.Location, len(authServer.Locations)),
+	}
+	copy(locations.Entries, authServer.Locations)
+
+	checkResponses(origLoginNeeded, origForbidden, locations)
+	if timer.startCalled != 3 {
+		// Each cached entry should have a separate timer.
+		t.Error("Unexpected timer starts", timer.startCalled)
+	}
+
+	// New version of cached content is available, but the cache is not stalled
+	// so still returns the old version
+	authServer.Forbidden = "new forbidden page"
+	authServer.LoginNeeded = "new login needed page"
+	authServer.Locations[0].Path = "/new-root"
+	checkResponses(origLoginNeeded, origForbidden, locations)
+
+	// whoami response with the same modId should not trigger the cache
+	// refresh.
+	_, _ = cachingStore.Whoami("alice-cookie")
+	checkResponses(origLoginNeeded, origForbidden, locations)
+	// Whoami response with the same ModId should restart all three
+	// existing timers and start a new timer for the user entry.
+	if timer.startCalled != 7 {
+		t.Error("Unexpected timer starts", timer.startCalled)
+	}
+
+	// whoami response with different modIf should trigger the cache
+	// refresh.
+	authServer.ModId += 1
+	_, _ = cachingStore.Whoami("bob-cookie")
+	locations.Entries[0].Path = "/new-root"
+	locations.ModId = authServer.ModId
+	checkResponses(authServer.LoginNeeded, authServer.Forbidden, locations)
+
+	if timer.startCalled != 11 {
+		t.Error("Unexpected timer starts", timer.startCalled)
 	}
 }
