@@ -1,3 +1,6 @@
+// caching_auth_store provides implementation of the AuthStore which
+// wraps the real AuthStore and caches data to limit communication
+// with it.
 package proxy
 
 import (
@@ -18,48 +21,75 @@ const sessionCacheValidity = 10 * time.Minute
 // TODO: Shorter, but bump with each whoami response
 const pageCacheValidity = 10 * time.Minute
 
+// See github.com/wrr/wwwhispergo/internal/timer
 type Timer interface {
 	Expired() bool
 	Start()
 }
 
+// TimerFactory creates a timer. Allows to use fake timers in tests.
+// Created timer is not started, Start() must be called before the
+// first call to Expired().
 type TimerFactory func(time.Duration) Timer
 
+// A cacheEntry is a structure that hold hashed data of type T.
 type cacheEntry[T any] struct {
+	// Timer that counts time to the cachEntry data expiration.
 	timer   Timer
-	value   T
+	value   T // Cached data
+	// True if the data was marked as stalled. Data can be stalled even
+	// if the timer has not yet expired.
 	stalled bool
 }
 
+// Get returns the cached data and a bool information if it was marked
+// as stalled or the cache timer has expired.
 func (c *cacheEntry[T]) Get() (T, bool) {
 	stalled := c.stalled || c.timer.Expired()
 	return c.value, stalled
 }
 
+// Sets the cached data. Restarts the timer and marks the entry as not
+// stalled.
 func (c *cacheEntry[T]) Set(v T) {
 	c.value = v
 	c.stalled = false
 	c.timer.Start()
 }
 
+// Marks the cached data as stalled.
 func (c *cacheEntry[T]) MarkStalled() {
 	c.stalled = true
 }
 
-func NewCacheEntry[T any](timer Timer) *cacheEntry[T] {
+func newCacheEntry[T any](timer Timer) *cacheEntry[T] {
 	return &cacheEntry[T]{
 		timer:   timer,
 		stalled: true,
 	}
 }
 
+// A cachingAuthStore is a wrapper (decorator) around an AuthStore,
+// exposing the same interface. It caches results returned by the auth
+// store to limit the frequency of communication with the auth store.
+//
+// The cached content is refreshed once a timer associated with the
+// cacheEntry expire, or when response.Whoami incoming from the
+// authStore has modId different from the previously received modId.
 type cachingAuthStore struct {
+	// The wrapped AuthStore which provides the actual data.
 	authStore         AuthStore
+	// Creates new timers which are then used to determine when cache
+	// entries should be refreshed.
 	newTimer          TimerFactory
 	log               *slog.Logger
+	// Maps a hashed user cookie to the whoami data for the user.
 	users             map[string]*cacheEntry[*response.Whoami]
+	// Last locationsResponse received from the authStore.
 	locationsResponse cacheEntry[*response.Locations]
+	// Last loginNeeded page received from the authStore.
 	loginNeededPage   cacheEntry[string]
+	// Last forbidden page received from the authStore.
 	forbiddenPage     cacheEntry[string]
 }
 
@@ -69,9 +99,9 @@ func NewCachingAuthStore(authStore AuthStore, newTimer TimerFactory, log *slog.L
 		newTimer:          newTimer,
 		log:               log,
 		users:             make(map[string]*cacheEntry[*response.Whoami]),
-		locationsResponse: *NewCacheEntry[*response.Locations](newTimer(locationValidity)),
-		loginNeededPage:   *NewCacheEntry[string](newTimer(pageCacheValidity)),
-		forbiddenPage:     *NewCacheEntry[string](newTimer(pageCacheValidity)),
+		locationsResponse: *newCacheEntry[*response.Locations](newTimer(locationValidity)),
+		loginNeededPage:   *newCacheEntry[string](newTimer(pageCacheValidity)),
+		forbiddenPage:     *newCacheEntry[string](newTimer(pageCacheValidity)),
 	}
 }
 
@@ -83,6 +113,7 @@ func secureHash(cookie string) string {
 
 func (c *cachingAuthStore) checkFreshness(modId int) {
 	if c.locationsResponse.value == nil {
+		// Locations not yet retrieved.
 		return
 	}
 
@@ -91,7 +122,7 @@ func (c *cachingAuthStore) checkFreshness(modId int) {
 		c.loginNeededPage.MarkStalled()
 		c.forbiddenPage.MarkStalled()
 	} else {
-		// Reset the cached entries timers
+		// The site hasn't changed, reset the cached entries timers
 		c.locationsResponse.timer.Start()
 		if c.loginNeededPage.value != "" {
 			c.loginNeededPage.timer.Start()
@@ -102,8 +133,18 @@ func (c *cachingAuthStore) checkFreshness(modId int) {
 	}
 }
 
+
+// See the AuthStore interface comments. cachingAuthStore.Whoami
+// Returns cached response if it is not expired or if a request to get
+// a fresh Whoami response fails. Error is returned only if the first
+// request to retrieve the Whoami response fails.
+//
+// If response.Whoami contains modId different from the modId of the
+// currently cached locationsResponse, marks cached locations, login
+// and forbidden pages as stalled (modId indicates that the site
+// configuration was modified).
 func (c *cachingAuthStore) Whoami(cookie string) (*response.Whoami, error) {
-	// hashCookie to prevent cache lookup timing attacks
+	// Hash the cookie to prevent cache lookup timing attacks
 	hashedCookie := secureHash(cookie)
 	cacheEntry, ok := c.users[hashedCookie]
 	var respCached *response.Whoami
@@ -126,17 +167,21 @@ func (c *cachingAuthStore) Whoami(cookie string) (*response.Whoami, error) {
 	c.checkFreshness(freshResp.ModId)
 	if !ok {
 		// TODO: limit cache size.
-		cacheEntry = NewCacheEntry[*response.Whoami](c.newTimer(sessionCacheValidity))
+		cacheEntry = newCacheEntry[*response.Whoami](c.newTimer(sessionCacheValidity))
 		c.users[hashedCookie] = cacheEntry
 	}
 	cacheEntry.Set(freshResp)
 	return freshResp, nil
 }
 
+// See the AuthStore interface comments. If cached location data is
+// stalled, attempts to refresh it, but fallbacks to stalled location
+// data if the refresh request fails. Error is returned only if the
+// first request to get locations fails.
 func (c *cachingAuthStore) Locations() (*response.Locations, error) {
 	resp, stalled := c.locationsResponse.Get()
 	if stalled {
-		// TODO: some retry mechanis?
+		// TODO: some retry mechanism?
 		freshResp, err := c.authStore.Locations()
 		if err != nil {
 			c.log.Warn(err.Error())
@@ -151,6 +196,7 @@ func (c *cachingAuthStore) Locations() (*response.Locations, error) {
 	return resp, nil
 }
 
+// See the AuthStore interface comments.
 func (c *cachingAuthStore) LoginNeededPage() (string, error) {
 	page, stalled := c.loginNeededPage.Get()
 	if stalled {
@@ -170,6 +216,7 @@ func (c *cachingAuthStore) LoginNeededPage() (string, error) {
 	return page, nil
 }
 
+// See the AuthStore interface comments.
 func (c *cachingAuthStore) ForbiddenPage() (string, error) {
 	page, stalled := c.forbiddenPage.Get()
 	if stalled {
