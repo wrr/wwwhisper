@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -58,6 +59,25 @@ func TestSecureHash(t *testing.T) {
 	}
 }
 
+func check[T any](resp T, err error, expectedResp T, expectedErr string) error {
+	if err != nil {
+		if expectedErr == "" {
+			return fmt.Errorf("unexpected error %v", err)
+		}
+		if !strings.Contains(err.Error(), expectedErr) {
+			return fmt.Errorf("unexpected error %v vs %v", err, expectedErr)
+		}
+		return nil
+	}
+	if expectedErr != "" {
+		return fmt.Errorf("expected error not returned %v", expectedErr)
+	}
+	if !reflect.DeepEqual(resp, expectedResp) {
+		return fmt.Errorf("unexpected result %#v vs %#v", resp, expectedResp)
+	}
+	return nil
+}
+
 func TestCachingAuthStore_Whoami(t *testing.T) {
 	authServer := proxytest.NewAuthServer(t)
 	defer authServer.Close()
@@ -69,32 +89,25 @@ func TestCachingAuthStore_Whoami(t *testing.T) {
 
 	// First request to get the user fails, error should be propageted.
 	authServer.StatusCode = 507
-	_, err := cachingStore.Whoami("alice-cookie")
-	if err == nil || !strings.Contains(err.Error(), "whoami failed: 507") {
-		t.Errorf("Unexpected error %v", err)
+	resp, err := cachingStore.Whoami("alice-cookie")
+	if err = check(resp, err, nil, "whoami failed: 507"); err != nil {
+		t.Error(err)
 	}
 
 	authServer.StatusCode = 200
-	resp, err := cachingStore.Whoami("alice-cookie")
-	if err != nil {
-		t.Errorf("Unexpected error %v", err)
-	}
+	resp, err = cachingStore.Whoami("alice-cookie")
 	expected := *authServer.Users["alice-cookie"]
 	expected.ModId = authServer.ModId
-
-	if !reflect.DeepEqual(*resp, expected) {
-		t.Errorf("Unexpected response %#v vs %#v", *resp, expected)
+	if err = check(resp, err, &expected, ""); err != nil {
+		t.Error(err)
 	}
 
 	// New user data is available, but the cache is not stalled, so
 	// still returns the old version.
 	authServer.Users["alice-cookie"].Email = "alice@new-example.org"
 	resp, err = cachingStore.Whoami("alice-cookie")
-	if err != nil {
-		t.Errorf("Unexpected error %v", err)
-	}
-	if !reflect.DeepEqual(*resp, expected) {
-		t.Errorf("Unexpected response %#v vs %#v", *resp, expected)
+	if err = check(resp, err, &expected, ""); err != nil {
+		t.Error(err)
 	}
 
 	// If the cache is stalled, but the request to refresh if fails, the
@@ -102,22 +115,16 @@ func TestCachingAuthStore_Whoami(t *testing.T) {
 	timer.expiredReturn = true
 	authServer.StatusCode = 507
 	resp, err = cachingStore.Whoami("alice-cookie")
-	if err != nil {
-		t.Errorf("Unexpected error %v", err)
-	}
-	if !reflect.DeepEqual(*resp, expected) {
-		t.Errorf("Unexpected response %#v vs %#v", *resp, expected)
+	if err = check(resp, err, &expected, ""); err != nil {
+		t.Error(err)
 	}
 
 	// Now the cache should refresh successfully.
 	authServer.StatusCode = 200
 	resp, err = cachingStore.Whoami("alice-cookie")
-	if err != nil {
-		t.Errorf("Unexpected error %v", err)
-	}
 	expected.Email = "alice@new-example.org"
-	if !reflect.DeepEqual(*resp, expected) {
-		t.Errorf("Unexpected response %#v vs %#v", *resp, expected)
+	if err = check(resp, err, &expected, ""); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -133,35 +140,28 @@ func TestCachingAuthStore_Locations(t *testing.T) {
 
 	// First request to get the locations fails, error should be propageted.
 	authServer.StatusCode = 507
-	_, err := cachingStore.Locations()
-	if err == nil || !strings.Contains(err.Error(), "get locations failed: 507") {
-		t.Errorf("Unexpected error %v", err)
+	locations, err := cachingStore.Locations()
+	if err = check(locations, err, nil, "get locations failed: 507"); err != nil {
+		t.Error(err)
 	}
 
 	authServer.StatusCode = 200
-	locations, err := cachingStore.Locations()
-	if err != nil {
-		t.Errorf("Unexpected error %v", err)
-	}
+	locations, err = cachingStore.Locations()
 	expected := response.Locations{
 		ModId:   authServer.ModId,
 		Entries: make([]response.Location, len(authServer.Locations)),
 	}
 	copy(expected.Entries, authServer.Locations)
-
-	if !reflect.DeepEqual(*locations, expected) {
-		t.Errorf("Unexpected locations %v vs %v", locations, expected)
+	if err = check(locations, err, &expected, ""); err != nil {
+		t.Error(err)
 	}
 
 	// New version of locations is available, but the cache is not
 	// stalled so still returns the old version
 	authServer.Locations[0].Path = "/new-root"
 	locations, err = cachingStore.Locations()
-	if err != nil {
-		t.Errorf("Unexpected error %v", err)
-	}
-	if !reflect.DeepEqual(*locations, expected) {
-		t.Errorf("Unexpected locations %v vs %v", locations, expected)
+	if err = check(locations, err, &expected, ""); err != nil {
+		t.Error(err)
 	}
 
 	// If the cache is stalled, but the request to refresh if fails, the
@@ -169,22 +169,16 @@ func TestCachingAuthStore_Locations(t *testing.T) {
 	timer.expiredReturn = true
 	authServer.StatusCode = 507
 	locations, err = cachingStore.Locations()
-	if err != nil {
-		t.Errorf("Unexpected error %v", err)
-	}
-	if !reflect.DeepEqual(*locations, expected) {
-		t.Errorf("Unexpected locations %v vs %v", locations, expected)
+	if err = check(locations, err, &expected, ""); err != nil {
+		t.Error(err)
 	}
 
 	// Now the cache should refresh successfully.
 	authServer.StatusCode = 200
 	locations, err = cachingStore.Locations()
-	if err != nil {
-		t.Errorf("Unexpected error %v", err)
-	}
 	expected.Entries[0].Path = "/new-root"
-	if !reflect.DeepEqual(*locations, expected) {
-		t.Errorf("Unexpected locations %v vs %v", locations, expected)
+	if err = check(locations, err, &expected, ""); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -199,18 +193,15 @@ func TestCachingAuthStore_LoginNeededPage(t *testing.T) {
 
 	// First request to get the page fails, error should be propageted.
 	authServer.StatusCode = 507
-	_, err := cachingStore.LoginNeededPage()
-	if err == nil || !strings.Contains(err.Error(), "get /api/login-needed/ failed: 507") {
-		t.Errorf("Unexpected error %v", err)
+	page, err := cachingStore.LoginNeededPage()
+	if err = check(page, err, "", "get /api/login-needed/ failed: 507"); err != nil {
+		t.Error(err)
 	}
 
 	authServer.StatusCode = 200
-	page, err := cachingStore.LoginNeededPage()
-	if err != nil {
-		t.Errorf("Unexpected error %v", err)
-	}
-	if page != authServer.LoginNeeded {
-		t.Errorf("Unexpected page %s", page)
+	page, err = cachingStore.LoginNeededPage()
+	if err = check(page, err, authServer.LoginNeeded, ""); err != nil {
+		t.Error(err)
 	}
 
 	// New version of a page is available, but the cache is not stalled
@@ -218,34 +209,23 @@ func TestCachingAuthStore_LoginNeededPage(t *testing.T) {
 	origPage := authServer.LoginNeeded
 	newPage := "new version of a  page"
 	authServer.LoginNeeded = newPage
-	page, err = cachingStore.LoginNeededPage()
-	if err != nil {
-		t.Errorf("Unexpected error %v", err)
-	}
-	if page != origPage {
-		t.Errorf("Unexpected page %s", page)
+	if err = check(page, err, origPage, ""); err != nil {
+		t.Error(err)
 	}
 
 	// If the cache is stalled, but the request to refresh if fails, the
 	// old version of the page should be returned.
 	timer.expiredReturn = true
 	authServer.StatusCode = 507
-	page, err = cachingStore.LoginNeededPage()
-	if err != nil {
-		t.Errorf("Unexpected error %v", err)
-	}
-	if page != origPage {
-		t.Errorf("Unexpected page %s", page)
+	if err = check(page, err, origPage, ""); err != nil {
+		t.Error(err)
 	}
 
 	// Now the cache should refresh successfully.
 	authServer.StatusCode = 200
 	page, err = cachingStore.LoginNeededPage()
-	if err != nil {
-		t.Errorf("Unexpected error %v", err)
-	}
-	if page != newPage {
-		t.Errorf("Unexpected page %s", page)
+	if err = check(page, err, newPage, ""); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -260,18 +240,15 @@ func TestCachingAuthStore_ForbiddenPage(t *testing.T) {
 
 	// First request to get the page fails, error should be propageted.
 	authServer.StatusCode = 507
-	_, err := cachingStore.ForbiddenPage()
-	if err == nil || !strings.Contains(err.Error(), "get /api/forbidden/ failed: 507") {
-		t.Errorf("Unexpected error %v", err)
+	page, err := cachingStore.ForbiddenPage()
+	if err = check(page, err, "", "get /api/forbidden/ failed: 507"); err != nil {
+		t.Error(err)
 	}
 
 	authServer.StatusCode = 200
-	page, err := cachingStore.ForbiddenPage()
-	if err != nil {
-		t.Errorf("Unexpected error %v", err)
-	}
-	if page != authServer.Forbidden {
-		t.Errorf("Unexpected page %s", page)
+	page, err = cachingStore.ForbiddenPage()
+	if err = check(page, err, authServer.Forbidden, ""); err != nil {
+		t.Error(err)
 	}
 
 	// New version of a page is available, but the cache is not stalled
@@ -280,11 +257,8 @@ func TestCachingAuthStore_ForbiddenPage(t *testing.T) {
 	newPage := "new version of a  page"
 	authServer.Forbidden = newPage
 	page, err = cachingStore.ForbiddenPage()
-	if err != nil {
-		t.Errorf("Unexpected error %v", err)
-	}
-	if page != origPage {
-		t.Errorf("Unexpected page %s", page)
+	if err = check(page, err, origPage, ""); err != nil {
+		t.Error(err)
 	}
 
 	// If the cache is stalled, but the request to refresh if fails, the
@@ -292,20 +266,14 @@ func TestCachingAuthStore_ForbiddenPage(t *testing.T) {
 	timer.expiredReturn = true
 	authServer.StatusCode = 507
 	page, err = cachingStore.ForbiddenPage()
-	if err != nil {
-		t.Errorf("Unexpected error %v", err)
-	}
-	if page != origPage {
-		t.Errorf("Unexpected page %s", page)
+	if err = check(page, err, origPage, ""); err != nil {
+		t.Error(err)
 	}
 
 	// Now the cache should refresh successfully.
 	authServer.StatusCode = 200
 	page, err = cachingStore.ForbiddenPage()
-	if err != nil {
-		t.Errorf("Unexpected error %v", err)
-	}
-	if page != newPage {
-		t.Errorf("Unexpected page %s", page)
+	if err = check(page, err, newPage, ""); err != nil {
+		t.Error(err)
 	}
 }
