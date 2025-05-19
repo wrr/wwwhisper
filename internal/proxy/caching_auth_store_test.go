@@ -43,6 +43,15 @@ func NewFakeTimer(t *testing.T, expired bool) *fakeTimer {
 	return ft
 }
 
+func newDeps(t *testing.T) (*proxytest.AuthServer, *fakeTimer, *cachingAuthStore) {
+	authServer := proxytest.NewAuthServer(t)
+	remoteStore := NewRemoteAuthStore(authServer.URL)
+	timer := NewFakeTimer(t, false)
+	logger := proxytest.NewLogger()
+	cachingStore := NewCachingAuthStore(remoteStore, timer.factory, logger)
+	return authServer, timer, cachingStore
+}
+
 func TestSecureHash(t *testing.T) {
 	hash1 := secureHash("test-cookie")
 	hash2 := secureHash("test-cookie")
@@ -79,13 +88,8 @@ func check[T any](resp T, err error, expectedResp T, expectedErr string) error {
 }
 
 func TestCachingAuthStore_Whoami(t *testing.T) {
-	authServer := proxytest.NewAuthServer(t)
+	authServer, timer, cachingStore := newDeps(t)
 	defer authServer.Close()
-
-	remoteStore := NewRemoteAuthStore(authServer.URL)
-	timer := NewFakeTimer(t, false)
-	logger := proxytest.NewLogger()
-	cachingStore := NewCachingAuthStore(remoteStore, timer.factory, logger)
 
 	// First request to get the user fails, error should be propageted.
 	authServer.StatusCode = 507
@@ -129,14 +133,8 @@ func TestCachingAuthStore_Whoami(t *testing.T) {
 }
 
 func TestCachingAuthStore_Locations(t *testing.T) {
-	authServer := proxytest.NewAuthServer(t)
+	authServer, timer, cachingStore := newDeps(t)
 	defer authServer.Close()
-
-	// TODO: dedup this setup
-	remoteStore := NewRemoteAuthStore(authServer.URL)
-	timer := NewFakeTimer(t, false)
-	logger := proxytest.NewLogger()
-	cachingStore := NewCachingAuthStore(remoteStore, timer.factory, logger)
 
 	// First request to get the locations fails, error should be propageted.
 	authServer.StatusCode = 507
@@ -183,13 +181,8 @@ func TestCachingAuthStore_Locations(t *testing.T) {
 }
 
 func TestCachingAuthStore_LoginNeededPage(t *testing.T) {
-	authServer := proxytest.NewAuthServer(t)
+	authServer, timer, cachingStore := newDeps(t)
 	defer authServer.Close()
-
-	remoteStore := NewRemoteAuthStore(authServer.URL)
-	timer := NewFakeTimer(t, false)
-	logger := proxytest.NewLogger()
-	cachingStore := NewCachingAuthStore(remoteStore, timer.factory, logger)
 
 	// First request to get the page fails, error should be propageted.
 	authServer.StatusCode = 507
@@ -230,13 +223,8 @@ func TestCachingAuthStore_LoginNeededPage(t *testing.T) {
 }
 
 func TestCachingAuthStore_ForbiddenPage(t *testing.T) {
-	authServer := proxytest.NewAuthServer(t)
+	authServer, timer, cachingStore := newDeps(t)
 	defer authServer.Close()
-
-	remoteStore := NewRemoteAuthStore(authServer.URL)
-	timer := NewFakeTimer(t, false)
-	logger := proxytest.NewLogger()
-	cachingStore := NewCachingAuthStore(remoteStore, timer.factory, logger)
 
 	// First request to get the page fails, error should be propageted.
 	authServer.StatusCode = 507
