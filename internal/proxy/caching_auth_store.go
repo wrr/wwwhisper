@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/wrr/wwwhispergo/internal/proxy/response"
@@ -83,6 +84,7 @@ type cachingAuthStore struct {
 	// entries should be refreshed.
 	newTimer          TimerFactory
 	log               *slog.Logger
+	mu                sync.RWMutex
 	// Maps a hashed user cookie to the whoami data for the user.
 	users             map[string]*cacheEntry[*response.Whoami]
 	// Last locationsResponse received from the authStore.
@@ -111,6 +113,7 @@ func secureHash(cookie string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+// Must be called with c.mu hold for writing.
 func (c *cachingAuthStore) checkFreshness(modId int) {
 	if c.locationsResponse.value == nil {
 		// Locations not yet retrieved.
@@ -146,15 +149,18 @@ func (c *cachingAuthStore) checkFreshness(modId int) {
 func (c *cachingAuthStore) Whoami(cookie string) (*response.Whoami, error) {
 	// Hash the cookie to prevent cache lookup timing attacks
 	hashedCookie := secureHash(cookie)
+	c.mu.RLock()
 	cacheEntry, ok := c.users[hashedCookie]
 	var respCached *response.Whoami
 	if ok {
 		var stalled bool
 		respCached, stalled = cacheEntry.Get()
 		if !stalled {
+			c.mu.RUnlock()
 			return respCached, nil
 		}
 	}
+	c.mu.RUnlock()
 	freshResp, err := c.authStore.Whoami(cookie)
 	if err != nil {
 		if respCached != nil {
@@ -164,6 +170,8 @@ func (c *cachingAuthStore) Whoami(cookie string) (*response.Whoami, error) {
 		}
 		return nil, err
 	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.checkFreshness(freshResp.ModId)
 	if !ok {
 		// TODO: limit cache size.
@@ -179,7 +187,9 @@ func (c *cachingAuthStore) Whoami(cookie string) (*response.Whoami, error) {
 // data if the refresh request fails. Error is returned only if the
 // first request to get locations fails.
 func (c *cachingAuthStore) Locations() (*response.Locations, error) {
+	c.mu.RLock()
 	resp, stalled := c.locationsResponse.Get()
+	c.mu.RUnlock()
 	if stalled {
 		// TODO: some retry mechanism?
 		freshResp, err := c.authStore.Locations()
@@ -190,7 +200,9 @@ func (c *cachingAuthStore) Locations() (*response.Locations, error) {
 			}
 			return nil, err
 		}
+		c.mu.Lock()
 		c.locationsResponse.Set(freshResp)
+		c.mu.Unlock()
 		resp = freshResp
 	}
 	return resp, nil
@@ -198,7 +210,9 @@ func (c *cachingAuthStore) Locations() (*response.Locations, error) {
 
 // See the AuthStore interface comments.
 func (c *cachingAuthStore) LoginNeededPage() (string, error) {
+	c.mu.RLock()
 	page, stalled := c.loginNeededPage.Get()
+	c.mu.RUnlock()
 	if stalled {
 		freshPage, err := c.authStore.LoginNeededPage()
 		if err != nil {
@@ -209,7 +223,9 @@ func (c *cachingAuthStore) LoginNeededPage() (string, error) {
 				return "", err
 			}
 		} else {
+			c.mu.Lock()
 			c.loginNeededPage.Set(freshPage)
+			c.mu.Unlock()
 			page = freshPage
 		}
 	}
@@ -218,7 +234,9 @@ func (c *cachingAuthStore) LoginNeededPage() (string, error) {
 
 // See the AuthStore interface comments.
 func (c *cachingAuthStore) ForbiddenPage() (string, error) {
+	c.mu.RLock()
 	page, stalled := c.forbiddenPage.Get()
+	c.mu.RUnlock()
 	if stalled {
 		freshPage, err := c.authStore.ForbiddenPage()
 		if err != nil {
@@ -229,7 +247,9 @@ func (c *cachingAuthStore) ForbiddenPage() (string, error) {
 				return "", err
 			}
 		} else {
+			c.mu.Lock()
 			c.forbiddenPage.Set(freshPage)
+			c.mu.Unlock()
 			page = freshPage
 		}
 	}
