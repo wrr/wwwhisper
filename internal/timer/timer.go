@@ -12,13 +12,13 @@ type timer struct {
 }
 
 // Expired returns true if the timer's duration has elapsed since it was started.
-func (r *timer) Expired() bool {
-	return time.Since(r.started) > r.duration
+func (t *timer) Expired() bool {
+	return time.Since(t.started) > t.duration
 }
 
 // Start sets the timer's start time to the current time.
-func (r *timer) Start() {
-	r.started = time.Now()
+func (t *timer) Start() {
+	t.started = time.Now()
 }
 
 // NewTimer creates and returns a timer with the specified duration.
