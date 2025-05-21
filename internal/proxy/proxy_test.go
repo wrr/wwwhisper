@@ -33,12 +33,39 @@ type TestEnv struct {
 	ProtectedAppServer *httptest.Server
 
 	AppProxy *httputil.ReverseProxy
+
+	Client *http.Client
 }
 
 func (env *TestEnv) dispose() {
 	defer env.AppServer.Close()
 	defer env.AuthServer.Close()
 	defer env.ProtectedAppServer.Close()
+}
+
+func newTestEnv(t *testing.T) *TestEnv {
+	t.Helper()
+	var env TestEnv
+	env.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
+		rw.Write([]byte("Hello world"))
+	}
+	env.AppServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		env.AppHandler(rw, req)
+		env.AppCount++
+	}))
+	env.AuthServer = proxytest.NewAuthServer(t)
+
+	log := proxytest.NewLogger()
+
+	appUrlParsed, _ := url.Parse(env.AppServer.URL)
+	env.AppProxy = newReverseProxy(appUrlParsed, log, false, false)
+
+	wwwhisperHandler := newRootHandler(env.AuthServer.URL, log, env.AppProxy)
+
+	env.ProtectedAppServer = httptest.NewServer(wwwhisperHandler)
+	env.ExternalURL = env.ProtectedAppServer.URL
+	env.Client = &http.Client{}
+	return &env
 }
 
 func parseURL(urlString string) *url.URL {
@@ -78,30 +105,6 @@ func genTempFilePath() string {
 	tempDir := os.TempDir()
 	fname := fmt.Sprintf("wwwhisper-test-%d", time.Now().UnixNano())
 	return filepath.Join(tempDir, fname)
-}
-
-func newTestEnv(t *testing.T) *TestEnv {
-	t.Helper()
-	var env TestEnv
-	env.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
-		rw.Write([]byte("Hello world"))
-	}
-	env.AppServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		env.AppHandler(rw, req)
-		env.AppCount++
-	}))
-	env.AuthServer = proxytest.NewAuthServer(t)
-
-	log := proxytest.NewLogger()
-
-	appUrlParsed, _ := url.Parse(env.AppServer.URL)
-	env.AppProxy = newReverseProxy(appUrlParsed, log, false, false)
-
-	wwwhisperHandler := newRootHandler(env.AuthServer.URL, log, env.AppProxy)
-
-	env.ProtectedAppServer = httptest.NewServer(wwwhisperHandler)
-	env.ExternalURL = env.ProtectedAppServer.URL
-	return &env
 }
 
 func checkResponse(resp *http.Response, err error, expectedStatus int, expectedBody *string) error {
@@ -241,8 +244,7 @@ func TestAppRequestAllowed(t *testing.T) {
 	req, _ := http.NewRequest("GET", testEnv.ExternalURL+"/hello", nil)
 	req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
 	req.Header.Add("X-Forwarded-Proto", "http")
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := testEnv.Client.Do(req)
 
 	expectedBody := "hello"
 	if err = checkResponse(resp, err, http.StatusOK, &expectedBody); err != nil {
@@ -259,10 +261,7 @@ func TestForbiddenIfNoRootLocation(t *testing.T) {
 	// requests should be forbidden.
 	testEnv.AuthServer.Locations[0].Path = "/foobar"
 
-	req, _ := http.NewRequest("GET", testEnv.ExternalURL+"/foo", nil)
-	client := &http.Client{}
-	resp, err := client.Do(req)
-
+	resp, err := http.Get(testEnv.ExternalURL + "/foo")
 	expectedBody := "Access forbidden.\n"
 	if err = checkResponse(resp, err, http.StatusForbidden, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
@@ -292,8 +291,7 @@ func TestSiteUrl(t *testing.T) {
 
 	req, _ := http.NewRequest("GET", testEnv.ExternalURL+"/wwwhisper/auth/custom", nil)
 	req.Header.Add("X-Forwarded-Proto", "https")
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := testEnv.Client.Do(req)
 	expectedBody := "custom page"
 	if err = checkResponse(resp, err, http.StatusOK, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
@@ -324,8 +322,7 @@ func TestRequestLoginNeededAcceptHtml(t *testing.T) {
 
 	req, _ := http.NewRequest("GET", testEnv.ExternalURL+"/hello", nil)
 	req.Header.Add("Accept", "text/html")
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := testEnv.Client.Do(req)
 	contentType := resp.Header.Get("Content-Type")
 	if contentType != "text/html; charset=utf-8" {
 		t.Error("Invalid content type", contentType)
@@ -345,8 +342,7 @@ func TestRequestForbiddenAcceptText(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", testEnv.ExternalURL+"/wwwhisper/admin/foo", nil)
 	req.Header.Add("Cookie", "wwwhisper-sessionid=bob-cookie")
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := testEnv.Client.Do(req)
 
 	contentType := resp.Header.Get("Content-Type")
 	if contentType != "text/plain; charset=utf-8" {
@@ -368,8 +364,7 @@ func TestRequestForbiddenAcceptHtml(t *testing.T) {
 	req, _ := http.NewRequest("POST", testEnv.ExternalURL+"/wwwhisper/admin/foo", nil)
 	req.Header.Add("Accept", "text/html")
 	req.Header.Add("Cookie", "wwwhisper-sessionid=bob-cookie")
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := testEnv.Client.Do(req)
 
 	contentType := resp.Header.Get("Content-Type")
 	if contentType != "text/html; charset=utf-8" {
@@ -427,8 +422,7 @@ func TestUserHeaderPassedToApp(t *testing.T) {
 	// User header that comes from the client should be dropped.
 	req.Header.Add("User", "eve@example.com")
 	req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := testEnv.Client.Do(req)
 
 	expectedBody := "hello"
 	if err = checkResponse(resp, err, http.StatusOK, &expectedBody); err != nil {
@@ -465,8 +459,7 @@ func TestAuthServerNonHttpError(t *testing.T) {
 	// Authenticated request, whoami retrieval should fail.
 	req, _ := http.NewRequest("GET", testEnv.ExternalURL+"/open", nil)
 	req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
-	client := &http.Client{}
-	resp, err = client.Do(req)
+	resp, err = testEnv.Client.Do(req)
 	if err = checkResponse(resp, err, 500, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
 	}
@@ -512,15 +505,13 @@ func TestPathNormalization(t *testing.T) {
 		rw.Write([]byte("ok"))
 	}
 
-	client := &http.Client{}
-
 	for _, test := range test_cases {
 		t.Run("["+test.path_in+"]", func(t *testing.T) {
 			expected_path = test.path_out
 			req, _ := http.NewRequest("GET", testEnv.ExternalURL+test.path_in, nil)
 			req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
 			req.Header.Add("X-Forwarded-Proto", "http")
-			resp, err := client.Do(req)
+			resp, err := testEnv.Client.Do(req)
 			expectedBody := "ok"
 			if err = checkResponse(resp, err, http.StatusOK, &expectedBody); err != nil {
 				t.Error("Invalid response", err)
@@ -534,7 +525,6 @@ func TestAdminPathAccess(t *testing.T) {
 	defer testEnv.dispose()
 
 	url := testEnv.ExternalURL + "/wwwhisper/admin/?foo=bar"
-	client := &http.Client{}
 
 	// no user
 	resp, err := http.Get(url)
@@ -546,7 +536,7 @@ func TestAdminPathAccess(t *testing.T) {
 	// no admin user
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("Cookie", "wwwhisper-sessionid=bob-cookie")
-	resp, err = client.Do(req)
+	resp, err = testEnv.Client.Do(req)
 	expectedBody = "Access forbidden.\n"
 	if err = checkResponse(resp, err, http.StatusForbidden, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
@@ -555,7 +545,7 @@ func TestAdminPathAccess(t *testing.T) {
 	// Admin user
 	req, _ = http.NewRequest("GET", url, nil)
 	req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
-	resp, err = client.Do(req)
+	resp, err = testEnv.Client.Do(req)
 	expectedBody = testEnv.AuthServer.Admin
 	if err = checkResponse(resp, err, http.StatusOK, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
@@ -571,12 +561,11 @@ func TestAdminPostRequest(t *testing.T) {
 	defer testEnv.dispose()
 
 	url := testEnv.ExternalURL + "/wwwhisper/admin/submit"
-	client := &http.Client{}
 
 	req, _ := http.NewRequest("POST", url, nil)
 	req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
 	req.Header.Add("Site-Url", "https://should.be.changed")
-	resp, err := client.Do(req)
+	resp, err := testEnv.Client.Do(req)
 	// Ensure Site-Url header is correctly passed with requests to /wwwhisper/*
 	expectedBody := fmt.Sprintf("{siteUrl: %q}", testEnv.ExternalURL)
 	if err = checkResponse(resp, err, http.StatusOK, &expectedBody); err != nil {
@@ -679,8 +668,7 @@ func TestIframeInjection(t *testing.T) {
 	// Iframe should not be injected wwwhisper backend responses.
 	req, _ := http.NewRequest("GET", testEnv.ExternalURL+"/wwwhisper/admin/", nil)
 	req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
-	client := &http.Client{}
-	resp, err = client.Do(req)
+	resp, err = testEnv.Client.Do(req)
 	if err = checkResponse(resp, err, 200, &testEnv.AuthServer.Admin); err != nil {
 		t.Error("Invalid response", err)
 	}
