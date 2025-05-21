@@ -15,6 +15,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/wrr/wwwhispergo/internal/timer"
 )
 
 type Port uint16
@@ -28,7 +30,7 @@ type Config struct {
 	LogLevel     slog.Level
 }
 
-const Version string = "1.0.2"
+const Version string = "1.0.3"
 const overlayToInject = `
 <script src="/wwwhisper/auth/iframe.js"></script>
 `
@@ -59,42 +61,6 @@ var headersToDrop = map[string]bool{
 // makes such wrapping verbose, complex and prone to problems when new such
 // interfaces are introduced in future version of net/http.
 type statusCodeKey struct{}
-
-func copyAuthRequestHeaders(dst *http.Request, src *http.Request) {
-	// Cookies identify the user, Accept is used by the wwwhisper
-	// backend in case request is denied to know if the error returned
-	// should be HTML.
-	forwardedHeaders := []string{"Accept", "Accept-Language", "Cookie"}
-	for _, header := range forwardedHeaders {
-		dst.Header.Set(header, src.Header.Get(header))
-	}
-}
-
-func copyResponse(w http.ResponseWriter, src *http.Response) error {
-	for key, values := range src.Header {
-		if headersToDrop[key] {
-			continue
-		}
-		for _, value := range values {
-			w.Header().Add(key, value)
-		}
-	}
-	w.WriteHeader(src.StatusCode)
-	_, err := io.Copy(w, src.Body)
-	return err
-}
-
-func setSiteURLHeader(dst *http.Request, incoming *http.Request) {
-	scheme := incoming.Header.Get("X-Forwarded-Proto")
-	if scheme == "" {
-		if incoming.TLS != nil {
-			scheme = "https"
-		} else {
-			scheme = "http"
-		}
-	}
-	dst.Header.Set("Site-Url", scheme+"://"+incoming.Host)
-}
 
 func basicAuthCredentials(url *url.URL) string {
 	username := url.User.Username()
@@ -133,6 +99,18 @@ func injectOverlay(resp *http.Response) error {
 
 	resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 	return nil
+}
+
+func setSiteURLHeader(dst *http.Request, incoming *http.Request) {
+	scheme := incoming.Header.Get("X-Forwarded-Proto")
+	if scheme == "" {
+		if incoming.TLS != nil {
+			scheme = "https"
+		} else {
+			scheme = "http"
+		}
+	}
+	dst.Header.Set("Site-Url", scheme+"://"+incoming.Host)
 }
 
 func newReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool, noOverlay bool) *httputil.ReverseProxy {
@@ -186,38 +164,21 @@ func newReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool, n
 	return proxy
 }
 
-func newAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Handler) http.Handler {
-	authURL := wwwhisperURL.String() + "/wwwhisper/auth/api/is-authorized/?path="
-	// Connection keepalive is on by default.
-	authClient := &http.Client{
-		Jar:     nil,
-		Timeout: 7 * time.Second,
-	}
+func NewTimer(duration time.Duration) Timer {
+	return timer.NewTimer(duration)
+}
+
+func newRootHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Handler) http.Handler {
+	remote_store := NewRemoteAuthStore(wwwhisperURL)
+	caching_store := NewCachingAuthStore(remote_store, NewTimer, log)
+	guard := NewAccessGuard(caching_store, log)
 
 	// wwwhisper HTML responses already have the logout overlay added.
 	noOverlay := true
 	wwwhisperProxy := newReverseProxy(wwwhisperURL, log, true, noOverlay)
 
-	makeAuthRequest := func(r *http.Request) (*http.Response, error) {
-		// Path has escape characters decoded (/ instead of %2F)
-		authReq, err := http.NewRequestWithContext(r.Context(), "GET", authURL+r.URL.Path, nil)
-		if err != nil {
-			// This should never happen: method is hardcoded to GET, authURL
-			// is for sure parsable because if comes from the already parsed
-			// url.URL, other errors are not reported by NewRequest, but by
-			// client.Do.
-			return nil, err
-		}
-		copyAuthRequestHeaders(authReq, r)
-		setSiteURLHeader(authReq, r)
-		authReq.Host = wwwhisperURL.Host
-		authReq.Header.Set("User-Agent", "go-"+Version)
-		return authClient.Do(authReq)
-	}
-
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		start := time.Now()
-		normalizePath(req.URL)
 
 		authStatus := ""
 		statusCode := 0
@@ -234,43 +195,12 @@ func newAuthHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 				slog.Duration("timer", duration),
 			)
 		}()
-
-		if strings.HasPrefix(req.URL.Path, "/wwwhisper/auth/") {
-			// login/logout/send-token etc. always allowed, doesn't require authorization.
-			authStatus = "open"
-			wwwhisperProxy.ServeHTTP(rw, req)
-			return
-		}
-		authResp, err := makeAuthRequest(req)
-		if err != nil {
-			authStatus = "failed"
-			statusCode = http.StatusInternalServerError
-			log.Warn("wwwhisper", "error", err.Error())
-			// Do not return err.Error() to the user as it can contain sensitive
-			// data.
-			http.Error(rw, "Internal server error (auth)", statusCode)
-			return
-		}
-		defer authResp.Body.Close()
-		if authResp.StatusCode != http.StatusOK {
+		granted := guard.Handle(rw, req)
+		if !granted {
 			authStatus = "denied"
-			statusCode = authResp.StatusCode
-			err = copyResponse(rw, authResp)
-			if err != nil {
-				log.Error("Error copying auth response: " + err.Error())
-			}
 			return
 		}
-
 		authStatus = "granted"
-		// If the client is trying to pass the User header, delete it.
-		req.Header.Del("User")
-		user := authResp.Header.Get("User")
-		if user != "" {
-			// The validated user header is passed to the backend to allow to identify the
-			// logged in user.
-			req.Header.Add("User", user)
-		}
 		if strings.HasPrefix(req.URL.Path, "/wwwhisper/") {
 			wwwhisperProxy.ServeHTTP(rw, req)
 		} else {
@@ -305,7 +235,7 @@ func Run(cfg Config) error {
 	server.SetKeepAlivesEnabled(true)
 
 	appProxy := newReverseProxy(proxyTarget, log, false, cfg.NoOverlay)
-	mux.Handle("/", newAuthHandler(cfg.WwwhisperURL, log, appProxy))
+	mux.Handle("/", newRootHandler(cfg.WwwhisperURL, log, appProxy))
 
 	serverStatus := make(chan error, 1)
 

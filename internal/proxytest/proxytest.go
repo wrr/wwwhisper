@@ -2,6 +2,8 @@ package proxytest
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -12,16 +14,22 @@ import (
 	"github.com/wrr/wwwhispergo/internal/proxy/response"
 )
 
+const basicAuthUser = "admin"
+const basicAuthPassword = "sometestpassword"
+
 type AuthServer struct {
 	server          *httptest.Server
+	Mux             *http.ServeMux
 	URL             *url.URL
 	ModId           int
 	Users           map[string]*response.Whoami
 	Locations       []response.Location
 	LoginNeeded     string
 	Forbidden       string
+	Admin           string
 	StatusCode      int
 	ContentTypeHTML string
+	ContentTypeJson string
 }
 
 func (a *AuthServer) Close() {
@@ -32,6 +40,28 @@ func (a *AuthServer) ReturnInvalidJson() {
 	a.server.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"invalid JSON`))
+	})
+}
+
+func checkBasicAuthCredentials(req *http.Request) error {
+	username, password, ok := req.BasicAuth()
+	if !ok {
+		return errors.New("credentials missing")
+	}
+	if username != basicAuthUser || password != basicAuthPassword {
+		return errors.New("credentials do not match")
+	}
+	return nil
+
+}
+
+func requireBasicAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := checkBasicAuthCredentials(r); err != nil {
+			http.Error(w, "basic auth required: "+err.Error(), http.StatusUnauthorized)
+		} else {
+			next.ServeHTTP(w, r)
+		}
 	})
 }
 
@@ -78,9 +108,9 @@ func NewAuthServer(t *testing.T) *AuthServer {
 				OpenAccess: true,
 			},
 			{
-				Path:       "/protected/",
-				Self:       "/api/locations/loc-protected",
-				ID:         "loc-protected",
+				Path:       "/wwwhisper/admin/",
+				Self:       "/api/locations/loc-admin",
+				ID:         "loc-admin",
 				OpenAccess: false,
 				AllowedUsers: []response.User{
 					{
@@ -93,11 +123,39 @@ func NewAuthServer(t *testing.T) *AuthServer {
 		},
 		LoginNeeded:     "<html><body>Login needed</body></html>",
 		Forbidden:       "<html><body>Forbidden</body></html>",
+		Admin:           "<html><body>admin page</body></html>",
 		StatusCode:      http.StatusOK,
 		ContentTypeHTML: "text/html; charset=utf-8",
+		ContentTypeJson: "application/json; charset=utf-8",
 	}
 
 	mux := http.NewServeMux()
+
+	mux.HandleFunc("/wwwhisper/auth/login", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", server.ContentTypeHTML)
+		w.WriteHeader(server.StatusCode)
+		w.Write([]byte("login response"))
+	})
+
+	mux.HandleFunc("/wwwhisper/admin/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", server.ContentTypeHTML)
+		w.WriteHeader(server.StatusCode)
+		w.Write([]byte(server.Admin))
+	})
+
+	mux.HandleFunc("/wwwhisper/admin/submit", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		siteURL := r.Header.Get("Site-Url")
+		w.Header().Set("Content-Type", server.ContentTypeJson)
+		w.WriteHeader(server.StatusCode)
+		var buf []byte
+		buf = fmt.Appendf(buf, "{siteUrl: %q}", siteURL)
+		w.Write(buf)
+	})
+
 	mux.HandleFunc("/api/whoami/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -165,12 +223,14 @@ func NewAuthServer(t *testing.T) *AuthServer {
 		w.Write([]byte(server.Forbidden))
 	})
 
-	server.server = httptest.NewServer(mux)
-	url, err := url.Parse(server.server.URL)
+	server.server = httptest.NewServer(requireBasicAuth(mux))
+	server.Mux = mux
+	urlParsed, err := url.Parse(server.server.URL)
 	if err != nil {
 		t.Fatalf("Failed to parse server URL: %v", err)
 	}
-	server.URL = url
+	urlParsed.User = url.UserPassword(basicAuthUser, basicAuthPassword)
+	server.URL = urlParsed
 	return server
 }
 
