@@ -43,11 +43,11 @@ func NewFakeTimer(t *testing.T, expired bool) *fakeTimer {
 	return ft
 }
 
-func newDeps(t *testing.T) (*proxytest.AuthServer, *fakeTimer, *cachingAuthStore) {
+func newCASDeps(t *testing.T) (*proxytest.AuthServer, *fakeTimer, *cachingAuthStore) {
 	authServer := proxytest.NewAuthServer(t)
-	remoteStore := NewRemoteAuthStore(authServer.URL)
-	timer := NewFakeTimer(t, false)
 	logger := proxytest.NewLogger()
+	remoteStore := NewRemoteAuthStore(authServer.URL, logger)
+	timer := NewFakeTimer(t, false)
 	cachingStore := NewCachingAuthStore(remoteStore, timer.factory, logger)
 	return authServer, timer, cachingStore
 }
@@ -88,7 +88,7 @@ func check[T any](resp T, err error, expectedResp T, expectedErr string) error {
 }
 
 func TestCachingAuthStore_Whoami(t *testing.T) {
-	authServer, timer, cachingStore := newDeps(t)
+	authServer, timer, cachingStore := newCASDeps(t)
 	defer authServer.Close()
 
 	// First request to get the user fails, error should be propageted.
@@ -133,7 +133,7 @@ func TestCachingAuthStore_Whoami(t *testing.T) {
 }
 
 func TestCachingAuthStore_Locations(t *testing.T) {
-	authServer, timer, cachingStore := newDeps(t)
+	authServer, timer, cachingStore := newCASDeps(t)
 	defer authServer.Close()
 
 	// First request to get the locations fails, error should be propageted.
@@ -181,7 +181,7 @@ func TestCachingAuthStore_Locations(t *testing.T) {
 }
 
 func TestCachingAuthStore_LoginNeededPage(t *testing.T) {
-	authServer, timer, cachingStore := newDeps(t)
+	authServer, timer, cachingStore := newCASDeps(t)
 	defer authServer.Close()
 
 	// First request to get the page fails, error should be propageted.
@@ -223,7 +223,7 @@ func TestCachingAuthStore_LoginNeededPage(t *testing.T) {
 }
 
 func TestCachingAuthStore_ForbiddenPage(t *testing.T) {
-	authServer, timer, cachingStore := newDeps(t)
+	authServer, timer, cachingStore := newCASDeps(t)
 	defer authServer.Close()
 
 	// First request to get the page fails, error should be propageted.
@@ -267,7 +267,7 @@ func TestCachingAuthStore_ForbiddenPage(t *testing.T) {
 }
 
 func TestCachingAuthStore_ModIdTriggersCacheRefresh(t *testing.T) {
-	authServer, timer, cachingStore := newDeps(t)
+	authServer, timer, cachingStore := newCASDeps(t)
 	defer authServer.Close()
 
 	checkResponses := func(loginNeeded string, forbidden string, locations *response.Locations) {

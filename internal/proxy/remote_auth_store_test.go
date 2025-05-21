@@ -9,10 +9,16 @@ import (
 	"github.com/wrr/wwwhispergo/internal/proxytest"
 )
 
+func newRASDeps(t *testing.T) (*proxytest.AuthServer, *remoteAuthStore) {
+	authServer := proxytest.NewAuthServer(t)
+	logger := proxytest.NewLogger()
+	remoteStore := NewRemoteAuthStore(authServer.URL, logger)
+	return authServer, remoteStore
+}
+
 func TestRemoteAuthStore_Whoami(t *testing.T) {
-	server := proxytest.NewAuthServer(t)
+	server, store := newRASDeps(t)
 	defer server.Close()
-	store := NewRemoteAuthStore(server.URL)
 
 	tests := []struct {
 		name       string
@@ -77,9 +83,8 @@ func TestRemoteAuthStore_Whoami(t *testing.T) {
 }
 
 func TestRemoteAuthStore_Locations(t *testing.T) {
-	server := proxytest.NewAuthServer(t)
+	server, store := newRASDeps(t)
 	defer server.Close()
-	store := NewRemoteAuthStore(server.URL)
 
 	resp, err := store.Locations()
 	if err != nil {
@@ -109,9 +114,8 @@ func TestRemoteAuthStore_Locations(t *testing.T) {
 }
 
 func TestRemoteAuthStore_LoginNeededPage(t *testing.T) {
-	server := proxytest.NewAuthServer(t)
+	server, store := newRASDeps(t)
 	defer server.Close()
-	store := NewRemoteAuthStore(server.URL)
 
 	html, err := store.LoginNeededPage()
 	if err != nil {
@@ -123,9 +127,8 @@ func TestRemoteAuthStore_LoginNeededPage(t *testing.T) {
 }
 
 func TestRemoteAuthStore_ForbiddenPage(t *testing.T) {
-	server := proxytest.NewAuthServer(t)
+	server, store := newRASDeps(t)
 	defer server.Close()
-	store := NewRemoteAuthStore(server.URL)
 
 	html, err := store.ForbiddenPage()
 	if err != nil {
@@ -137,10 +140,9 @@ func TestRemoteAuthStore_ForbiddenPage(t *testing.T) {
 }
 
 func TestRemoteAuthStore_ConnectionErrorHandling(t *testing.T) {
-	server := proxytest.NewAuthServer(t)
+	server, store := newRASDeps(t)
 	// Close the server to trigger network errors.
 	server.Close()
-	store := NewRemoteAuthStore(server.URL)
 
 	t.Run("whoami with connection error", func(t *testing.T) {
 		_, err := store.Whoami("any-cookie")
@@ -172,8 +174,9 @@ func TestRemoteAuthStore_ConnectionErrorHandling(t *testing.T) {
 }
 
 func TestRemoteAuthStore_InvalidStatus(t *testing.T) {
-	server := proxytest.NewAuthServer(t)
-	store := NewRemoteAuthStore(server.URL)
+	server, store := newRASDeps(t)
+	defer server.Close()
+
 	server.StatusCode = 500
 
 	t.Run("whoami with connection error", func(t *testing.T) {
@@ -206,9 +209,8 @@ func TestRemoteAuthStore_InvalidStatus(t *testing.T) {
 }
 
 func TestRemoteAuthStore_InvalidJSON(t *testing.T) {
-	server := proxytest.NewAuthServer(t)
+	server, store := newRASDeps(t)
 	defer server.Close()
-	store := NewRemoteAuthStore(server.URL)
 
 	server.ReturnInvalidJson()
 
@@ -227,9 +229,8 @@ func TestRemoteAuthStore_InvalidJSON(t *testing.T) {
 }
 
 func TestRemoteAuthStore_InvalidContentType(t *testing.T) {
-	server := proxytest.NewAuthServer(t)
+	server, store := newRASDeps(t)
 	defer server.Close()
-	store := NewRemoteAuthStore(server.URL)
 
 	server.ContentTypeHTML = "text/plain; charset=utf-8"
 

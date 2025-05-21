@@ -169,7 +169,7 @@ func NewTimer(duration time.Duration) Timer {
 }
 
 func newRootHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Handler) http.Handler {
-	remote_store := NewRemoteAuthStore(wwwhisperURL)
+	remote_store := NewRemoteAuthStore(wwwhisperURL, log)
 	caching_store := NewCachingAuthStore(remote_store, NewTimer, log)
 	guard := NewAccessGuard(caching_store, log)
 

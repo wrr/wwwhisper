@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -16,11 +17,12 @@ import (
 type remoteAuthStore struct {
 	wwwhisperURL *url.URL
 	httpClient   *http.Client
+	log          *slog.Logger
 }
 
 const requestTimeout = 7 * time.Second
 
-func NewRemoteAuthStore(wwwhisperURL *url.URL) *remoteAuthStore {
+func NewRemoteAuthStore(wwwhisperURL *url.URL, log *slog.Logger) *remoteAuthStore {
 	return &remoteAuthStore{
 		wwwhisperURL: wwwhisperURL,
 		// Connection keepalive is on by default.
@@ -28,6 +30,7 @@ func NewRemoteAuthStore(wwwhisperURL *url.URL) *remoteAuthStore {
 			Jar:     nil,
 			Timeout: requestTimeout,
 		},
+		log: log,
 	}
 }
 
