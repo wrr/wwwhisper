@@ -18,6 +18,20 @@ type Location struct {
 	ID           string `json:"id"`
 }
 
+// Can access check if the user with the given userId can access the
+// location.
+func (l *Location) CanAccess(userId string) bool {
+	if l.OpenAccess {
+		return true
+	}
+	for _, user := range l.AllowedUsers {
+		if user.ID == userId {
+			return true
+		}
+	}
+	return false
+}
+
 type Whoami struct {
 	// ModId is an identifier that changes each time the site is
 	// modified (Locations or LoginNeeded page content changes). The
@@ -38,33 +52,18 @@ type Locations struct {
 	Entries []Location `json:"locations"`
 }
 
-// Can access check if the user with the given userId can access the
-// location.
-func (l *Location) CanAccess(userId string) bool {
-	if l.OpenAccess {
-		return true
-	}
-	for _, user := range l.AllowedUsers {
-		if user.ID == userId {
-			return true
-		}
-	}
-	return false
-}
-
-// MatchingLocation finds a location that defines access to a given
-// path on the site.  The path argument must be in canonical format
-// (absolute and normalized).  The function returns the most specific
+// LongestMatch finds a location that defines access to a given
+// path on the site. The path argument must be in canonical format
+// (absolute and normalized). The function returns the most specific
 // location with path matching a given path or None if no matching
 // location exists.
-func MatchingLocation(locations []Location, path string) *Location {
-	// TODO: or maybe better make it a method on response.Locations
+func (l *Locations) LongestMatch(path string) *Location {
 	longestMatched := (*Location)(nil)
 	longestMatchedLen := -1
 	pathLen := len(path)
 
-	for i := range locations {
-		location := &locations[i]
+	for i := range l.Entries {
+		location := &l.Entries[i]
 		probedPath := location.Path
 		if !strings.HasPrefix(path, probedPath) {
 			continue

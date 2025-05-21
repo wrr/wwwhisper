@@ -95,7 +95,7 @@ func (g *accessGuard) Handle(rw http.ResponseWriter, req *http.Request) bool {
 		return false
 	}
 
-	location := response.MatchingLocation(locationsResponse.Entries, req.URL.Path)
+	location := locationsResponse.LongestMatch(req.URL.Path)
 	if location == nil {
 		g.forbidden(rw, req)
 		return false

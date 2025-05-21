@@ -67,32 +67,34 @@ func TestLocationCanAccess(t *testing.T) {
 	}
 }
 
-func TestMatchingLocation(t *testing.T) {
-	locations := []Location{
-		{
-			Path:       "/",
-			OpenAccess: true,
-			ID:         "root",
-		},
-		{
-			Path:       "/docs/private",
-			OpenAccess: false,
-			ID:         "docs-private",
-		},
-		{
-			Path:       "/docs/",
-			OpenAccess: true,
-			ID:         "docs",
-		},
-		{
-			Path:       "/docs/privat",
-			OpenAccess: false,
-			ID:         "docs-privat",
-		},
-		{
-			Path:       "/admin",
-			OpenAccess: false,
-			ID:         "admin",
+func TestLongestMatch(t *testing.T) {
+	locations := &Locations{
+		Entries: []Location{
+			{
+				Path:       "/",
+				OpenAccess: true,
+				ID:         "root",
+			},
+			{
+				Path:       "/docs/private",
+				OpenAccess: false,
+				ID:         "docs-private",
+			},
+			{
+				Path:       "/docs/",
+				OpenAccess: true,
+				ID:         "docs",
+			},
+			{
+				Path:       "/docs/privat",
+				OpenAccess: false,
+				ID:         "docs-privat",
+			},
+			{
+				Path:       "/admin",
+				OpenAccess: false,
+				ID:         "admin",
+			},
 		},
 	}
 
@@ -160,25 +162,27 @@ func TestMatchingLocation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("["+tt.path+"]", func(t *testing.T) {
-			got := MatchingLocation(locations, tt.path)
+			got := locations.LongestMatch(tt.path)
 			if got.ID != tt.expectedID {
-				t.Errorf("MatchingLocation(\"%v\") = %v, expected %v", tt.path, got.ID, tt.expectedID)
+				t.Errorf("LongestMatch(\"%v\") = %v, expected %v", tt.path, got.ID, tt.expectedID)
 			}
 		})
 	}
 }
 
-func TestMatchingLocationNoRootEntry(t *testing.T) {
-	locations := []Location{
-		{
-			Path:       "/foo/",
-			OpenAccess: true,
-			ID:         "foo",
-		},
-		{
-			Path:       "/foo/bar/",
-			OpenAccess: true,
-			ID:         "bar",
+func TestLongestMatchNoRootEntry(t *testing.T) {
+	locations := &Locations{
+		Entries: []Location{
+			{
+				Path:       "/foo/",
+				OpenAccess: true,
+				ID:         "foo",
+			},
+			{
+				Path:       "/foo/bar/",
+				OpenAccess: true,
+				ID:         "bar",
+			},
 		},
 	}
 
@@ -214,15 +218,15 @@ func TestMatchingLocationNoRootEntry(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("["+tt.path+"]", func(t *testing.T) {
-			got := MatchingLocation(locations, tt.path)
+			got := locations.LongestMatch(tt.path)
 			if got == nil {
 				if tt.expectedID != "" {
-					t.Errorf("MatchingLocation() = nil expected %v", tt.expectedID)
+					t.Errorf("LongestMatch() = nil expected %v", tt.expectedID)
 				}
 				return
 			}
 			if got.ID != tt.expectedID {
-				t.Errorf("MatchingLocation(\"%v\") = %v, expected %v", tt.path, got.ID, tt.expectedID)
+				t.Errorf("LongestMatch(\"%v\") = %v, expected %v", tt.path, got.ID, tt.expectedID)
 			}
 		})
 	}
