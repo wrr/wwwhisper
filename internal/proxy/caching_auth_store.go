@@ -125,14 +125,12 @@ func (c *cachingAuthStore) checkFreshness(modId int) {
 		c.loginNeededPage.MarkStalled()
 		c.forbiddenPage.MarkStalled()
 	} else {
-		// The site hasn't changed, reset the cached entries timers
+		// The site hasn't changed, reset the locations cache timers
+		//
+		// Note: loginNeededPage and forbiddenPage timers are not reset,
+		// because these can change also when new wwwhisper version is
+		// deployed, not only when the site changes.
 		c.locationsResponse.timer.Start()
-		if c.loginNeededPage.value != "" {
-			c.loginNeededPage.timer.Start()
-		}
-		if c.forbiddenPage.value != "" {
-			c.forbiddenPage.timer.Start()
-		}
 	}
 }
 

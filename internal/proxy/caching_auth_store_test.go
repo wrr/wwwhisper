@@ -311,13 +311,13 @@ func TestCachingAuthStore_ModIdTriggersCacheRefresh(t *testing.T) {
 	// refresh.
 	_, _ = cachingStore.Whoami("alice-cookie")
 	checkResponses(origLoginNeeded, origForbidden, locations)
-	// Whoami response with the same ModId should restart all three
-	// existing timers and start a new timer for the user entry.
-	if timer.startCalled != 7 {
+	// Whoami response with the same ModId should restart locations
+	// timer and start a new timer for the user entry.
+	if timer.startCalled != 5 {
 		t.Error("Unexpected timer starts", timer.startCalled)
 	}
 
-	// whoami response with different modIf should trigger the cache
+	// whoami response with different modId should trigger the cache
 	// refresh.
 	authServer.ModId += 1
 	_, _ = cachingStore.Whoami("bob-cookie")
@@ -325,7 +325,7 @@ func TestCachingAuthStore_ModIdTriggersCacheRefresh(t *testing.T) {
 	locations.ModId = authServer.ModId
 	checkResponses(authServer.LoginNeeded, authServer.Forbidden, locations)
 
-	if timer.startCalled != 11 {
+	if timer.startCalled != 9 {
 		t.Error("Unexpected timer starts", timer.startCalled)
 	}
 }
