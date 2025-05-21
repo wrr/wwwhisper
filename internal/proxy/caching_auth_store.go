@@ -36,8 +36,8 @@ type TimerFactory func(time.Duration) Timer
 // A cacheEntry is a structure that hold hashed data of type T.
 type cacheEntry[T any] struct {
 	// Timer that counts time to the cachEntry data expiration.
-	timer   Timer
-	value   T // Cached data
+	timer Timer
+	value T // Cached data
 	// True if the data was marked as stalled. Data can be stalled even
 	// if the timer has not yet expired.
 	stalled bool
@@ -79,20 +79,20 @@ func newCacheEntry[T any](timer Timer) *cacheEntry[T] {
 // authStore has modId different from the previously received modId.
 type cachingAuthStore struct {
 	// The wrapped AuthStore which provides the actual data.
-	authStore         AuthStore
+	authStore AuthStore
 	// Creates new timers which are then used to determine when cache
 	// entries should be refreshed.
-	newTimer          TimerFactory
-	log               *slog.Logger
-	mu                sync.RWMutex
+	newTimer TimerFactory
+	log      *slog.Logger
+	mu       sync.RWMutex
 	// Maps a hashed user cookie to the whoami data for the user.
-	users             map[string]*cacheEntry[*response.Whoami]
+	users map[string]*cacheEntry[*response.Whoami]
 	// Last locationsResponse received from the authStore.
 	locationsResponse cacheEntry[*response.Locations]
 	// Last loginNeeded page received from the authStore.
-	loginNeededPage   cacheEntry[string]
+	loginNeededPage cacheEntry[string]
 	// Last forbidden page received from the authStore.
-	forbiddenPage     cacheEntry[string]
+	forbiddenPage cacheEntry[string]
 }
 
 func NewCachingAuthStore(authStore AuthStore, newTimer TimerFactory, log *slog.Logger) *cachingAuthStore {
@@ -135,7 +135,6 @@ func (c *cachingAuthStore) checkFreshness(modId int) {
 		}
 	}
 }
-
 
 // See the AuthStore interface comments. cachingAuthStore.Whoami
 // Returns cached response if it is not expired or if a request to get
