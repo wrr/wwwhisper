@@ -37,6 +37,7 @@ func (r remoteAuthStore) Whoami(cookie string) (*response.Whoami, error) {
 	url := r.wwwhisperURL.String() + "/api/whoami/"
 	args := map[string]string{
 		"cookie": cookie,
+		"client": "go-" + Version,
 	}
 	jsonArgs, err := json.Marshal(args)
 	if err != nil {

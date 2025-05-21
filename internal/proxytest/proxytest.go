@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/wrr/wwwhispergo/internal/proxy/response"
@@ -163,9 +164,15 @@ func NewAuthServer(t *testing.T) *AuthServer {
 		}
 		var requestBody struct {
 			Cookie string `json:"cookie"`
+			Client string `json:"client"`
 		}
+
 		if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+		if !strings.HasPrefix(requestBody.Client, "go-") {
+			http.Error(w, "Invalid client:"+requestBody.Client, http.StatusBadRequest)
 			return
 		}
 		resp := response.Whoami{
