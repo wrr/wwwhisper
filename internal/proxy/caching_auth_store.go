@@ -13,14 +13,11 @@ import (
 	"github.com/wrr/wwwhispergo/internal/proxy/response"
 )
 
-// TODO: Shorter, but bump with each whoami response
-const locationValidity = 10 * time.Minute
+const locationValidity = 5 * time.Minute
 
-// TODO: extend
-const sessionCacheValidity = 10 * time.Minute
+const sessionCacheValidity = 5 * time.Minute
 
-// TODO: Shorter, but bump with each whoami response
-const pageCacheValidity = 10 * time.Minute
+const pageCacheValidity = 5 * time.Minute
 
 // See github.com/wrr/wwwhispergo/internal/timer
 type Timer interface {
