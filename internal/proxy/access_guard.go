@@ -8,10 +8,11 @@ import (
 	"github.com/wrr/wwwhispergo/internal/proxy/response"
 )
 
-// AccessGuard decides if incoming HTTP requests should be allowed and
-// processed further. It uses authentication and authorization data
-// from the AuthStore. In case a request is not authorized, it writes
-// an appropriate HTTP error response.
+// AccessGuard determines whether incoming HTTP requests should be
+// allowed and processed further. It uses authentication and
+// authorization data from the AuthStore. If a request is
+// unauthorized, it writes an appropriate HTTP error response and
+// blocks further processing.
 type accessGuard struct {
 	authStore AuthStore // Provides auth data for the accessGuard
 	log       *slog.Logger
