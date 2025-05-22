@@ -3,6 +3,7 @@
 package timer
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -27,4 +28,8 @@ func NewTimer(duration time.Duration) *timer {
 	return &timer{
 		duration: duration,
 	}
+}
+
+func MsString(duration time.Duration) string {
+	return fmt.Sprintf("%.2fms", float64(duration.Nanoseconds())/1e6)
 }
