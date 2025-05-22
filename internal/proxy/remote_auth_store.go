@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/wrr/wwwhispergo/internal/proxy/response"
+	"github.com/wrr/wwwhispergo/internal/timer"
 )
 
 type remoteAuthStore struct {
@@ -34,10 +36,33 @@ func NewRemoteAuthStore(wwwhisperURL *url.URL, log *slog.Logger) *remoteAuthStor
 	}
 }
 
+func (r remoteAuthStore) debugLog(path string, resp *http.Response, err error, start time.Time) {
+	if !r.log.Enabled(context.Background(), slog.LevelDebug) {
+		return
+	}
+	log := r.log.With("path", path)
+	if err != nil {
+		log = log.With("error", err)
+	}
+	if resp != nil {
+		log = log.With("status", resp.StatusCode)
+	}
+	log = log.With("timer", timer.MsString(time.Since(start)))
+	log.Debug("wwwhisper-out-request")
+}
+
 // TODO: proxied whoami should work differently, csrf cookies should
 // be included only if they are present in the original request.
 func (r remoteAuthStore) Whoami(cookie string) (*response.Whoami, error) {
-	url := r.wwwhisperURL.String() + "/api/whoami/"
+	start := time.Now()
+	path := "/api/whoami/"
+	url := r.wwwhisperURL.String() + path
+	var err error
+	var resp *http.Response
+	defer func() {
+		r.debugLog(path, resp, err, start)
+	}()
+
 	args := map[string]string{
 		"cookie": cookie,
 		"client": "go-" + Version,
@@ -53,7 +78,7 @@ func (r remoteAuthStore) Whoami(cookie string) (*response.Whoami, error) {
 	}
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 
-	resp, err := r.httpClient.Do(req)
+	resp, err = r.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -75,8 +100,14 @@ func (r remoteAuthStore) Whoami(cookie string) (*response.Whoami, error) {
 }
 
 func (r remoteAuthStore) Locations() (*response.Locations, error) {
-	url := r.wwwhisperURL.String() + "/api/locations/"
+	start := time.Now()
+	path := "/api/locations"
+	url := r.wwwhisperURL.String() + path
 	resp, err := r.httpClient.Get(url)
+	defer func() {
+		r.debugLog(path, resp, err, start)
+	}()
+
 	if err != nil {
 		return nil, err
 	}
@@ -98,13 +129,20 @@ func (r remoteAuthStore) Locations() (*response.Locations, error) {
 }
 
 func (r remoteAuthStore) getPage(path string) (string, error) {
+	start := time.Now()
 	url := r.wwwhisperURL.String() + path
+	var err error
+	var resp *http.Response
+	defer func() {
+		r.debugLog(path, resp, err, start)
+	}()
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return "", err
 	}
 	req.Header.Add("Accept", "text/html")
-	resp, err := r.httpClient.Do(req)
+	resp, err = r.httpClient.Do(req)
 	if err != nil {
 		return "", err
 	}

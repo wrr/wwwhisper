@@ -192,7 +192,7 @@ func newRootHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 				slog.String("path", req.URL.Path),
 				slog.String("auth", authStatus),
 				slog.Int("status", statusCode),
-				slog.Duration("timer", duration),
+				slog.String("timer", timer.MsString(duration)),
 			)
 		}()
 		granted := guard.Handle(rw, req)
