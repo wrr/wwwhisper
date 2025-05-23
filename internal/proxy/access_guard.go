@@ -26,29 +26,40 @@ func NewAccessGuard(c AuthStore, log *slog.Logger) *accessGuard {
 }
 
 func (g *accessGuard) loginNeeded(rw http.ResponseWriter, req *http.Request) {
+	status := http.StatusUnauthorized
+	GetRequestLogger(req).HttpStatus(status)
 	if AcceptsHTML(req) {
 		if page, err := g.authStore.LoginNeededPage(); err == nil {
 			// no error.
 			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-			rw.WriteHeader(http.StatusUnauthorized)
+			rw.WriteHeader(status)
 			rw.Write([]byte(page))
 			return
 		}
 	}
-	http.Error(rw, "Authentication required.", http.StatusUnauthorized)
+	http.Error(rw, "Authentication required.", status)
 }
 
 func (g *accessGuard) forbidden(rw http.ResponseWriter, req *http.Request) {
+	status := http.StatusForbidden
+	GetRequestLogger(req).HttpStatus(status)
 	if AcceptsHTML(req) {
 		if page, err := g.authStore.ForbiddenPage(); err == nil {
 			// no error.
 			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-			rw.WriteHeader(http.StatusForbidden)
+			rw.WriteHeader(status)
 			rw.Write([]byte(page))
 			return
 		}
 	}
-	http.Error(rw, "Access forbidden.", http.StatusForbidden)
+	http.Error(rw, "Access forbidden.", status)
+}
+
+func (g *accessGuard) internalError(rw http.ResponseWriter, req *http.Request, err error) {
+	status := http.StatusInternalServerError
+	GetRequestLogger(req).HttpStatus(status)
+	g.log.Warn("wwwhisper", "error", err)
+	http.Error(rw, "Internal server error (auth)", status)
 }
 
 // Handle allows or rejects an incoming HTTP request. It returns true
@@ -81,18 +92,14 @@ func (g *accessGuard) Handle(rw http.ResponseWriter, req *http.Request) bool {
 	if cookie != nil {
 		whoami, err = g.authStore.Whoami(cookie.Value)
 		if err != nil {
-			g.log.Warn("wwwhisper", "error", err)
-			http.Error(rw, "Internal server error (auth)", http.StatusInternalServerError)
+			g.internalError(rw, req, err)
 			return false
 		}
 	}
 
 	locationsResponse, err := g.authStore.Locations()
 	if err != nil {
-		g.log.Warn("wwwhisper", "error", err)
-		// Do not return err.Error() to the user as it can contain sensitive
-		// data.
-		http.Error(rw, "Internal server error (auth)", http.StatusInternalServerError)
+		g.internalError(rw, req, err)
 		return false
 	}
 

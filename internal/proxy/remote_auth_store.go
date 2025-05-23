@@ -40,15 +40,17 @@ func (r remoteAuthStore) debugLog(path string, resp *http.Response, err error, s
 	if !r.log.Enabled(context.Background(), slog.LevelDebug) {
 		return
 	}
-	log := r.log.With("path", path)
+	attrs := []slog.Attr{
+		slog.String("path", path),
+		slog.String("timer", timer.MsString(time.Since(start))),
+	}
 	if err != nil {
-		log = log.With("error", err)
+		attrs = append(attrs, slog.Any("error", err))
 	}
 	if resp != nil {
-		log = log.With("status", resp.StatusCode)
+		attrs = append(attrs, slog.Int("status", resp.StatusCode))
 	}
-	log = log.With("timer", timer.MsString(time.Since(start)))
-	log.Debug("wwwhisper-out-request")
+	r.log.LogAttrs(context.Background(), slog.LevelDebug, "wwwhisper-out-request", attrs...)
 }
 
 // TODO: proxied whoami should work differently, csrf cookies should

@@ -55,13 +55,6 @@ var headersToDrop = map[string]bool{
 	"User":                true,
 }
 
-// Store HTTP status in context for logging purposes. An alternative
-// is to wrap ResponseWritter to capture the status,
-// but the ResponseWritter implements several optional interfaces which
-// makes such wrapping verbose, complex and prone to problems when new such
-// interfaces are introduced in future version of net/http.
-type statusCodeKey struct{}
-
 func basicAuthCredentials(url *url.URL) string {
 	username := url.User.Username()
 	password, isPasswordSet := url.User.Password()
@@ -147,9 +140,9 @@ func newReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool, n
 	}
 
 	proxy.ModifyResponse = func(resp *http.Response) error {
-		if statusCode, ok := resp.Request.Context().Value(statusCodeKey{}).(*int); ok {
-			// Stored for logging purposes.
-			*statusCode = resp.StatusCode
+		logger := GetRequestLogger(resp.Request)
+		if logger != nil {
+			logger.HttpStatus(resp.StatusCode)
 		}
 		if proxyToWwwhisper {
 			for key := range headersToDrop {
@@ -178,29 +171,15 @@ func newRootHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 	wwwhisperProxy := newReverseProxy(wwwhisperURL, log, true, noOverlay)
 
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		start := time.Now()
+		req, logger := NewRequestLogger(req, log)
+		defer logger.Done()
 
-		authStatus := ""
-		statusCode := 0
-		ctx := context.WithValue(req.Context(), statusCodeKey{}, &statusCode)
-		req = req.WithContext(ctx)
-
-		defer func() {
-			duration := time.Since(start)
-			log.Info("wwwhisper",
-				slog.String("method", req.Method),
-				slog.String("path", req.URL.Path),
-				slog.String("auth", authStatus),
-				slog.Int("status", statusCode),
-				slog.String("timer", timer.MsString(duration)),
-			)
-		}()
 		granted := guard.Handle(rw, req)
 		if !granted {
-			authStatus = "denied"
+			logger.AuthDenied()
 			return
 		}
-		authStatus = "granted"
+		logger.AuthGranted()
 		if strings.HasPrefix(req.URL.Path, "/wwwhisper/") {
 			wwwhisperProxy.ServeHTTP(rw, req)
 		} else {
