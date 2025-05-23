@@ -2,9 +2,11 @@ package proxy
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/wrr/wwwhispergo/internal/proxy/response"
 	"github.com/wrr/wwwhispergo/internal/proxytest"
@@ -249,4 +251,74 @@ func TestRemoteAuthStore_InvalidContentType(t *testing.T) {
 			t.Errorf("Unexpected error %v", err)
 		}
 	})
+}
+
+func TestRemoteAuthStore_Cancellation(t *testing.T) {
+	ctx, server, store := newRASDeps(t)
+	defer server.Close()
+	server.HangOnRequests()
+
+	testCases := []struct {
+		name     string
+		testFunc func(context.Context, AuthStore) error
+	}{
+		{
+			name: "Locations",
+			testFunc: func(ctx context.Context, store AuthStore) error {
+				resp, err := store.Locations(ctx)
+				if resp != nil {
+					t.Fatalf("Expected nil response, got %v", resp)
+				}
+				return err
+			},
+		},
+		{
+			name: "Whoami",
+			testFunc: func(ctx context.Context, store AuthStore) error {
+				resp, err := store.Whoami(ctx, "test-cookie")
+				if resp != nil {
+					t.Fatalf("Expected nil response, got %v", resp)
+				}
+				return err
+			},
+		},
+		{
+			name: "LoginNeededPage",
+			testFunc: func(ctx context.Context, store AuthStore) error {
+				resp, err := store.LoginNeededPage(ctx)
+				if resp != "" {
+					t.Fatalf("Expected empty response, got %v", resp)
+				}
+				return err
+			},
+		},
+		{
+			name: "ForbiddenPage",
+			testFunc: func(ctx context.Context, store AuthStore) error {
+				resp, err := store.ForbiddenPage(ctx)
+				if resp != "" {
+					t.Fatalf("Expected empty response, got %v", resp)
+				}
+				return err
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cancelCtx, cancel := context.WithTimeout(ctx, 2*time.Nanosecond)
+			defer cancel()
+
+			err := tc.testFunc(cancelCtx, store)
+
+			if err == nil {
+				t.Fatalf("Expected error not returned")
+			}
+
+			if !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, context.Canceled) {
+				t.Errorf("Expected context cancellation error, got: %v", err)
+			}
+		})
+	}
+
 }

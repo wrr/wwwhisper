@@ -73,8 +73,7 @@ func (r remoteAuthStore) Whoami(ctx context.Context, cookie string) (*response.W
 	if err != nil {
 		return nil, err
 	}
-	// TODO: use new request with context everywhere?
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonArgs))
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonArgs))
 	if err != nil {
 		return nil, err
 	}
@@ -105,14 +104,22 @@ func (r remoteAuthStore) Locations(ctx context.Context) (*response.Locations, er
 	start := time.Now()
 	path := "/api/locations"
 	url := r.wwwhisperURL.String() + path
-	resp, err := r.httpClient.Get(url)
+
+	var err error
+	var resp *http.Response
 	defer func() {
 		r.debugLog(path, resp, err, start)
 	}()
 
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
+	resp, err = r.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -130,7 +137,7 @@ func (r remoteAuthStore) Locations(ctx context.Context) (*response.Locations, er
 	return &locations, nil
 }
 
-func (r remoteAuthStore) getPage(path string) (string, error) {
+func (r remoteAuthStore) getPage(ctx context.Context, path string) (string, error) {
 	start := time.Now()
 	url := r.wwwhisperURL.String() + path
 	var err error
@@ -139,7 +146,7 @@ func (r remoteAuthStore) getPage(path string) (string, error) {
 		r.debugLog(path, resp, err, start)
 	}()
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return "", err
 	}
@@ -167,9 +174,9 @@ func (r remoteAuthStore) getPage(path string) (string, error) {
 }
 
 func (r remoteAuthStore) LoginNeededPage(ctx context.Context) (string, error) {
-	return r.getPage("/api/login-needed/")
+	return r.getPage(ctx, "/api/login-needed/")
 }
 
 func (r remoteAuthStore) ForbiddenPage(ctx context.Context) (string, error) {
-	return r.getPage("/api/forbidden/")
+	return r.getPage(ctx, "/api/forbidden/")
 }

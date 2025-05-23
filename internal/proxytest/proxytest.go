@@ -44,6 +44,13 @@ func (a *AuthServer) ReturnInvalidJson() {
 	})
 }
 
+// Make request take forever to return to test cancellation logic.
+func (a *AuthServer) HangOnRequests() {
+	a.server.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {}
+	})
+}
+
 func checkBasicAuthCredentials(req *http.Request) error {
 	username, password, ok := req.BasicAuth()
 	if !ok {
