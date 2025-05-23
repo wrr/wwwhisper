@@ -231,13 +231,14 @@ func (c *cachingAuthStore) Locations(ctx context.Context) (*response.Locations, 
 	return resp, nil
 }
 
-// See the AuthStore interface comments.
-func (c *cachingAuthStore) LoginNeededPage(ctx context.Context) (string, error) {
+type getFresh func(context.Context) (string, error)
+
+func (c *cachingAuthStore) getPage(ctx context.Context, entry *cacheEntry[string], fresh getFresh) (string, error) {
 	c.mu.RLock()
-	page, stalled := c.loginNeededPage.Get()
+	page, stalled := entry.Get()
 	c.mu.RUnlock()
 	if stalled {
-		freshPage, err := c.authStore.LoginNeededPage(ctx)
+		freshPage, err := fresh(ctx)
 		if err != nil {
 			c.log.Warn(err.Error())
 			// If page failed to refresh, return error only if stalled
@@ -248,7 +249,7 @@ func (c *cachingAuthStore) LoginNeededPage(ctx context.Context) (string, error) 
 			logCacheHitStalled(ctx)
 		} else {
 			c.mu.Lock()
-			c.loginNeededPage.Set(freshPage)
+			entry.Set(freshPage)
 			c.mu.Unlock()
 			page = freshPage
 			logCacheMiss(ctx)
@@ -260,29 +261,12 @@ func (c *cachingAuthStore) LoginNeededPage(ctx context.Context) (string, error) 
 }
 
 // See the AuthStore interface comments.
+func (c *cachingAuthStore) LoginNeededPage(ctx context.Context) (string, error) {
+	return c.getPage(ctx, &c.loginNeededPage, c.authStore.LoginNeededPage)
+}
+
+// See the AuthStore interface comments.
 func (c *cachingAuthStore) ForbiddenPage(ctx context.Context) (string, error) {
-	c.mu.RLock()
-	page, stalled := c.forbiddenPage.Get()
-	c.mu.RUnlock()
-	if stalled {
-		freshPage, err := c.authStore.ForbiddenPage(ctx)
-		if err != nil {
-			c.log.Warn(err.Error())
-			// If page failed to refresh, return error only if stalled
-			// version doesn't exist.
-			if page == "" {
-				return "", err
-			}
-			logCacheHitStalled(ctx)
-		} else {
-			c.mu.Lock()
-			c.forbiddenPage.Set(freshPage)
-			c.mu.Unlock()
-			page = freshPage
-			logCacheMiss(ctx)
-		}
-	} else {
-		logCacheHit(ctx)
-	}
-	return page, nil
+	return c.getPage(ctx, &c.forbiddenPage, c.authStore.ForbiddenPage)
+
 }
