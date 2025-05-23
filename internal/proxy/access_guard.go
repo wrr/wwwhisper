@@ -27,7 +27,7 @@ func NewAccessGuard(c AuthStore, log *slog.Logger) *accessGuard {
 
 func (g *accessGuard) loginNeeded(rw http.ResponseWriter, req *http.Request) {
 	status := http.StatusUnauthorized
-	GetRequestLogger(req).HttpStatus(status)
+	GetRequestLogger(req.Context()).HttpStatus(status)
 	if AcceptsHTML(req) {
 		if page, err := g.authStore.LoginNeededPage(req.Context()); err == nil {
 			// no error.
@@ -42,7 +42,7 @@ func (g *accessGuard) loginNeeded(rw http.ResponseWriter, req *http.Request) {
 
 func (g *accessGuard) forbidden(rw http.ResponseWriter, req *http.Request) {
 	status := http.StatusForbidden
-	GetRequestLogger(req).HttpStatus(status)
+	GetRequestLogger(req.Context()).HttpStatus(status)
 	if AcceptsHTML(req) {
 		if page, err := g.authStore.ForbiddenPage(req.Context()); err == nil {
 			// no error.
@@ -57,7 +57,7 @@ func (g *accessGuard) forbidden(rw http.ResponseWriter, req *http.Request) {
 
 func (g *accessGuard) internalError(rw http.ResponseWriter, req *http.Request, err error) {
 	status := http.StatusInternalServerError
-	GetRequestLogger(req).HttpStatus(status)
+	GetRequestLogger(req.Context()).HttpStatus(status)
 	g.log.Warn("wwwhisper", "error", err)
 	http.Error(rw, "Internal server error (auth)", status)
 }

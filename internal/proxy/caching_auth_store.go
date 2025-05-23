@@ -132,6 +132,27 @@ func (c *cachingAuthStore) checkFreshness(modId int) {
 	}
 }
 
+func logCacheHit(ctx context.Context) {
+	logger := GetRequestLogger(ctx)
+	if logger != nil {
+		logger.CacheHit()
+	}
+}
+
+func logCacheHitStalled(ctx context.Context) {
+	logger := GetRequestLogger(ctx)
+	if logger != nil {
+		logger.CacheHitStalled()
+	}
+}
+
+func logCacheMiss(ctx context.Context) {
+	logger := GetRequestLogger(ctx)
+	if logger != nil {
+		logger.CacheMiss()
+	}
+}
+
 // See the AuthStore interface comments. cachingAuthStore.Whoami
 // Returns cached response if it is not expired or if a request to get
 // a fresh Whoami response fails. Error is returned only if the first
@@ -152,6 +173,7 @@ func (c *cachingAuthStore) Whoami(ctx context.Context, cookie string) (*response
 		respCached, stalled = cacheEntry.Get()
 		if !stalled {
 			c.mu.RUnlock()
+			logCacheHit(ctx)
 			return respCached, nil
 		}
 	}
@@ -161,6 +183,7 @@ func (c *cachingAuthStore) Whoami(ctx context.Context, cookie string) (*response
 		if respCached != nil {
 			// If failed to obtain a fresh response, but stalled cached
 			// response exists, return it.
+			logCacheHitStalled(ctx)
 			return respCached, nil
 		}
 		return nil, err
@@ -174,6 +197,7 @@ func (c *cachingAuthStore) Whoami(ctx context.Context, cookie string) (*response
 		c.users[hashedCookie] = cacheEntry
 	}
 	cacheEntry.Set(freshResp)
+	logCacheMiss(ctx)
 	return freshResp, nil
 }
 
@@ -191,6 +215,7 @@ func (c *cachingAuthStore) Locations(ctx context.Context) (*response.Locations, 
 		if err != nil {
 			c.log.Warn(err.Error())
 			if resp != nil {
+				logCacheHitStalled(ctx)
 				return resp, nil
 			}
 			return nil, err
@@ -199,6 +224,9 @@ func (c *cachingAuthStore) Locations(ctx context.Context) (*response.Locations, 
 		c.locationsResponse.Set(freshResp)
 		c.mu.Unlock()
 		resp = freshResp
+		logCacheMiss(ctx)
+	} else {
+		logCacheHit(ctx)
 	}
 	return resp, nil
 }
@@ -217,12 +245,16 @@ func (c *cachingAuthStore) LoginNeededPage(ctx context.Context) (string, error) 
 			if page == "" {
 				return "", err
 			}
+			logCacheHitStalled(ctx)
 		} else {
 			c.mu.Lock()
 			c.loginNeededPage.Set(freshPage)
 			c.mu.Unlock()
 			page = freshPage
+			logCacheMiss(ctx)
 		}
+	} else {
+		logCacheHit(ctx)
 	}
 	return page, nil
 }
@@ -241,12 +273,16 @@ func (c *cachingAuthStore) ForbiddenPage(ctx context.Context) (string, error) {
 			if page == "" {
 				return "", err
 			}
+			logCacheHitStalled(ctx)
 		} else {
 			c.mu.Lock()
 			c.forbiddenPage.Set(freshPage)
 			c.mu.Unlock()
 			page = freshPage
+			logCacheMiss(ctx)
 		}
+	} else {
+		logCacheHit(ctx)
 	}
 	return page, nil
 }

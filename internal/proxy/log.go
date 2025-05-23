@@ -36,6 +36,34 @@ func (r *RequestLogger) AuthDenied() {
 	r.attrs = append(r.attrs, slog.String("auth", "denied"))
 }
 
+// addCacheStatus adds or appends cache status to existing cache
+// attribute. Multiple statuses need to be supported because a
+// single incoming requests can result in multiple outgoing requests
+// to AuthStore, each such request has a separate cache status.
+func (r *RequestLogger) addCacheStatus(status string) {
+	for i, attr := range r.attrs {
+		if attr.Key == "cache" {
+			currentValue := attr.Value.String()
+			r.attrs[i] = slog.String("cache", currentValue+":"+status)
+			return
+		}
+	}
+	// No existing cache entry, create new one
+	r.attrs = append(r.attrs, slog.String("cache", status))
+}
+
+func (r *RequestLogger) CacheHit() {
+	r.addCacheStatus("hit")
+}
+
+func (r *RequestLogger) CacheHitStalled() {
+	r.addCacheStatus("hit-stalled")
+}
+
+func (r *RequestLogger) CacheMiss() {
+	r.addCacheStatus("miss")
+}
+
 // Must be called at the end of the request processing. Outputs all
 // the request attributes as a single log entry.
 func (r *RequestLogger) Done() {
@@ -68,7 +96,7 @@ func NewRequestLogger(req *http.Request, log *slog.Logger) (*http.Request, *Requ
 // GetRequestLogger retrieves a RequestLogger from a request
 // context. Returns nil if called on request that do not have logger
 // in the context (was not returned by NewRequestLogger function).
-func GetRequestLogger(req *http.Request) *RequestLogger {
-	logger, _ := req.Context().Value(loggerKey{}).(*RequestLogger)
+func GetRequestLogger(ctx context.Context) *RequestLogger {
+	logger, _ := ctx.Value(loggerKey{}).(*RequestLogger)
 	return logger
 }

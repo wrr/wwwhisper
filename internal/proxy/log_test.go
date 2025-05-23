@@ -52,19 +52,31 @@ func (tl *LogTestEnv) newRequest(method string, path string) *http.Request {
 	return req
 }
 
-func (tl *LogTestEnv) checkOutput(method string, path string, status int, auth string) error {
+type logOutput struct {
+	Method string
+	Path   string
+	Status int
+	Auth   string
+	Cache  string
+}
+
+func (tl *LogTestEnv) checkOutput(out logOutput) error {
 	logEntry := tl.output()
 	expected := map[string]interface{}{
 		"msg":    "wwwhisper",
-		"method": method,
-		"path":   path,
+		"method": out.Method,
+		"path":   out.Path,
 	}
-	if status != 0 {
-		expected["status"] = float64(status) // JSON numbers are float64
+	if out.Status != 0 {
+		expected["status"] = float64(out.Status) // JSON numbers are float64
 	}
-	if auth != "" {
-		expected["auth"] = auth
+	if out.Auth != "" {
+		expected["auth"] = out.Auth
 	}
+	if out.Cache != "" {
+		expected["cache"] = out.Cache
+	}
+
 	for key, value := range expected {
 		if got := logEntry[key]; got != value {
 			return fmt.Errorf("Expected %s %v, got %v", key, value, got)
@@ -124,7 +136,7 @@ func TestNewRequestLogger(t *testing.T) {
 	}
 
 	logger.Done()
-	err := testEnv.checkOutput("GET", "/test/path", 0, "")
+	err := testEnv.checkOutput(logOutput{Method: "GET", Path: "/test/path"})
 	if err != nil {
 		t.Error(err)
 	}
@@ -137,7 +149,7 @@ func TestGetRequestLogger(t *testing.T) {
 		req := testEnv.newRequest("GET", "/test")
 
 		newReq, originalLogger := testEnv.newRequestLogger(req)
-		retrievedLogger := GetRequestLogger(newReq)
+		retrievedLogger := GetRequestLogger(newReq.Context())
 
 		if retrievedLogger != originalLogger {
 			t.Error("Expected to retrieve the same logger instance")
@@ -146,7 +158,7 @@ func TestGetRequestLogger(t *testing.T) {
 
 	t.Run("without logger in context", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/test", nil)
-		retrievedLogger := GetRequestLogger(req)
+		retrievedLogger := GetRequestLogger(req.Context())
 
 		if retrievedLogger != nil {
 			t.Error("Expected nil logger for request without logger in context")
@@ -156,14 +168,22 @@ func TestGetRequestLogger(t *testing.T) {
 
 func TestRequestLogger_Output(t *testing.T) {
 	testEnv := newLogTestEnv(t)
-	req := testEnv.newRequest("PUT", "/foo")
+	req := testEnv.newRequest("DELETE", "/foo")
 	_, logger := testEnv.newRequestLogger(req)
 
 	logger.AuthDenied()
 	logger.HttpStatus(401)
+	logger.CacheHit()
 	logger.Done()
 
-	err := testEnv.checkOutput("PUT", "/foo", 401, "denied")
+	expected := logOutput{
+		Method: "DELETE",
+		Path:   "/foo",
+		Status: 401,
+		Auth:   "denied",
+		Cache:  "hit",
+	}
+	err := testEnv.checkOutput(expected)
 	if err != nil {
 		t.Error(err)
 	}
@@ -176,26 +196,20 @@ func TestRequestLogger_Output2(t *testing.T) {
 
 	logger.HttpStatus(201)
 	logger.AuthGranted()
+	logger.CacheHitStalled()
+	logger.CacheMiss()
+	logger.CacheMiss()
+	logger.CacheHit()
 	logger.Done()
 
-	err := testEnv.checkOutput("PUT", "/users/123", 201, "granted")
-	if err != nil {
-		t.Error(err)
+	expected := logOutput{
+		Method: "PUT",
+		Path:   "/users/123",
+		Status: 201,
+		Auth:   "granted",
+		Cache:  "hit-stalled:miss:miss:hit",
 	}
-}
-
-func TestRequestLogger_OverwriteFields(t *testing.T) {
-	testEnv := newLogTestEnv(t)
-	req := testEnv.newRequest("POST", "/foo")
-	_, logger := testEnv.newRequestLogger(req)
-
-	logger.HttpStatus(200)
-	logger.HttpStatus(404)
-	logger.AuthGranted()
-	logger.AuthDenied()
-	logger.Done()
-
-	err := testEnv.checkOutput("POST", "/foo", 404, "denied")
+	err := testEnv.checkOutput(expected)
 	if err != nil {
 		t.Error(err)
 	}
@@ -214,7 +228,7 @@ func TestRequestLogger_URLWithQueryParams(t *testing.T) {
 	logger.Done()
 
 	// Should only log the path, not query parameters
-	err := testEnv.checkOutput("GET", "/search", 0, "")
+	err := testEnv.checkOutput(logOutput{Method: "GET", Path: "/search"})
 	if err != nil {
 		t.Error(err)
 	}

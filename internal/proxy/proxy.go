@@ -140,7 +140,7 @@ func newReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool, n
 	}
 
 	proxy.ModifyResponse = func(resp *http.Response) error {
-		logger := GetRequestLogger(resp.Request)
+		logger := GetRequestLogger(resp.Request.Context())
 		if logger != nil {
 			logger.HttpStatus(resp.StatusCode)
 		}
