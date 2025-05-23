@@ -29,7 +29,7 @@ func (g *accessGuard) loginNeeded(rw http.ResponseWriter, req *http.Request) {
 	status := http.StatusUnauthorized
 	GetRequestLogger(req).HttpStatus(status)
 	if AcceptsHTML(req) {
-		if page, err := g.authStore.LoginNeededPage(); err == nil {
+		if page, err := g.authStore.LoginNeededPage(req.Context()); err == nil {
 			// no error.
 			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 			rw.WriteHeader(status)
@@ -44,7 +44,7 @@ func (g *accessGuard) forbidden(rw http.ResponseWriter, req *http.Request) {
 	status := http.StatusForbidden
 	GetRequestLogger(req).HttpStatus(status)
 	if AcceptsHTML(req) {
-		if page, err := g.authStore.ForbiddenPage(); err == nil {
+		if page, err := g.authStore.ForbiddenPage(req.Context()); err == nil {
 			// no error.
 			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 			rw.WriteHeader(status)
@@ -90,14 +90,14 @@ func (g *accessGuard) Handle(rw http.ResponseWriter, req *http.Request) bool {
 	var whoami *response.Whoami
 	cookie, _ := req.Cookie("wwwhisper-sessionid")
 	if cookie != nil {
-		whoami, err = g.authStore.Whoami(cookie.Value)
+		whoami, err = g.authStore.Whoami(req.Context(), cookie.Value)
 		if err != nil {
 			g.internalError(rw, req, err)
 			return false
 		}
 	}
 
-	locationsResponse, err := g.authStore.Locations()
+	locationsResponse, err := g.authStore.Locations(req.Context())
 	if err != nil {
 		g.internalError(rw, req, err)
 		return false

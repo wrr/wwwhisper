@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"context"
 	"reflect"
 	"strings"
 	"testing"
@@ -9,15 +10,15 @@ import (
 	"github.com/wrr/wwwhispergo/internal/proxytest"
 )
 
-func newRASDeps(t *testing.T) (*proxytest.AuthServer, *remoteAuthStore) {
+func newRASDeps(t *testing.T) (context.Context, *proxytest.AuthServer, *remoteAuthStore) {
 	authServer := proxytest.NewAuthServer(t)
 	logger := proxytest.NewLogger()
 	remoteStore := NewRemoteAuthStore(authServer.URL, logger)
-	return authServer, remoteStore
+	return context.Background(), authServer, remoteStore
 }
 
 func TestRemoteAuthStore_Whoami(t *testing.T) {
-	server, store := newRASDeps(t)
+	ctx, server, store := newRASDeps(t)
 	defer server.Close()
 
 	tests := []struct {
@@ -60,7 +61,7 @@ func TestRemoteAuthStore_Whoami(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := store.Whoami(tt.cookie)
+			resp, err := store.Whoami(ctx, tt.cookie)
 
 			if tt.wantErrMsg != "" {
 				if err == nil {
@@ -83,10 +84,10 @@ func TestRemoteAuthStore_Whoami(t *testing.T) {
 }
 
 func TestRemoteAuthStore_Locations(t *testing.T) {
-	server, store := newRASDeps(t)
+	ctx, server, store := newRASDeps(t)
 	defer server.Close()
 
-	resp, err := store.Locations()
+	resp, err := store.Locations(ctx)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -114,10 +115,10 @@ func TestRemoteAuthStore_Locations(t *testing.T) {
 }
 
 func TestRemoteAuthStore_LoginNeededPage(t *testing.T) {
-	server, store := newRASDeps(t)
+	ctx, server, store := newRASDeps(t)
 	defer server.Close()
 
-	html, err := store.LoginNeededPage()
+	html, err := store.LoginNeededPage(ctx)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -127,10 +128,10 @@ func TestRemoteAuthStore_LoginNeededPage(t *testing.T) {
 }
 
 func TestRemoteAuthStore_ForbiddenPage(t *testing.T) {
-	server, store := newRASDeps(t)
+	ctx, server, store := newRASDeps(t)
 	defer server.Close()
 
-	html, err := store.ForbiddenPage()
+	html, err := store.ForbiddenPage(ctx)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -140,33 +141,33 @@ func TestRemoteAuthStore_ForbiddenPage(t *testing.T) {
 }
 
 func TestRemoteAuthStore_ConnectionErrorHandling(t *testing.T) {
-	server, store := newRASDeps(t)
+	ctx, server, store := newRASDeps(t)
 	// Close the server to trigger network errors.
 	server.Close()
 
 	t.Run("whoami with connection error", func(t *testing.T) {
-		_, err := store.Whoami("any-cookie")
+		_, err := store.Whoami(ctx, "any-cookie")
 		if err == nil {
 			t.Error("Error not returned")
 		}
 	})
 
 	t.Run("locations with connection error", func(t *testing.T) {
-		_, err := store.Locations()
+		_, err := store.Locations(ctx)
 		if err == nil {
 			t.Error("Error not returned")
 		}
 	})
 
 	t.Run("login needed page with connection error", func(t *testing.T) {
-		_, err := store.LoginNeededPage()
+		_, err := store.LoginNeededPage(ctx)
 		if err == nil {
 			t.Error("Error not returned")
 		}
 	})
 
 	t.Run("forbidden page with connection error", func(t *testing.T) {
-		_, err := store.ForbiddenPage()
+		_, err := store.ForbiddenPage(ctx)
 		if err == nil {
 			t.Error("Error not returned")
 		}
@@ -174,34 +175,34 @@ func TestRemoteAuthStore_ConnectionErrorHandling(t *testing.T) {
 }
 
 func TestRemoteAuthStore_InvalidStatus(t *testing.T) {
-	server, store := newRASDeps(t)
+	ctx, server, store := newRASDeps(t)
 	defer server.Close()
 
 	server.StatusCode = 500
 
 	t.Run("whoami with connection error", func(t *testing.T) {
-		_, err := store.Whoami("any-cookie")
+		_, err := store.Whoami(ctx, "any-cookie")
 		if err == nil || !strings.Contains(err.Error(), "failed: 500") {
 			t.Errorf("Unexpected error %v", err)
 		}
 	})
 
 	t.Run("locations with connection error", func(t *testing.T) {
-		_, err := store.Locations()
+		_, err := store.Locations(ctx)
 		if err == nil || !strings.Contains(err.Error(), "failed: 500") {
 			t.Errorf("Unexpected error %v", err)
 		}
 	})
 
 	t.Run("login needed page with connection error", func(t *testing.T) {
-		_, err := store.LoginNeededPage()
+		_, err := store.LoginNeededPage(ctx)
 		if err == nil || !strings.Contains(err.Error(), "failed: 500") {
 			t.Errorf("Unexpected error %v", err)
 		}
 	})
 
 	t.Run("forbidden page with connection error", func(t *testing.T) {
-		_, err := store.ForbiddenPage()
+		_, err := store.ForbiddenPage(ctx)
 		if err == nil || !strings.Contains(err.Error(), "failed: 500") {
 			t.Errorf("Unexpected error %v", err)
 		}
@@ -209,19 +210,19 @@ func TestRemoteAuthStore_InvalidStatus(t *testing.T) {
 }
 
 func TestRemoteAuthStore_InvalidJSON(t *testing.T) {
-	server, store := newRASDeps(t)
+	ctx, server, store := newRASDeps(t)
 	defer server.Close()
 
 	server.ReturnInvalidJson()
 
 	t.Run("whoami with invalid JSON", func(t *testing.T) {
-		_, err := store.Whoami("any-cookie")
+		_, err := store.Whoami(ctx, "any-cookie")
 		if err == nil || !strings.Contains(err.Error(), "error parsing whoami JSON") {
 			t.Errorf("Unexpected error %v", err)
 		}
 	})
 	t.Run("locations with invalid JSON", func(t *testing.T) {
-		_, err := store.Locations()
+		_, err := store.Locations(ctx)
 		if err == nil || !strings.Contains(err.Error(), "error parsing locations JSON") {
 			t.Errorf("Unexpected error %v", err)
 		}
@@ -229,13 +230,13 @@ func TestRemoteAuthStore_InvalidJSON(t *testing.T) {
 }
 
 func TestRemoteAuthStore_InvalidContentType(t *testing.T) {
-	server, store := newRASDeps(t)
+	ctx, server, store := newRASDeps(t)
 	defer server.Close()
 
 	server.ContentTypeHTML = "text/plain; charset=utf-8"
 
 	t.Run("login needed page with invalid content type", func(t *testing.T) {
-		_, err := store.LoginNeededPage()
+		_, err := store.LoginNeededPage(ctx)
 		if err == nil || !strings.Contains(err.Error(), "invalid content type") {
 			t.Errorf("Expected error about invalid content type, got: %v", err)
 			t.Errorf("Unexpected error %v", err)
@@ -243,7 +244,7 @@ func TestRemoteAuthStore_InvalidContentType(t *testing.T) {
 	})
 
 	t.Run("forbidden page with invalid content type", func(t *testing.T) {
-		_, err := store.ForbiddenPage()
+		_, err := store.ForbiddenPage(ctx)
 		if err == nil || !strings.Contains(err.Error(), "invalid content type") {
 			t.Errorf("Unexpected error %v", err)
 		}

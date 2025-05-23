@@ -4,6 +4,7 @@
 package proxy
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"log/slog"
@@ -140,7 +141,7 @@ func (c *cachingAuthStore) checkFreshness(modId int) {
 // currently cached locationsResponse, marks cached locations, login
 // and forbidden pages as stalled (modId indicates that the site
 // configuration was modified).
-func (c *cachingAuthStore) Whoami(cookie string) (*response.Whoami, error) {
+func (c *cachingAuthStore) Whoami(ctx context.Context, cookie string) (*response.Whoami, error) {
 	// Hash the cookie to prevent cache lookup timing attacks
 	hashedCookie := secureHash(cookie)
 	c.mu.RLock()
@@ -155,7 +156,7 @@ func (c *cachingAuthStore) Whoami(cookie string) (*response.Whoami, error) {
 		}
 	}
 	c.mu.RUnlock()
-	freshResp, err := c.authStore.Whoami(cookie)
+	freshResp, err := c.authStore.Whoami(ctx, cookie)
 	if err != nil {
 		if respCached != nil {
 			// If failed to obtain a fresh response, but stalled cached
@@ -180,13 +181,13 @@ func (c *cachingAuthStore) Whoami(cookie string) (*response.Whoami, error) {
 // stalled, attempts to refresh it, but fallbacks to stalled location
 // data if the refresh request fails. Error is returned only if the
 // first request to get locations fails.
-func (c *cachingAuthStore) Locations() (*response.Locations, error) {
+func (c *cachingAuthStore) Locations(ctx context.Context) (*response.Locations, error) {
 	c.mu.RLock()
 	resp, stalled := c.locationsResponse.Get()
 	c.mu.RUnlock()
 	if stalled {
 		// TODO: some retry mechanism?
-		freshResp, err := c.authStore.Locations()
+		freshResp, err := c.authStore.Locations(ctx)
 		if err != nil {
 			c.log.Warn(err.Error())
 			if resp != nil {
@@ -203,12 +204,12 @@ func (c *cachingAuthStore) Locations() (*response.Locations, error) {
 }
 
 // See the AuthStore interface comments.
-func (c *cachingAuthStore) LoginNeededPage() (string, error) {
+func (c *cachingAuthStore) LoginNeededPage(ctx context.Context) (string, error) {
 	c.mu.RLock()
 	page, stalled := c.loginNeededPage.Get()
 	c.mu.RUnlock()
 	if stalled {
-		freshPage, err := c.authStore.LoginNeededPage()
+		freshPage, err := c.authStore.LoginNeededPage(ctx)
 		if err != nil {
 			c.log.Warn(err.Error())
 			// If page failed to refresh, return error only if stalled
@@ -227,12 +228,12 @@ func (c *cachingAuthStore) LoginNeededPage() (string, error) {
 }
 
 // See the AuthStore interface comments.
-func (c *cachingAuthStore) ForbiddenPage() (string, error) {
+func (c *cachingAuthStore) ForbiddenPage(ctx context.Context) (string, error) {
 	c.mu.RLock()
 	page, stalled := c.forbiddenPage.Get()
 	c.mu.RUnlock()
 	if stalled {
-		freshPage, err := c.authStore.ForbiddenPage()
+		freshPage, err := c.authStore.ForbiddenPage(ctx)
 		if err != nil {
 			c.log.Warn(err.Error())
 			// If page failed to refresh, return error only if stalled
