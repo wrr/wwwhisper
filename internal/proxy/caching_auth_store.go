@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/golang-lru/v2"
 	"github.com/wrr/wwwhispergo/internal/proxy/response"
 )
 
@@ -19,6 +20,9 @@ const locationValidity = 5 * time.Minute
 const sessionCacheValidity = 5 * time.Minute
 
 const pageCacheValidity = 5 * time.Minute
+
+// user entry is about 150B, which limits the cache size to ~1MB
+const usersCacheSize = 10000
 
 // See github.com/wrr/wwwhispergo/internal/timer
 type Timer interface {
@@ -84,7 +88,8 @@ type cachingAuthStore struct {
 	log      *slog.Logger
 	mu       sync.RWMutex
 	// Maps a hashed user cookie to the whoami data for the user.
-	users map[string]*cacheEntry[*response.Whoami]
+	users *lru.Cache[string, *cacheEntry[*response.Whoami]]
+
 	// Last locationsResponse received from the authStore.
 	locationsResponse cacheEntry[*response.Locations]
 	// Last loginNeeded page received from the authStore.
@@ -94,11 +99,22 @@ type cachingAuthStore struct {
 }
 
 func NewCachingAuthStore(authStore AuthStore, newTimer TimerFactory, log *slog.Logger) *cachingAuthStore {
+	return newCachingAuthStoreWithSize(authStore, newTimer, usersCacheSize, log)
+}
+
+// A separate function to allow for cache eviction testing.
+func newCachingAuthStoreWithSize(authStore AuthStore, newTimer TimerFactory, cacheSize int, log *slog.Logger) *cachingAuthStore {
+	usersCache, err := lru.New[string, *cacheEntry[*response.Whoami]](cacheSize)
+	if err != nil {
+		// This should never happen with positive cache size
+		panic(err)
+	}
+
 	return &cachingAuthStore{
 		authStore:         authStore,
 		newTimer:          newTimer,
 		log:               log,
-		users:             make(map[string]*cacheEntry[*response.Whoami]),
+		users:             usersCache,
 		locationsResponse: *newCacheEntry[*response.Locations](newTimer(locationValidity)),
 		loginNeededPage:   *newCacheEntry[string](newTimer(pageCacheValidity)),
 		forbiddenPage:     *newCacheEntry[string](newTimer(pageCacheValidity)),
@@ -165,19 +181,17 @@ func logCacheMiss(ctx context.Context) {
 func (c *cachingAuthStore) Whoami(ctx context.Context, cookie string) (*response.Whoami, error) {
 	// Hash the cookie to prevent cache lookup timing attacks
 	hashedCookie := secureHash(cookie)
-	c.mu.RLock()
-	cacheEntry, ok := c.users[hashedCookie]
+	// LRU cache is thread safe.
+	cacheEntry, ok := c.users.Get(hashedCookie)
 	var respCached *response.Whoami
 	if ok {
 		var stalled bool
 		respCached, stalled = cacheEntry.Get()
 		if !stalled {
-			c.mu.RUnlock()
 			logCacheHit(ctx)
 			return respCached, nil
 		}
 	}
-	c.mu.RUnlock()
 	freshResp, err := c.authStore.Whoami(ctx, cookie)
 	if err != nil {
 		if respCached != nil {
@@ -188,13 +202,13 @@ func (c *cachingAuthStore) Whoami(ctx context.Context, cookie string) (*response
 		}
 		return nil, err
 	}
+	// Lock because modification of cacheEntry is not thread safe.
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.checkFreshness(freshResp.ModId)
 	if !ok {
-		// TODO: limit cache size.
 		cacheEntry = newCacheEntry[*response.Whoami](c.newTimer(sessionCacheValidity))
-		c.users[hashedCookie] = cacheEntry
+		c.users.Add(hashedCookie, cacheEntry)
 	}
 	cacheEntry.Set(freshResp)
 	logCacheMiss(ctx)

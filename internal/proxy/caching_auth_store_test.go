@@ -53,6 +53,15 @@ func newCASDeps(t *testing.T) (context.Context, *proxytest.AuthServer, *fakeTime
 	return context.Background(), authServer, timer, cachingStore
 }
 
+func newCASDepsWithCacheSize(t *testing.T, size int) (context.Context, *proxytest.AuthServer, *fakeTimer, *cachingAuthStore) {
+	authServer := proxytest.NewAuthServer(t)
+	logger := proxytest.NewLogger()
+	remoteStore := NewRemoteAuthStore(authServer.URL, logger)
+	timer := NewFakeTimer(t, false)
+	cachingStore := newCachingAuthStoreWithSize(remoteStore, timer.factory, size, logger)
+	return context.Background(), authServer, timer, cachingStore
+}
+
 func TestSecureHash(t *testing.T) {
 	hash1 := secureHash("test-cookie")
 	hash2 := secureHash("test-cookie")
@@ -129,6 +138,44 @@ func TestCachingAuthStore_Whoami(t *testing.T) {
 	resp, err = cachingStore.Whoami(ctx, "alice-cookie")
 	expected.Email = "alice@new-example.org"
 	if err = check(resp, err, &expected, ""); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestCachingAuthStore_WhoamiEviction(t *testing.T) {
+	ctx, authServer, _, cachingStore := newCASDepsWithCacheSize(t, 1)
+	defer authServer.Close()
+
+	resp, err := cachingStore.Whoami(ctx, "alice-cookie")
+	expected := *authServer.Users["alice-cookie"]
+	expected.ModId = authServer.ModId
+	if err = check(resp, err, &expected, ""); err != nil {
+		t.Error(err)
+	}
+
+	// auth server fails, but data is cached, so is returned from the cache.
+	authServer.StatusCode = 511
+	resp, err = cachingStore.Whoami(ctx, "alice-cookie")
+	if err = check(resp, err, &expected, ""); err != nil {
+		t.Error(err)
+	}
+
+	// Cache size is configured to just one record, so getting Bob
+	// whoami record should evict Alice record.
+	authServer.StatusCode = 200
+	resp, err = cachingStore.Whoami(ctx, "bob-cookie")
+	expected = *authServer.Users["bob-cookie"]
+	expected.ModId = authServer.ModId
+	if err = check(resp, err, &expected, ""); err != nil {
+		t.Error(err)
+	}
+
+	authServer.StatusCode = 511
+	// Old Alice record is evicted and new one fails to fetch, error must be returned.
+	resp, err = cachingStore.Whoami(ctx, "alice-cookie")
+	expected = *authServer.Users["alice-cookie"]
+	expected.ModId = authServer.ModId
+	if err = check(resp, err, nil, "whoami failed: 511"); err != nil {
 		t.Error(err)
 	}
 }
