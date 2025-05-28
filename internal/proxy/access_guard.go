@@ -25,41 +25,67 @@ func NewAccessGuard(c AuthStore, log *slog.Logger) *accessGuard {
 	}
 }
 
+const textContent string = "text/plain; charset=utf-8"
+const htmlContent string = "text/html; charset=utf-8"
+const cacheOff string = "no-cache, no-store, must-revalidate, max-age=0"
+
+type Response struct {
+	status      int
+	contentType string
+	body        string
+}
+
+func writeResponse(rw http.ResponseWriter, resp *Response, req *http.Request) {
+	GetRequestLogger(req.Context()).HttpStatus(resp.status)
+	rw.Header().Set("Content-Type", resp.contentType)
+	rw.Header().Set("Cache-Control", cacheOff)
+	rw.Header().Set("X-Content-Type-Options", "nosniff")
+	rw.Header().Set("X-Frame-Options", "SAMEORIGIN")
+	rw.WriteHeader(resp.status)
+	rw.Write([]byte(resp.body))
+}
+
 func (g *accessGuard) loginNeeded(rw http.ResponseWriter, req *http.Request) {
-	status := http.StatusUnauthorized
-	GetRequestLogger(req.Context()).HttpStatus(status)
+	resp := &Response{
+		status:      http.StatusUnauthorized,
+		contentType: textContent,
+		body:        "Authentication required.",
+	}
+
 	if AcceptsHTML(req) {
 		if page, err := g.authStore.LoginNeededPage(req.Context()); err == nil {
 			// no error.
-			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-			rw.WriteHeader(status)
-			rw.Write([]byte(page))
-			return
+			resp.contentType = htmlContent
+			resp.body = page
 		}
 	}
-	http.Error(rw, "Authentication required.", status)
+	writeResponse(rw, resp, req)
 }
 
 func (g *accessGuard) forbidden(rw http.ResponseWriter, req *http.Request) {
-	status := http.StatusForbidden
-	GetRequestLogger(req.Context()).HttpStatus(status)
+	resp := &Response{
+		status:      http.StatusForbidden,
+		contentType: textContent,
+		body:        "Access forbidden.",
+	}
 	if AcceptsHTML(req) {
 		if page, err := g.authStore.ForbiddenPage(req.Context()); err == nil {
 			// no error.
-			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-			rw.WriteHeader(status)
-			rw.Write([]byte(page))
-			return
+			resp.contentType = htmlContent
+			resp.body = page
 		}
 	}
-	http.Error(rw, "Access forbidden.", status)
+	writeResponse(rw, resp, req)
 }
 
 func (g *accessGuard) internalError(rw http.ResponseWriter, req *http.Request, err error) {
-	status := http.StatusInternalServerError
-	GetRequestLogger(req.Context()).HttpStatus(status)
+	resp := &Response{
+		status:      http.StatusInternalServerError,
+		contentType: textContent,
+		body:        "Internal server error (auth)",
+	}
 	g.log.Warn("wwwhisper", "error", err)
-	http.Error(rw, "Internal server error (auth)", status)
+	writeResponse(rw, resp, req)
 }
 
 // Handle allows or rejects an incoming HTTP request. It returns true

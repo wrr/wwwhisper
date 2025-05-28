@@ -133,6 +133,32 @@ func checkResponse(resp *http.Response, err error, expectedStatus int, expectedB
 	return nil
 }
 
+func checkSecurityHeaders(resp *http.Response) error {
+	headers := []struct {
+		key   string
+		value string
+	}{
+		{
+			key:   "Cache-Control",
+			value: cacheOff,
+		},
+		{
+			key:   "X-Frame-Options",
+			value: "SAMEORIGIN",
+		},
+		{
+			key:   "X-Content-Type-Options",
+			value: "nosniff",
+		},
+	}
+	for _, h := range headers {
+		if v := resp.Header.Get(h.key); v != h.value {
+			return fmt.Errorf("%s header expected %q; got %q", h.key, h.value, v)
+		}
+	}
+	return nil
+}
+
 func TestRunServerStartError(t *testing.T) {
 	config := Config{
 		WwwhisperURL: parseURL("https://wwwhisper.io"),
@@ -262,7 +288,7 @@ func TestForbiddenIfNoRootLocation(t *testing.T) {
 	testEnv.AuthServer.Locations[0].Path = "/foobar"
 
 	resp, err := http.Get(testEnv.ExternalURL + "/foo")
-	expectedBody := "Access forbidden.\n"
+	expectedBody := "Access forbidden."
 	if err = checkResponse(resp, err, http.StatusForbidden, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
 	}
@@ -307,7 +333,7 @@ func TestRequestLoginNeededAcceptText(t *testing.T) {
 	if contentType != "text/plain; charset=utf-8" {
 		t.Error("Invalid content type", contentType)
 	}
-	expectedBody := "Authentication required.\n"
+	expectedBody := "Authentication required."
 	if err = checkResponse(resp, err, http.StatusUnauthorized, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
 	}
@@ -331,6 +357,9 @@ func TestRequestLoginNeededAcceptHtml(t *testing.T) {
 	if err = checkResponse(resp, err, http.StatusUnauthorized, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
 	}
+	if err = checkSecurityHeaders(resp); err != nil {
+		t.Error(err)
+	}
 	if testEnv.AppCount != 0 {
 		t.Error("App request made")
 	}
@@ -348,9 +377,12 @@ func TestRequestForbiddenAcceptText(t *testing.T) {
 	if contentType != "text/plain; charset=utf-8" {
 		t.Error("Invalid content type", contentType)
 	}
-	expectedBody := "Access forbidden.\n"
+	expectedBody := "Access forbidden."
 	if err = checkResponse(resp, err, http.StatusForbidden, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
+	}
+	if err = checkSecurityHeaders(resp); err != nil {
+		t.Error(err)
 	}
 	if testEnv.AppCount != 0 {
 		t.Error("App request made")
@@ -373,6 +405,9 @@ func TestRequestForbiddenAcceptHtml(t *testing.T) {
 	expectedBody := testEnv.AuthServer.Forbidden
 	if err = checkResponse(resp, err, http.StatusForbidden, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
+	}
+	if err = checkSecurityHeaders(resp); err != nil {
+		t.Error(err)
 	}
 	if testEnv.AppCount != 0 {
 		t.Error("App request made")
@@ -451,9 +486,12 @@ func TestAuthServerNonHttpError(t *testing.T) {
 
 	// Not authenticated request, location retrieval should fail.
 	resp, err := http.Get(testEnv.ExternalURL)
-	expectedBody := "Internal server error (auth)\n"
+	expectedBody := "Internal server error (auth)"
 	if err = checkResponse(resp, err, 500, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
+	}
+	if err = checkSecurityHeaders(resp); err != nil {
+		t.Error(err)
 	}
 
 	// Authenticated request, whoami retrieval should fail.
@@ -528,7 +566,7 @@ func TestAdminPathAccess(t *testing.T) {
 
 	// no user
 	resp, err := http.Get(url)
-	expectedBody := "Authentication required.\n"
+	expectedBody := "Authentication required."
 	if err = checkResponse(resp, err, http.StatusUnauthorized, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
 	}
@@ -537,7 +575,7 @@ func TestAdminPathAccess(t *testing.T) {
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("Cookie", "wwwhisper-sessionid=bob-cookie")
 	resp, err = testEnv.Client.Do(req)
-	expectedBody = "Access forbidden.\n"
+	expectedBody = "Access forbidden."
 	if err = checkResponse(resp, err, http.StatusForbidden, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
 	}
