@@ -609,84 +609,88 @@ func TestRedirectPassedFromAppToClient(t *testing.T) {
 	}
 }
 
-func TestIframeInjection(t *testing.T) {
+func TestIframeInjection2(t *testing.T) {
 	testEnv := newTestEnv(t)
 	defer testEnv.dispose()
-	responseUnmodified := "<html><body>foo</body></html>"
 
-	testEnv.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
-		rw.Header().Add("Content-Type", "text/html")
-		rw.WriteHeader(http.StatusOK)
-		rw.Write([]byte(responseUnmodified))
-	}
-
-	// Iframe should not be injected if user is not authenticated.
-	resp, err := http.Get(testEnv.ExternalURL + "/open/foo")
-	if err = checkResponse(resp, err, 200, &responseUnmodified); err != nil {
-		t.Error("Invalid response", err)
-	}
-
-	// Iframe should be injected if the user is authenticated.
-	req, _ := http.NewRequest("GET", testEnv.ExternalURL+"/open/foo/", nil)
-	req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
-	resp, err = testEnv.Client.Do(req)
-	expectedBody := `<html><body>foo
+	responseOrig := "<html><body>foo</body></html>"
+	responseNoBody := "<html><head>foo</head></html>"
+	responseInjected := `<html><body>foo
 <script src="/wwwhisper/auth/iframe.js"></script>
 </body></html>`
-	if err = checkResponse(resp, err, 200, &expectedBody); err != nil {
-		t.Error("Invalid response", err)
+
+	newHandler := func(contentType string, body string) http.HandlerFunc {
+		return func(rw http.ResponseWriter, req *http.Request) {
+			rw.Header().Add("Content-Type", contentType)
+			rw.WriteHeader(http.StatusOK)
+			rw.Write([]byte(body))
+		}
 	}
 
-	// Iframe should not be injected to not HTML responses
-	testEnv.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
-		rw.Header().Add("Content-Type", "text/plain")
-		rw.WriteHeader(http.StatusOK)
-		rw.Write([]byte(responseUnmodified))
-	}
-	req, _ = http.NewRequest("GET", testEnv.ExternalURL+"/open/foo/", nil)
-	req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
-	resp, err = testEnv.Client.Do(req)
-	if err = checkResponse(resp, err, 200, &responseUnmodified); err != nil {
-		t.Error("Invalid response", err)
+	tests := []struct {
+		name         string
+		handler      func(rw http.ResponseWriter, req *http.Request)
+		path         string
+		noAuth       bool
+		expectedBody string
+	}{
+		{
+			name:         "no injection if not authenticated",
+			handler:      newHandler("text/html", responseOrig),
+			path:         "/open/foo",
+			noAuth:       true,
+			expectedBody: responseOrig,
+		},
+		{
+			name:         "inject if authenticated",
+			handler:      newHandler("text/html", responseOrig),
+			path:         "/open/foo/",
+			expectedBody: responseInjected,
+		},
+		{
+			name:         "no injection for non-HTML responses",
+			handler:      newHandler("text/plain", responseOrig),
+			path:         "/foo/",
+			expectedBody: responseOrig,
+		},
+		{
+			name: "no injection for gzipped HTML responses",
+			handler: func(rw http.ResponseWriter, req *http.Request) {
+				rw.Header().Add("Content-Type", "text/html")
+				rw.Header().Add("Content-Encoding", "gzip")
+				rw.WriteHeader(http.StatusOK)
+				gz := gzip.NewWriter(rw)
+				defer gz.Close()
+				gz.Write([]byte(responseOrig))
+			},
+			path:         "/foo/",
+			expectedBody: responseOrig,
+		},
+		{
+			name:         "no injection for HTML without closing body tag",
+			handler:      newHandler("text/html", responseNoBody),
+			path:         "/foo/",
+			expectedBody: responseNoBody,
+		},
+		{
+			name:         "no injection for wwwhisper backend responses",
+			path:         "/wwwhisper/admin/",
+			expectedBody: testEnv.AuthServer.Admin,
+		},
 	}
 
-	// Iframe should not be injected to gzipped HTML responses
-	testEnv.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
-		rw.Header().Add("Content-Type", "text/html")
-		rw.Header().Add("Content-Encoding", "gzip")
-		rw.WriteHeader(http.StatusOK)
-
-		gz := gzip.NewWriter(rw)
-		defer gz.Close()
-		gz.Write([]byte(responseUnmodified))
-	}
-	req, _ = http.NewRequest("GET", testEnv.ExternalURL+"/open/foo/", nil)
-	req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
-	resp, err = testEnv.Client.Do(req)
-	if err = checkResponse(resp, err, 200, &responseUnmodified); err != nil {
-		t.Error("Invalid response", err)
-	}
-
-	// Iframe should not be injected HTML responses without the closing </body> tag.
-	responseNoBody := "<html><head>foo</head></html>"
-	testEnv.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
-		rw.Header().Add("Content-Type", "text/plain")
-		rw.WriteHeader(http.StatusOK)
-		rw.Write([]byte(responseNoBody))
-	}
-	req, _ = http.NewRequest("GET", testEnv.ExternalURL+"/open/foo/", nil)
-	req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
-	resp, err = testEnv.Client.Do(req)
-	if err = checkResponse(resp, err, 200, &responseNoBody); err != nil {
-		t.Error("Invalid response", err)
-	}
-
-	// Iframe should not be injected tp wwwhisper backend responses.
-	req, _ = http.NewRequest("GET", testEnv.ExternalURL+"/wwwhisper/admin/", nil)
-	req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
-	resp, err = testEnv.Client.Do(req)
-	if err = checkResponse(resp, err, 200, &testEnv.AuthServer.Admin); err != nil {
-		t.Error("Invalid response", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testEnv.AppHandler = tt.handler
+			req, _ := http.NewRequest("GET", testEnv.ExternalURL+tt.path, nil)
+			if !tt.noAuth {
+				req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
+			}
+			resp, err := testEnv.Client.Do(req)
+			if err = checkResponse(resp, err, 200, &tt.expectedBody); err != nil {
+				t.Errorf("Invalid response for %v", err)
+			}
+		})
 	}
 }
 
