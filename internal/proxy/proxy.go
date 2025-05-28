@@ -140,7 +140,8 @@ func newReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool, n
 	}
 
 	proxy.ModifyResponse = func(resp *http.Response) error {
-		logger := GetRequestLogger(resp.Request.Context())
+		req := resp.Request
+		logger := GetRequestLogger(req.Context())
 		if logger != nil {
 			logger.HttpStatus(resp.StatusCode)
 		}
@@ -149,7 +150,8 @@ func newReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool, n
 				resp.Header.Del(key)
 			}
 		}
-		if !noOverlay {
+		if !noOverlay && req.Header.Get("User") != "" {
+			// Inject overlay only if the user is authenticated.
 			return injectOverlay(resp)
 		}
 		return nil

@@ -619,7 +619,17 @@ func TestIframeInjection(t *testing.T) {
 		rw.WriteHeader(http.StatusOK)
 		rw.Write([]byte(responseUnmodified))
 	}
+
+	// Iframe should not be injected if user is not authenticated.
 	resp, err := http.Get(testEnv.ExternalURL + "/open/foo")
+	if err = checkResponse(resp, err, 200, &responseUnmodified); err != nil {
+		t.Error("Invalid response", err)
+	}
+
+	// Iframe should be injected if the user is authenticated.
+	req, _ := http.NewRequest("GET", testEnv.ExternalURL+"/open/foo/", nil)
+	req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
+	resp, err = testEnv.Client.Do(req)
 	expectedBody := `<html><body>foo
 <script src="/wwwhisper/auth/iframe.js"></script>
 </body></html>`
@@ -633,7 +643,9 @@ func TestIframeInjection(t *testing.T) {
 		rw.WriteHeader(http.StatusOK)
 		rw.Write([]byte(responseUnmodified))
 	}
-	resp, err = http.Get(testEnv.ExternalURL + "/open/foo")
+	req, _ = http.NewRequest("GET", testEnv.ExternalURL+"/open/foo/", nil)
+	req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
+	resp, err = testEnv.Client.Do(req)
 	if err = checkResponse(resp, err, 200, &responseUnmodified); err != nil {
 		t.Error("Invalid response", err)
 	}
@@ -648,7 +660,9 @@ func TestIframeInjection(t *testing.T) {
 		defer gz.Close()
 		gz.Write([]byte(responseUnmodified))
 	}
-	resp, err = http.Get(testEnv.ExternalURL + "/open/foo")
+	req, _ = http.NewRequest("GET", testEnv.ExternalURL+"/open/foo/", nil)
+	req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
+	resp, err = testEnv.Client.Do(req)
 	if err = checkResponse(resp, err, 200, &responseUnmodified); err != nil {
 		t.Error("Invalid response", err)
 	}
@@ -660,13 +674,15 @@ func TestIframeInjection(t *testing.T) {
 		rw.WriteHeader(http.StatusOK)
 		rw.Write([]byte(responseNoBody))
 	}
-	resp, err = http.Get(testEnv.ExternalURL + "/open/foo")
+	req, _ = http.NewRequest("GET", testEnv.ExternalURL+"/open/foo/", nil)
+	req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
+	resp, err = testEnv.Client.Do(req)
 	if err = checkResponse(resp, err, 200, &responseNoBody); err != nil {
 		t.Error("Invalid response", err)
 	}
 
-	// Iframe should not be injected wwwhisper backend responses.
-	req, _ := http.NewRequest("GET", testEnv.ExternalURL+"/wwwhisper/admin/", nil)
+	// Iframe should not be injected tp wwwhisper backend responses.
+	req, _ = http.NewRequest("GET", testEnv.ExternalURL+"/wwwhisper/admin/", nil)
 	req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
 	resp, err = testEnv.Client.Do(req)
 	if err = checkResponse(resp, err, 200, &testEnv.AuthServer.Admin); err != nil {
@@ -702,7 +718,10 @@ func TestIframeInjectionBodyReadFailure(t *testing.T) {
 	// Error returned by the default AppProxy.ErrorHandler
 	// when ModifyResponse returns an error.
 	expectedBody := ""
-	resp, err := http.Get(testEnv.ExternalURL + "/open")
+	req, err := http.NewRequest("GET", testEnv.ExternalURL+"/open/foo/", nil)
+	req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
+	resp, err := testEnv.Client.Do(req)
+
 	if err = checkResponse(resp, err, 502, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
 	}
