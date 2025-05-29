@@ -760,7 +760,7 @@ func TestIframeInjectionBodyReadFailure(t *testing.T) {
 	// Error returned by the default AppProxy.ErrorHandler
 	// when ModifyResponse returns an error.
 	expectedBody := ""
-	req, err := http.NewRequest("GET", testEnv.ExternalURL+"/open/foo/", nil)
+	req, _ := http.NewRequest("GET", testEnv.ExternalURL+"/open/foo/", nil)
 	req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
 	resp, err := testEnv.Client.Do(req)
 
