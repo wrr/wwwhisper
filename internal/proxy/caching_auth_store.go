@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/golang-lru/v2"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/wrr/wwwhispergo/internal/proxy/response"
 )
 
