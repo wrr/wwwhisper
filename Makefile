@@ -11,8 +11,15 @@ vet: fmt
 build: vet
 	go build ./cmd/wwwhisper
 
+# Build a devel binary with race detection
+build-race:
+	go build -race ./cmd/wwwhisper
+
 test: vet
 	go test ./...
+
+test-race:
+	go test -race ./...
 
 # go install honnef.co/go/tools/cmd/staticcheck@latest
 lint: build

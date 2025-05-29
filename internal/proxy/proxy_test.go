@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"testing"
 	"time"
@@ -25,7 +26,7 @@ import (
 type TestEnv struct {
 	AppServer  *httptest.Server
 	AppHandler func(http.ResponseWriter, *http.Request)
-	AppCount   int
+	appCount   atomic.Int32
 
 	AuthServer *proxytest.AuthServer
 
@@ -35,6 +36,10 @@ type TestEnv struct {
 	AppProxy *httputil.ReverseProxy
 
 	Client *http.Client
+}
+
+func (env *TestEnv) AppCount() int32 {
+	return env.appCount.Load()
 }
 
 func (env *TestEnv) dispose() {
@@ -51,7 +56,7 @@ func newTestEnv(t *testing.T) *TestEnv {
 	}
 	env.AppServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		env.AppHandler(rw, req)
-		env.AppCount++
+		env.appCount.Add(1)
 	}))
 	env.AuthServer = proxytest.NewAuthServer(t)
 
@@ -292,7 +297,7 @@ func TestForbiddenIfNoRootLocation(t *testing.T) {
 	if err = checkResponse(resp, err, http.StatusForbidden, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
 	}
-	if testEnv.AppCount != 0 {
+	if testEnv.AppCount() != 0 {
 		t.Error("App request made")
 	}
 }
@@ -337,7 +342,7 @@ func TestRequestLoginNeededAcceptText(t *testing.T) {
 	if err = checkResponse(resp, err, http.StatusUnauthorized, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
 	}
-	if testEnv.AppCount != 0 {
+	if testEnv.AppCount() != 0 {
 		t.Error("App request made")
 	}
 }
@@ -360,7 +365,7 @@ func TestRequestLoginNeededAcceptHtml(t *testing.T) {
 	if err = checkSecurityHeaders(resp); err != nil {
 		t.Error(err)
 	}
-	if testEnv.AppCount != 0 {
+	if testEnv.AppCount() != 0 {
 		t.Error("App request made")
 	}
 }
@@ -384,7 +389,7 @@ func TestRequestForbiddenAcceptText(t *testing.T) {
 	if err = checkSecurityHeaders(resp); err != nil {
 		t.Error(err)
 	}
-	if testEnv.AppCount != 0 {
+	if testEnv.AppCount() != 0 {
 		t.Error("App request made")
 	}
 }
@@ -409,7 +414,7 @@ func TestRequestForbiddenAcceptHtml(t *testing.T) {
 	if err = checkSecurityHeaders(resp); err != nil {
 		t.Error(err)
 	}
-	if testEnv.AppCount != 0 {
+	if testEnv.AppCount() != 0 {
 		t.Error("App request made")
 	}
 }
@@ -474,7 +479,7 @@ func TestAuthPathAllowed(t *testing.T) {
 	if err = checkResponse(resp, err, http.StatusOK, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
 	}
-	if testEnv.AppCount != 0 {
+	if testEnv.AppCount() != 0 {
 		t.Error("App request made")
 	}
 }
@@ -502,7 +507,7 @@ func TestAuthServerNonHttpError(t *testing.T) {
 		t.Error("Invalid response", err)
 	}
 
-	if testEnv.AppCount != 0 {
+	if testEnv.AppCount() != 0 {
 		t.Error("App request made")
 	}
 }
@@ -589,7 +594,7 @@ func TestAdminPathAccess(t *testing.T) {
 		t.Error("Invalid response", err)
 	}
 
-	if testEnv.AppCount != 0 {
+	if testEnv.AppCount() != 0 {
 		t.Error("App request made")
 	}
 }
@@ -610,7 +615,7 @@ func TestAdminPostRequest(t *testing.T) {
 		t.Error("Invalid response", err)
 	}
 
-	if testEnv.AppCount != 0 {
+	if testEnv.AppCount() != 0 {
 		t.Error("App request made")
 	}
 }
@@ -642,7 +647,7 @@ func TestRedirectPassedFromAppToClient(t *testing.T) {
 	if location != "https://localhost:9999/foo/bar" {
 		t.Error("Location header not returned to client", location)
 	}
-	if testEnv.AppCount != 1 {
+	if testEnv.AppCount() != 1 {
 		t.Error("App request not made")
 	}
 }

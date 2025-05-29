@@ -186,7 +186,10 @@ func (c *cachingAuthStore) Whoami(ctx context.Context, cookie string) (*response
 	var respCached *response.Whoami
 	if ok {
 		var stalled bool
+		// Lock because access and modification of cacheEntry is not thread safe.
+		c.mu.RLock()
 		respCached, stalled = cacheEntry.Get()
+		c.mu.RUnlock()
 		if !stalled {
 			logCacheHit(ctx)
 			return respCached, nil
@@ -202,7 +205,6 @@ func (c *cachingAuthStore) Whoami(ctx context.Context, cookie string) (*response
 		}
 		return nil, err
 	}
-	// Lock because modification of cacheEntry is not thread safe.
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.checkFreshness(freshResp.ModId)
