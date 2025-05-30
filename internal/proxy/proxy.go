@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -31,6 +32,7 @@ type Config struct {
 }
 
 const Version string = "1.0.3"
+const Client string = "go-" + Version
 const overlayToInject = `
 <script src="/wwwhisper/auth/iframe.js"></script>
 `
@@ -47,12 +49,16 @@ const overlayToInject = `
 // it contains can be obtained anyway from the
 // /wwwhisper/auth/api/whoami endpoint, but to avoid it being treated
 // as some kind of a public API, we mask the header.
+//
+// We also drop Mod-Id which is needed by the auth proxy for cache
+// invalidation, but is not needed by the end client.
 var headersToDrop = map[string]bool{
 	"Via":                 true,
 	"Nel":                 true,
 	"Report-To":           true,
 	"Reporting-Endpoints": true,
 	"User":                true,
+	"X-Mod-Id":            true,
 }
 
 func basicAuthCredentials(url *url.URL) string {
@@ -106,14 +112,31 @@ func setSiteURLHeader(dst *http.Request, incoming *http.Request) {
 	dst.Header.Set("Site-Url", scheme+"://"+incoming.Host)
 }
 
-func newReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool, noOverlay bool) *httputil.ReverseProxy {
+func getModId(resp *http.Response) (int, bool) {
+	modIdStr := resp.Header.Get("X-Mod-Id")
+	if modIdStr != "" {
+		modId, err := strconv.Atoi(modIdStr);
+		return modId, err == nil
+	}
+	return 0, false
+}
+
+type reverseProxyConfig struct {
+	target           *url.URL
+	log              *slog.Logger
+	proxyToWwwhisper bool
+	cachingStore     *cachingAuthStore
+	noOverlay        bool
+}
+
+func newReverseProxy(cfg *reverseProxyConfig) *httputil.ReverseProxy {
 	proxy := &httputil.ReverseProxy{}
-	proxy.ErrorLog = slog.NewLogLogger(log.Handler(), slog.LevelError)
-	credentials := basicAuthCredentials(target)
+	proxy.ErrorLog = slog.NewLogLogger(cfg.log.Handler(), slog.LevelError)
+	credentials := basicAuthCredentials(cfg.target)
 
 	proxy.Rewrite = func(req *httputil.ProxyRequest) {
-		req.Out.URL.Scheme = target.Scheme
-		req.Out.URL.Host = target.Host
+		req.Out.URL.Scheme = cfg.target.Scheme
+		req.Out.URL.Host = cfg.target.Host
 		req.Out.Header["X-Forwarded-For"] = req.In.Header["X-Forwarded-For"]
 		req.SetXForwarded()
 		// In the chains of proxies (for example on Heroku where wwwhisper
@@ -124,7 +147,8 @@ func newReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool, n
 		if len(proto) > 0 {
 			req.Out.Header.Set("X-Forwarded-Proto", proto)
 		}
-		if proxyToWwwhisper {
+		if cfg.proxyToWwwhisper {
+			req.Out.Header.Set("X-Client", Client)
 			setSiteURLHeader(req.Out, req.In)
 			// When proxying to wwwhisper the host header needs to contain
 			// hostname parsed from the WWWHISPER_URL, not hostname of the
@@ -132,7 +156,7 @@ func newReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool, n
 			// (Heroku at this moment) is not able to correctly route the
 			// request (the Site-Url header contains the protected site
 			// hostname).
-			req.Out.Host = target.Host
+			req.Out.Host = cfg.target.Host
 		}
 		if credentials != "" {
 			req.Out.Header.Set("Authorization", credentials)
@@ -145,12 +169,16 @@ func newReverseProxy(target *url.URL, log *slog.Logger, proxyToWwwhisper bool, n
 		if logger != nil {
 			logger.HttpStatus(resp.StatusCode)
 		}
-		if proxyToWwwhisper {
+		if cfg.proxyToWwwhisper {
+			modId, ok := getModId(resp)
+			if ok {
+				cfg.cachingStore.CheckFreshness(modId)
+			}
 			for key := range headersToDrop {
 				resp.Header.Del(key)
 			}
 		}
-		if !noOverlay && req.Header.Get("User") != "" {
+		if !cfg.noOverlay && req.Header.Get("User") != "" {
 			// Inject overlay only if the user is authenticated.
 			return injectOverlay(resp)
 		}
@@ -164,13 +192,18 @@ func NewTimer(duration time.Duration) Timer {
 }
 
 func newRootHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Handler) http.Handler {
-	remote_store := NewRemoteAuthStore(wwwhisperURL, log)
-	caching_store := NewCachingAuthStore(remote_store, NewTimer, log)
-	guard := NewAccessGuard(caching_store, log)
+	remoteStore := NewRemoteAuthStore(wwwhisperURL, log)
+	cachingStore := NewCachingAuthStore(remoteStore, NewTimer, log)
+	guard := NewAccessGuard(cachingStore, log)
 
-	// wwwhisper HTML responses already have the logout overlay added.
-	noOverlay := true
-	wwwhisperProxy := newReverseProxy(wwwhisperURL, log, true, noOverlay)
+	cfg := &reverseProxyConfig{
+		target:           wwwhisperURL,
+		log:              log,
+		proxyToWwwhisper: true,
+		cachingStore:     cachingStore,
+		noOverlay:        true, // wwwhisper HTML responses already have the logout overlay added.
+	}
+	wwwhisperProxy := newReverseProxy(cfg)
 
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		req, logger := NewRequestLogger(req, log)
@@ -215,7 +248,13 @@ func Run(cfg Config) error {
 	}
 	server.SetKeepAlivesEnabled(true)
 
-	appProxy := newReverseProxy(proxyTarget, log, false, cfg.NoOverlay)
+	appProxy := newReverseProxy(&reverseProxyConfig{
+		target:           proxyTarget,
+		log:              log,
+		proxyToWwwhisper: false,
+		cachingStore:     nil,
+		noOverlay:        cfg.NoOverlay,
+	})
 	mux.Handle("/", newRootHandler(cfg.WwwhisperURL, log, appProxy))
 
 	serverStatus := make(chan error, 1)

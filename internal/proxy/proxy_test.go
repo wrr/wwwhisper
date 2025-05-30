@@ -63,7 +63,13 @@ func newTestEnv(t *testing.T) *TestEnv {
 	log := proxytest.NewLogger()
 
 	appUrlParsed, _ := url.Parse(env.AppServer.URL)
-	env.AppProxy = newReverseProxy(appUrlParsed, log, false, false)
+	env.AppProxy = newReverseProxy(&reverseProxyConfig{
+		target:           appUrlParsed,
+		log:              log,
+		proxyToWwwhisper: false,
+		cachingStore:     nil,
+		noOverlay:        false,
+	})
 
 	wwwhisperHandler := newRootHandler(env.AuthServer.URL, log, env.AppProxy)
 
@@ -370,6 +376,49 @@ func TestRequestLoginNeededAcceptHtml(t *testing.T) {
 	}
 }
 
+func TestModIdHeaderCacheInvalidation(t *testing.T) {
+	testEnv := newTestEnv(t)
+	defer testEnv.dispose()
+
+	checkPage := func(expectedBody string) error {
+		req, _ := http.NewRequest("GET", testEnv.ExternalURL+"/hello", nil)
+		req.Header.Add("Accept", "text/html")
+		resp, err := testEnv.Client.Do(req)
+		return checkResponse(resp, err, http.StatusUnauthorized, &expectedBody)
+	}
+
+	origPage := testEnv.AuthServer.LoginNeeded
+
+	if err := checkPage(origPage); err != nil {
+		t.Error("Invalid login page", err)
+	}
+
+	// Modify the login page
+	newPage := origPage + "modified"
+	testEnv.AuthServer.LoginNeeded = newPage
+
+	// Login page is modified, but the original page should still be cached and returned.
+	if err := checkPage(origPage); err != nil {
+		t.Error("Invalid login page", err)
+	}
+
+	// A request to /wwwhisper/auth/login should return modId, but the modId is
+	// not yet changed, so should not cause cache invalidation.
+	http.Get(testEnv.ExternalURL + "/wwwhisper/auth/login")
+	if err := checkPage(origPage); err != nil {
+		t.Error("Invalid login page", err)
+	}
+
+	// Finaly, change the ModId; request to /wwwhisper/auth/login should
+	// return it, cause cache invalidation and new version of
+	// the page should be fetched and returned.
+	testEnv.AuthServer.ModId += 1
+	http.Get(testEnv.ExternalURL + "/wwwhisper/auth/login")
+	if err := checkPage(newPage); err != nil {
+		t.Error("Invalid login page", err)
+	}
+}
+
 func TestRequestForbiddenAcceptText(t *testing.T) {
 	testEnv := newTestEnv(t)
 	defer testEnv.dispose()
@@ -423,13 +472,13 @@ func TestAuthBackendNotNeededResponseHeadersStripped(t *testing.T) {
 	testEnv := newTestEnv(t)
 	defer testEnv.dispose()
 
+	headers := []string{"Via", "Nel", "Report-To", "Reporting-Endpoints", "User", "X-Mod-Id"}
+
 	mux := testEnv.AuthServer.Mux
 	mux.HandleFunc("/wwwhisper/auth/custom", func(rw http.ResponseWriter, req *http.Request) {
-		rw.Header().Add("Via", "test-router")
-		rw.Header().Add("Nel", "x")
-		rw.Header().Add("Report-To", "y")
-		rw.Header().Add("Reporting-Endpoints", "z")
-		rw.Header().Add("User", "alice@example.com")
+		for _, h := range headers {
+			rw.Header().Add(h, "header-value")
+		}
 		rw.Write([]byte("custom page"))
 	})
 
@@ -438,7 +487,6 @@ func TestAuthBackendNotNeededResponseHeadersStripped(t *testing.T) {
 	if err = checkResponse(resp, err, http.StatusOK, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
 	}
-	headers := []string{"Via", "Nel", "Report-To", "Reporting-Endpoints", "User"}
 	for _, h := range headers {
 		if resp.Header.Get(h) != "" {
 			t.Error("Header not stripped:", h)
@@ -652,7 +700,7 @@ func TestRedirectPassedFromAppToClient(t *testing.T) {
 	}
 }
 
-func TestIframeInjection2(t *testing.T) {
+func TestIframeInjection(t *testing.T) {
 	testEnv := newTestEnv(t)
 	defer testEnv.dispose()
 

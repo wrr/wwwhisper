@@ -128,7 +128,7 @@ func secureHash(cookie string) string {
 }
 
 // Must be called with c.mu hold for writing.
-func (c *cachingAuthStore) checkFreshness(modId int) {
+func (c *cachingAuthStore) checkFresshnessThreadUnsafe(modId int) {
 	if c.locationsResponse.value == nil {
 		// Locations not yet retrieved.
 		return
@@ -146,6 +146,18 @@ func (c *cachingAuthStore) checkFreshness(modId int) {
 		// deployed, not only when the site changes.
 		c.locationsResponse.timer.Start()
 	}
+}
+
+// CheckFreshness checks if modification id of the location data is
+// the same as modId passed as the argument.  If not, the cached data
+// is marked as stalled and an attempt will be made to refresh it
+// during the next access.
+//
+// Thread safe.
+func (c *cachingAuthStore) CheckFreshness(modId int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.checkFresshnessThreadUnsafe(modId)
 }
 
 func logCacheHit(ctx context.Context) {
@@ -207,7 +219,7 @@ func (c *cachingAuthStore) Whoami(ctx context.Context, cookie string) (*response
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.checkFreshness(freshResp.ModId)
+	c.checkFresshnessThreadUnsafe(freshResp.ModId)
 	if !ok {
 		cacheEntry = newCacheEntry[*response.Whoami](c.newTimer(sessionCacheValidity))
 		c.users.Add(hashedCookie, cacheEntry)

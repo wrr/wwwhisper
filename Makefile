@@ -34,10 +34,6 @@ cover-inspect: cover
 clean:
 	go clean
 
-release: test
-	tar -cvzf wwwhisper.tgz wwwhisper
-	cp wwwhisper.tgz ../wwwhisper-heroku-buildpack
-
 # go install golang.org/x/tools/cmd/goimports@latest
 imports: build
 	goimports -l -w .
@@ -45,3 +41,9 @@ imports: build
 # go install golang.org/x/vuln/cmd/govulncheck@latest
 vulncheck: build
 	govulncheck ./...
+
+all: cover-inspect test-race vulncheck imports lint build
+
+release: all
+	tar -cvzf wwwhisper.tgz wwwhisper
+	cp wwwhisper.tgz ../wwwhisper-heroku-buildpack

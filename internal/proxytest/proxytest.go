@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -71,6 +72,15 @@ func requireBasicAuth(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		}
 	})
+}
+
+func checkClient(w http.ResponseWriter, r *http.Request) bool {
+	client := r.Header.Get("X-Client")
+	if !strings.HasPrefix(client, "go-") {
+		http.Error(w, "Invalid X-Client: "+client, http.StatusBadRequest)
+		return false
+	}
+	return true
 }
 
 func NewAuthServer(t *testing.T) *AuthServer {
@@ -140,24 +150,36 @@ func NewAuthServer(t *testing.T) *AuthServer {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/wwwhisper/auth/login", func(w http.ResponseWriter, r *http.Request) {
+		if !checkClient(w, r) {
+			return
+		}
 		w.Header().Set("Content-Type", server.ContentTypeHTML)
+		w.Header().Set("X-Mod-Id", strconv.Itoa(server.ModId))
 		w.WriteHeader(server.StatusCode)
 		w.Write([]byte("login response"))
 	})
 
 	mux.HandleFunc("/wwwhisper/admin/", func(w http.ResponseWriter, r *http.Request) {
+		if !checkClient(w, r) {
+			return
+		}
 		w.Header().Set("Content-Type", server.ContentTypeHTML)
+		w.Header().Set("X-Mod-Id", strconv.Itoa(server.ModId))
 		w.WriteHeader(server.StatusCode)
 		w.Write([]byte(server.Admin))
 	})
 
 	mux.HandleFunc("/wwwhisper/admin/submit", func(w http.ResponseWriter, r *http.Request) {
+		if !checkClient(w, r) {
+			return
+		}
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 		siteURL := r.Header.Get("Site-Url")
 		w.Header().Set("Content-Type", server.ContentTypeJson)
+		w.Header().Set("X-Mod-Id", strconv.Itoa(server.ModId))
 		w.WriteHeader(server.StatusCode)
 		var buf []byte
 		buf = fmt.Appendf(buf, "{siteUrl: %q}", siteURL)

@@ -67,7 +67,7 @@ func (r remoteAuthStore) Whoami(ctx context.Context, cookie string) (*response.W
 
 	args := map[string]string{
 		"cookie": cookie,
-		"client": "go-" + Version,
+		"client": Client,
 	}
 	jsonArgs, err := json.Marshal(args)
 	if err != nil {
