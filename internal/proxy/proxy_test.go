@@ -123,10 +123,10 @@ func checkResponse(resp *http.Response, err error, expectedStatus int, expectedB
 		return fmt.Errorf("failed to make request: %v", err)
 	}
 	defer resp.Body.Close()
-	body_bytes, body_err := io.ReadAll(resp.Body)
+	bodyBytes, bodyErr := io.ReadAll(resp.Body)
 	body := ""
-	if body_err == nil {
-		body = string(body_bytes)
+	if bodyErr == nil {
+		body = string(bodyBytes)
 	}
 
 	if resp.StatusCode != expectedStatus {
@@ -134,8 +134,8 @@ func checkResponse(resp *http.Response, err error, expectedStatus int, expectedB
 	}
 
 	if expectedBody != nil {
-		if body_err != nil {
-			return fmt.Errorf("failed to read response body: %v", body_err)
+		if bodyErr != nil {
+			return fmt.Errorf("failed to read response body: %v", bodyErr)
 		}
 		if body != *expectedBody {
 			return fmt.Errorf("expected body %q; got %q", *expectedBody, body)
@@ -561,9 +561,9 @@ func TestAuthServerNonHttpError(t *testing.T) {
 }
 
 func TestPathNormalization(t *testing.T) {
-	test_cases := []struct {
-		path_in  string
-		path_out string
+	testCases := []struct {
+		pathIn  string
+		pathOut string
 	}{
 		{"/", "/"},
 		{"/foo/bar", "/foo/bar"},
@@ -581,7 +581,7 @@ func TestPathNormalization(t *testing.T) {
 		{"", "/"},
 		{"///", "/"},
 	}
-	var expected_path string
+	var expectedPath string
 	testEnv := newTestEnv(t)
 	defer testEnv.dispose()
 	testEnv.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
@@ -589,17 +589,17 @@ func TestPathNormalization(t *testing.T) {
 			t.Error("Invalid Host header", req.Host, testEnv.ExternalURL)
 		}
 
-		if req.URL.RequestURI() != expected_path {
-			t.Error("Invalid app request path", req.URL.RequestURI(), expected_path)
+		if req.URL.RequestURI() != expectedPath {
+			t.Error("Invalid app request path", req.URL.RequestURI(), expectedPath)
 			return
 		}
 		rw.Write([]byte("ok"))
 	}
 
-	for _, test := range test_cases {
-		t.Run("["+test.path_in+"]", func(t *testing.T) {
-			expected_path = test.path_out
-			req, _ := http.NewRequest("GET", testEnv.ExternalURL+test.path_in, nil)
+	for _, test := range testCases {
+		t.Run("["+test.pathIn+"]", func(t *testing.T) {
+			expectedPath = test.pathOut
+			req, _ := http.NewRequest("GET", testEnv.ExternalURL+test.pathIn, nil)
 			req.Header.Add("Cookie", "wwwhisper-sessionid=alice-cookie")
 			req.Header.Add("X-Forwarded-Proto", "http")
 			resp, err := testEnv.Client.Do(req)

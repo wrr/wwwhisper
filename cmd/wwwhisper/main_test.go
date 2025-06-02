@@ -99,9 +99,9 @@ func TestIntToPort(t *testing.T) {
 }
 
 func TestParseLogLevel(t *testing.T) {
-	test_cases := []struct {
-		level_in  string
-		level_out slog.Level
+	testCases := []struct {
+		levelIn  string
+		levelOut slog.Level
 	}{
 		// All levels are case insensitive.
 		{"debug", slog.LevelDebug},
@@ -117,11 +117,11 @@ func TestParseLogLevel(t *testing.T) {
 		{"1", slog.LevelInfo},
 	}
 
-	for _, test := range test_cases {
-		t.Run(test.level_in, func(t *testing.T) {
-			out := parseLogLevel(test.level_in)
-			if test.level_out != out {
-				t.Errorf("expected: %s, got: %s", test.level_out, out)
+	for _, test := range testCases {
+		t.Run(test.levelIn, func(t *testing.T) {
+			out := parseLogLevel(test.levelIn)
+			if test.levelOut != out {
+				t.Errorf("expected: %s, got: %s", test.levelOut, out)
 			}
 		})
 	}

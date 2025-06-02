@@ -115,7 +115,7 @@ func setSiteURLHeader(dst *http.Request, incoming *http.Request) {
 func getModId(resp *http.Response) (int, bool) {
 	modIdStr := resp.Header.Get("X-Mod-Id")
 	if modIdStr != "" {
-		modId, err := strconv.Atoi(modIdStr);
+		modId, err := strconv.Atoi(modIdStr)
 		return modId, err == nil
 	}
 	return 0, false
