@@ -83,11 +83,11 @@ func (r remoteAuthStore) Whoami(ctx context.Context, cookie string) (*response.W
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
-	resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("whoami failed: %d %s", resp.StatusCode, string(body))
@@ -119,7 +119,6 @@ func (r remoteAuthStore) Locations(ctx context.Context) (*response.Locations, er
 	if err != nil {
 		return nil, err
 	}
-
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

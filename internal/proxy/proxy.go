@@ -79,11 +79,11 @@ func injectOverlay(resp *http.Response) error {
 		return nil
 	}
 
+	defer resp.Body.Close()
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
-	resp.Body.Close()
 
 	htmlString := string(bodyBytes)
 	// Inject before the </body> tag
