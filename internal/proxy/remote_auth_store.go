@@ -36,7 +36,7 @@ func NewRemoteAuthStore(wwwhisperURL *url.URL, log *slog.Logger) *remoteAuthStor
 	}
 }
 
-func (r remoteAuthStore) debugLog(path string, resp *http.Response, err error, start time.Time) {
+func (r *remoteAuthStore) debugLog(path string, resp *http.Response, err error, start time.Time) {
 	if !r.log.Enabled(context.Background(), slog.LevelDebug) {
 		return
 	}
@@ -55,7 +55,7 @@ func (r remoteAuthStore) debugLog(path string, resp *http.Response, err error, s
 
 // TODO: proxied whoami should work differently, csrf cookies should
 // be included only if they are present in the original request.
-func (r remoteAuthStore) Whoami(ctx context.Context, cookie string) (*response.Whoami, error) {
+func (r *remoteAuthStore) Whoami(ctx context.Context, cookie string) (*response.Whoami, error) {
 	start := time.Now()
 	path := "/api/whoami/"
 	url := r.wwwhisperURL.String() + path
@@ -100,7 +100,7 @@ func (r remoteAuthStore) Whoami(ctx context.Context, cookie string) (*response.W
 	return &whoami, nil
 }
 
-func (r remoteAuthStore) Locations(ctx context.Context) (*response.Locations, error) {
+func (r *remoteAuthStore) Locations(ctx context.Context) (*response.Locations, error) {
 	start := time.Now()
 	path := "/api/locations"
 	url := r.wwwhisperURL.String() + path
@@ -136,7 +136,7 @@ func (r remoteAuthStore) Locations(ctx context.Context) (*response.Locations, er
 	return &locations, nil
 }
 
-func (r remoteAuthStore) getPage(ctx context.Context, path string) (string, error) {
+func (r *remoteAuthStore) getPage(ctx context.Context, path string) (string, error) {
 	start := time.Now()
 	url := r.wwwhisperURL.String() + path
 	var err error
@@ -172,10 +172,10 @@ func (r remoteAuthStore) getPage(ctx context.Context, path string) (string, erro
 	return result, nil
 }
 
-func (r remoteAuthStore) LoginNeededPage(ctx context.Context) (string, error) {
+func (r *remoteAuthStore) LoginNeededPage(ctx context.Context) (string, error) {
 	return r.getPage(ctx, "/api/login-needed/")
 }
 
-func (r remoteAuthStore) ForbiddenPage(ctx context.Context) (string, error) {
+func (r *remoteAuthStore) ForbiddenPage(ctx context.Context) (string, error) {
 	return r.getPage(ctx, "/api/forbidden/")
 }
