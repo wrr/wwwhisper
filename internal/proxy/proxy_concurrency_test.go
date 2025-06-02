@@ -69,7 +69,7 @@ func TestConcurrentRequests(t *testing.T) {
 	var wg sync.WaitGroup
 	results := make(chan error, totalRequests)
 
-	for i := 0; i < goroutines; i++ {
+	for range goroutines {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -77,7 +77,7 @@ func TestConcurrentRequests(t *testing.T) {
 				Timeout: 5 * time.Second,
 			}
 
-			for j := 0; j < testLoops; j++ {
+			for range testLoops {
 				for _, cfg := range tests {
 					req, _ := http.NewRequest("GET", testEnv.ExternalURL+cfg.path, nil)
 					if cfg.cookie != "" {
