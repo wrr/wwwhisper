@@ -31,7 +31,7 @@ type Config struct {
 	LogLevel     slog.Level
 }
 
-const Version string = "1.0.3"
+const Version string = "1.0.4"
 const Client string = "go-" + Version
 const overlayToInject = `
 <script src="/wwwhisper/auth/iframe.js"></script>
