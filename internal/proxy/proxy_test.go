@@ -48,7 +48,7 @@ func (env *TestEnv) dispose() {
 	defer env.ProtectedAppServer.Close()
 }
 
-func newTestEnv(t *testing.T) *TestEnv {
+func doNewTestEnv(t *testing.T, allowHttp bool) *TestEnv {
 	t.Helper()
 	var env TestEnv
 	env.AppHandler = func(rw http.ResponseWriter, req *http.Request) {
@@ -71,12 +71,27 @@ func newTestEnv(t *testing.T) *TestEnv {
 		noOverlay:        false,
 	})
 
-	wwwhisperHandler := newRootHandler(env.AuthServer.URL, log, env.AppProxy)
+	wwwhisperHandler := newRootHandler(env.AuthServer.URL, allowHttp, log, env.AppProxy)
 
 	env.ProtectedAppServer = httptest.NewServer(wwwhisperHandler)
 	env.ExternalURL = env.ProtectedAppServer.URL
-	env.Client = &http.Client{}
+	env.Client = &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			// Disable following HTTP redirects so we can test redirect responses
+			return http.ErrUseLastResponse
+		},
+	}
 	return &env
+}
+
+func newTestEnv(t *testing.T) *TestEnv {
+	// Allow HTTP for tests
+	return doNewTestEnv(t, true)
+}
+
+func newTestEnvRequireHttps(t *testing.T) *TestEnv {
+	// Do not allow HTTP
+	return doNewTestEnv(t, false)
 }
 
 func parseURL(urlString string) *url.URL {
@@ -680,13 +695,7 @@ func TestRedirectPassedFromAppToClient(t *testing.T) {
 
 	// Not using http.Get() because it follows redirects.
 	req, _ := http.NewRequest("GET", testEnv.ExternalURL+"/open", nil)
-	client := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			// Disable following HTTP redirects.
-			return http.ErrUseLastResponse
-		},
-	}
-	resp, err := client.Do(req)
+	resp, err := testEnv.Client.Do(req)
 	expectedBody := "redirect"
 	if err = checkResponse(resp, err, 302, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
@@ -819,5 +828,43 @@ func TestIframeInjectionBodyReadFailure(t *testing.T) {
 
 	if err = checkResponse(resp, err, 502, &expectedBody); err != nil {
 		t.Error("Invalid response", err)
+	}
+}
+
+func TestHttpsRedirection(t *testing.T) {
+	env := newTestEnvRequireHttps(t)
+	defer env.dispose()
+
+	resp, err := env.Client.Get(env.ExternalURL + "/hello")
+	if err = checkResponse(resp, err, http.StatusMovedPermanently, nil); err != nil {
+		t.Error("Invalid response", err)
+	}
+
+	location := resp.Header.Get("Location")
+	expectedLocation := strings.Replace(env.ExternalURL, "http://", "https://", 1) + "/hello"
+	if location != expectedLocation {
+		t.Errorf("Expected redirect to %q, got %q", expectedLocation, location)
+	}
+
+	if env.AppCount() != 0 {
+		t.Error("App request should not be made but redirected")
+	}
+}
+
+func TestNoHttpsIfXForwardedProto(t *testing.T) {
+	env := newTestEnvRequireHttps(t)
+	defer env.dispose()
+
+	req, _ := http.NewRequest("GET", env.ExternalURL+"/open", nil)
+	req.Header.Add("X-Forwarded-Proto", "https")
+	resp, err := env.Client.Do(req)
+
+	expectedBody := "Hello world"
+	if err = checkResponse(resp, err, http.StatusOK, &expectedBody); err != nil {
+		t.Error("Invalid response", err)
+	}
+
+	if env.AppCount() != 1 {
+		t.Error("App request not made")
 	}
 }

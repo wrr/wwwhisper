@@ -28,6 +28,7 @@ type Config struct {
 	WwwhisperURL *url.URL
 	Listen       Port
 	ProxyTo      Port
+	AllowHttp    bool
 	LogLevel     slog.Level
 }
 
@@ -100,16 +101,20 @@ func injectOverlay(resp *http.Response) error {
 	return nil
 }
 
-func setSiteURLHeader(dst *http.Request, incoming *http.Request) {
-	scheme := incoming.Header.Get("X-Forwarded-Proto")
-	if scheme == "" {
-		if incoming.TLS != nil {
-			scheme = "https"
+func scheme(r *http.Request) string {
+	result := r.Header.Get("X-Forwarded-Proto")
+	if result != "https" && result != "http" {
+		if r.TLS != nil {
+			result = "https"
 		} else {
-			scheme = "http"
+			result = "http"
 		}
 	}
-	dst.Header.Set("Site-Url", scheme+"://"+incoming.Host)
+	return result
+}
+
+func setSiteURLHeader(dst *http.Request, incoming *http.Request) {
+	dst.Header.Set("Site-Url", scheme(incoming)+"://"+incoming.Host)
 }
 
 func getModId(resp *http.Response) (int, bool) {
@@ -191,7 +196,7 @@ func NewTimer(duration time.Duration) Timer {
 	return timer.NewTimer(duration)
 }
 
-func newRootHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Handler) http.Handler {
+func newRootHandler(wwwhisperURL *url.URL, allowHttp bool, log *slog.Logger, appHandler http.Handler) http.Handler {
 	remoteStore := NewRemoteAuthStore(wwwhisperURL, log)
 	cachingStore := NewCachingAuthStore(remoteStore, NewTimer, log)
 	guard := NewAccessGuard(cachingStore, log)
@@ -208,6 +213,13 @@ func newRootHandler(wwwhisperURL *url.URL, log *slog.Logger, appHandler http.Han
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		req, logger := NewRequestLogger(req, log)
 		defer logger.Done()
+
+		if !allowHttp && scheme(req) != "https" {
+			httpsURL := "https://" + req.Host + req.RequestURI
+			logger.HttpStatus(http.StatusMovedPermanently)
+			http.Redirect(rw, req, httpsURL, http.StatusMovedPermanently)
+			return
+		}
 
 		granted := guard.Handle(rw, req)
 		if !granted {
@@ -255,7 +267,7 @@ func Run(cfg Config) error {
 		cachingStore:     nil,
 		noOverlay:        cfg.NoOverlay,
 	})
-	mux.Handle("/", newRootHandler(cfg.WwwhisperURL, log, appProxy))
+	mux.Handle("/", newRootHandler(cfg.WwwhisperURL, cfg.AllowHttp, log, appProxy))
 
 	serverStatus := make(chan error, 1)
 
