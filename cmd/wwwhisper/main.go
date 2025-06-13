@@ -38,8 +38,9 @@ func intToPort(in int) (proxy.Port, error) {
 	return proxy.Port(in), nil
 }
 
-func newProxyConfig(pidFilePath string, listen int, proxyTo int, allowHttp bool) (proxy.Config, error) {
+func newProxyConfig(pidFilePath string, listen int, proxyTo int) (proxy.Config, error) {
 	_, noOverlay := os.LookupEnv("WWWHISPER_NO_OVERLAY")
+	_, allowHttp := os.LookupEnv("WWWHISPER_ALLOW_HTTP")
 	config := proxy.Config{
 		PidFilePath: pidFilePath,
 		NoOverlay:   noOverlay,
@@ -87,9 +88,6 @@ wwwhisper forwards authorized requests to this port.`)
 	pidFileFlag := flag.String("pidfile", "", `Path to file where process ID is written.
 The file is removed when the program terminates.`)
 
-	allowHttpFlag := flag.Bool("allowhttp", false,
-		"Allow HTTP requests without redirecting to HTTPS.")
-
 	versionFlag := flag.Bool("version", false, "Print the program version")
 
 	flag.Usage = func() {
@@ -116,7 +114,7 @@ The file is removed when the program terminates.`)
 		die(errors.New("missing -proxyto flag"))
 	}
 
-	config, err := newProxyConfig(*pidFileFlag, *listenFlag, *proxyToFlag, *allowHttpFlag)
+	config, err := newProxyConfig(*pidFileFlag, *listenFlag, *proxyToFlag)
 	if err == nil {
 		err = proxy.Run(config)
 	}

@@ -11,39 +11,40 @@ func clearEnv() {
 	os.Unsetenv("WWWHISPER_URL")
 	os.Unsetenv("WWWHISPER_LOG")
 	os.Unsetenv("WWWHISPER_NO_OVERLAY")
+	os.Unsetenv("WWWHISPER_ALLOW_HTTP")
 }
 
 func TestNewConfig(t *testing.T) {
 	clearEnv()
 	defer clearEnv()
 
-	_, err := newProxyConfig("", 80, 8080, false)
+	_, err := newProxyConfig("", 80, 8080)
 	expected := "WWWHISPER_URL environment variable is not set"
 	if err == nil || err.Error() != expected {
 		t.Error("Unexpected error:", err)
 	}
 
 	os.Setenv("WWWHISPER_URL", "https://example.com:-1")
-	_, err = newProxyConfig("", 80, 8080, false)
+	_, err = newProxyConfig("", 80, 8080)
 	expected = "WWWHISPER_URL has invalid format: "
 	if err == nil || !strings.HasPrefix(err.Error(), expected) {
 		t.Error("Unexpected error:", err)
 	}
 
 	os.Setenv("WWWHISPER_URL", "https://example.com")
-	_, err = newProxyConfig("", 70000, 8080, false)
+	_, err = newProxyConfig("", 70000, 8080)
 	expected = "port number out of range 70000"
 	if err == nil || err.Error() != expected {
 		t.Error("Unexpected error:", err)
 	}
 
-	_, err = newProxyConfig("", 80, 80000, false)
+	_, err = newProxyConfig("", 80, 80000)
 	expected = "port number out of range 80000"
 	if err == nil || !strings.HasPrefix(err.Error(), expected) {
 		t.Error("Unexpected error:", err)
 	}
 
-	cfg, _ := newProxyConfig("/tmp/foo", 80, 8080, false)
+	cfg, _ := newProxyConfig("/tmp/foo", 80, 8080)
 	if cfg.PidFilePath != "/tmp/foo" {
 		t.Error("pidFilePath invalid", cfg.PidFilePath)
 	}
@@ -68,7 +69,8 @@ func TestNewConfig(t *testing.T) {
 
 	os.Setenv("WWWHISPER_LOG", "info")
 	os.Setenv("WWWHISPER_NO_OVERLAY", "")
-	cfg, _ = newProxyConfig("/tmp/foo", 80, 8080, true)
+	os.Setenv("WWWHISPER_ALLOW_HTTP", "")
+	cfg, _ = newProxyConfig("/tmp/foo", 80, 8080)
 	if cfg.LogLevel != slog.LevelInfo {
 		t.Error("LogLevel invalid", cfg.LogLevel)
 	}
