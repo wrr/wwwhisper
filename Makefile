@@ -50,4 +50,4 @@ release: test-race vulncheck lint
 	GOOS=linux GOARCH=amd64 go build ./cmd/wwwhisper
 	tar -cvzf wwwhisper-amd64.tgz wwwhisper
 	cp wwwhisper-amd64.tgz ../wwwhisper-heroku-buildpack/wwwhisper.tgz
-	cp wwwhisper-amd64.tgz wwwhisper-arm64.tgz ../wwwhisper-cnb/
+	cp wwwhisper-amd64.tgz wwwhisper-arm64.tgz ../wwwhisper-cnb/buildpack/
