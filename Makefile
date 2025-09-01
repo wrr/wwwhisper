@@ -45,9 +45,9 @@ vulncheck: build
 all: cover-inspect test-race vulncheck imports lint build
 
 release: test-race vulncheck lint
-	GOOS=linux GOARCH=arm64 go build ./cmd/wwwhisper
+	GOOS=linux GOARCH=arm64 go build -trimpath ./cmd/wwwhisper
 	tar -cvzf wwwhisper-arm64.tgz wwwhisper
-	GOOS=linux GOARCH=amd64 go build ./cmd/wwwhisper
+	GOOS=linux GOARCH=amd64 go build -trimpath ./cmd/wwwhisper
 	tar -cvzf wwwhisper-amd64.tgz wwwhisper
 	cp wwwhisper-amd64.tgz ../wwwhisper-heroku-buildpack/wwwhisper.tgz
 	cp wwwhisper-amd64.tgz wwwhisper-arm64.tgz ../wwwhisper-cnb/buildpack/
