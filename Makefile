@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := build
 
-.PHONY:fmt vet build
+.PHONY: fmt vet build build-race test test-race lint cover cover-inspect clean imports vulncheck all
 
 fmt:
 	go fmt ./...
@@ -29,7 +29,7 @@ cover: build
 	go test -v -cover -coverprofile=c.out ./...
 
 cover-inspect: cover
-	go tool cover -html=c.out -o=/home/j/tmp/coverage.html
+	go tool cover -html=c.out -o=coverage.html
 
 clean:
 	go clean
