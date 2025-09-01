@@ -74,9 +74,16 @@ func basicAuthCredentials(url *url.URL) string {
 
 func injectOverlay(resp *http.Response) error {
 	contentType := resp.Header.Get("Content-Type")
+	contentLength := resp.ContentLength
 	if !strings.Contains(strings.ToLower(contentType), "text/html") ||
-		resp.Header.Get("Content-Encoding") != "" {
-		// Inject only to not compressed HTML responses.
+		contentLength == -1 || contentLength > 10*1024*1024 ||
+		resp.Header.Get("Transfer-Encoding") != "" ||
+		resp.Header.Get("Content-Encoding") != "" ||
+		resp.Header.Get("Content-Range") != "" ||
+		resp.Header.Get("Content-MD5") != "" {
+		// Inject overlay only to HTML responses. Do not attempt to inject
+		// iframe if the result content length is unknown, larger than
+		// 10MB, or the result is chunked, compressed or checksummed.
 		return nil
 	}
 

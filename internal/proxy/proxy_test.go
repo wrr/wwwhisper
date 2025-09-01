@@ -715,6 +715,8 @@ func TestIframeInjection(t *testing.T) {
 
 	responseOrig := "<html><body>foo</body></html>"
 	responseNoBody := "<html><head>foo</head></html>"
+	responseLarge := strings.Repeat("<body></body>", 1024*1024)
+
 	responseInjected := `<html><body>foo
 <script src="/wwwhisper/auth/iframe.js"></script>
 </body></html>`
@@ -776,6 +778,64 @@ func TestIframeInjection(t *testing.T) {
 			name:         "no injection for wwwhisper backend responses",
 			path:         "/wwwhisper/admin/",
 			expectedBody: testEnv.AuthServer.Admin,
+		},
+		{
+			name: "no injection for chunked HTML responses",
+			handler: func(rw http.ResponseWriter, req *http.Request) {
+				rw.Header().Add("Content-Type", "text/html")
+				rw.Header().Add("Transfer-Encoding", "chunked")
+				rw.WriteHeader(http.StatusOK)
+				rw.Write([]byte(responseOrig))
+			},
+			path:         "/foo/",
+			expectedBody: responseOrig,
+		},
+		{
+			name: "no injection for HTML responses with Content-Range",
+			handler: func(rw http.ResponseWriter, req *http.Request) {
+				rw.Header().Add("Content-Type", "text/html")
+				rw.Header().Add("Content-Range", "bytes 200-1023/1024")
+				rw.WriteHeader(http.StatusOK) // Use 200 for test consistency
+				rw.Write([]byte(responseOrig))
+			},
+			path:         "/foo/",
+			expectedBody: responseOrig,
+		},
+		{
+			name: "no injection for HTML responses with Content-MD5",
+			handler: func(rw http.ResponseWriter, req *http.Request) {
+				rw.Header().Add("Content-Type", "text/html")
+				rw.Header().Add("Content-MD5", "Q2hlY2sgSW50ZWdyaXR5IQ==")
+				rw.WriteHeader(http.StatusOK)
+				rw.Write([]byte(responseOrig))
+			},
+			path:         "/foo/",
+			expectedBody: responseOrig,
+		},
+		{
+			name: "no injection for large HTML responses",
+			handler: func(rw http.ResponseWriter, req *http.Request) {
+				rw.Header().Add("Content-Type", "text/html")
+				rw.Header().Set("Content-Length", strconv.Itoa(len(responseLarge)))
+				rw.WriteHeader(http.StatusOK)
+				rw.Write([]byte(responseLarge))
+			},
+			path:         "/foo/",
+			expectedBody: responseLarge,
+		},
+		{
+			name: "no injection for streamed HTML responses",
+			handler: func(rw http.ResponseWriter, req *http.Request) {
+				rw.Header().Add("Content-Type", "text/html")
+				// Stream response without setting Content-Length
+				rw.WriteHeader(http.StatusOK)
+				flusher := rw.(http.Flusher)
+				rw.Write([]byte(responseOrig[:5]))
+				flusher.Flush()
+				rw.Write([]byte(responseOrig[5:]))
+			},
+			path:         "/foo/",
+			expectedBody: responseOrig,
 		},
 	}
 
