@@ -1,6 +1,9 @@
-wwwhisper is a low latency authentication/authorization reverse proxy,
-which allows you to easily add verified email based authentication and
-authorization to Heroku-hosted web applications.
+Access control for Heroku hosted apps
+-------------------------------------
+
+wwwhisper is a low latency HTTP reverse proxy, which allows you to
+easily add verified email based authentication and authorization to
+Heroku-hosted web applications.
 
 The wwwhisper reverse proxy is language, framework and application
 independent, it can forward requests and add authorization to any HTTP
@@ -28,7 +31,7 @@ login prompt:
 
 ![Login prompt](https://raw.github.com/wrr/wrr.github.io/main/wwwhisper-screens/wwwhisper-login.png)
 
-The 'Request a login token' button sends a link with an email
+The `Request a login link` button sends a link with an email
 verification token to the provided email address.
 
 After the link is clicked, wwwhisper verifies whether the user is
@@ -37,7 +40,7 @@ to the site.
 
 By default, wwwhisper inserts a small overlay in the lower-right
 corner of each protected HTML document. The overlay displays the
-current user's email a 'Sign out' button:
+current user's email a `Sign out` button:
 
 ![Overlay](https://raw.github.com/wrr/wrr.github.io/main/wwwhisper-screens/wwwhisper-overlay.png)
 
@@ -105,7 +108,7 @@ Project history
   which nginx communicated using auth-request module.
 
 * In those pre-Docker era, running and configuring a third-party
-  backend like wwwhisper was a pain. wwwhisper tried to simplify
+  backend like wwwhisper was cumbersome. wwwhisper tried to simplify
   things as much as possible with installation scripts, but that did
   not help with the adoption. People liked the project idea, but not
   many actually used wwwhisper.
@@ -118,7 +121,7 @@ Project history
 * The integration with the add-on was provided as Ruby Rack
   middleware, thus the add-on was available for Ruby apps only.
 
-* In 2014 a Node.js Connect middleware was created and the wwwhisper
+* In 2014, a Node.js Connect middleware was created and the wwwhisper
   add-on became available for Node apps.
 
 * In 2016, Mozilla shut down the Persona project. To continue
@@ -127,7 +130,7 @@ Project history
   support the tokens, no one complained and further development of
   open source wwwhisper backend was halted.
 
-* In 2023, a nginx based wwwhisper Heroku buildpack was launched which
+* In 2023, an nginx based wwwhisper Heroku buildpack was launched which
   used the nginx auth-request module. As a generic HTTP reverse proxy
   it allowed to use wwwhisper add-on with any language and framework,
   not just Ruby and Node.
