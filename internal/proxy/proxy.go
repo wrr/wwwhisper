@@ -21,7 +21,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/wrr/wwwhispergo/internal/timer"
+	"github.com/wrr/wwwhisper/internal/timer"
 )
 
 type Port uint16

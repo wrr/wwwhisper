@@ -7,7 +7,7 @@ package proxy
 import (
 	"context"
 
-	"github.com/wrr/wwwhispergo/internal/proxy/response"
+	"github.com/wrr/wwwhisper/internal/proxy/response"
 )
 
 type AuthStore interface {

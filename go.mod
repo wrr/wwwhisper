@@ -1,4 +1,4 @@
-module github.com/wrr/wwwhispergo
+module github.com/wrr/wwwhisper
 
 go 1.25.3
 

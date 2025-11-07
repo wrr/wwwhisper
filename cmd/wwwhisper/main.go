@@ -13,7 +13,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/wrr/wwwhispergo/internal/proxy"
+	"github.com/wrr/wwwhisper/internal/proxy"
 )
 
 func parseLogLevel(logLevelStr string) slog.Level {

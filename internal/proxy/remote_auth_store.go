@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wrr/wwwhispergo/internal/proxy/response"
-	"github.com/wrr/wwwhispergo/internal/timer"
+	"github.com/wrr/wwwhisper/internal/proxy/response"
+	"github.com/wrr/wwwhisper/internal/timer"
 )
 
 type remoteAuthStore struct {

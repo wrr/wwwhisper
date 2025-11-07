@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/wrr/wwwhispergo/internal/proxy/response"
+	"github.com/wrr/wwwhisper/internal/proxy/response"
 )
 
 // AccessGuard determines whether incoming HTTP requests should be

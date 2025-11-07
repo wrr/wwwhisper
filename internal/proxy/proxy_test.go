@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/wrr/wwwhispergo/internal/proxytest"
+	"github.com/wrr/wwwhisper/internal/proxytest"
 )
 
 type TestEnv struct {

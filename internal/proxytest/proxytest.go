@@ -17,7 +17,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wrr/wwwhispergo/internal/proxy/response"
+	"github.com/wrr/wwwhisper/internal/proxy/response"
 )
 
 const basicAuthUser = "admin"

@@ -16,7 +16,7 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru/v2"
-	"github.com/wrr/wwwhispergo/internal/proxy/response"
+	"github.com/wrr/wwwhisper/internal/proxy/response"
 )
 
 const locationValidity = 5 * time.Minute
@@ -28,7 +28,7 @@ const pageCacheValidity = 5 * time.Minute
 // user entry is about 150B, which limits the cache size to ~1MB
 const usersCacheSize = 10000
 
-// See github.com/wrr/wwwhispergo/internal/timer
+// See github.com/wrr/wwwhisper/internal/timer
 type Timer interface {
 	Expired() bool
 	Start()

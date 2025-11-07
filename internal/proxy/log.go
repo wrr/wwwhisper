@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/wrr/wwwhispergo/internal/timer"
+	"github.com/wrr/wwwhisper/internal/timer"
 )
 
 // A key under which *RequestLogger is stored in context.
