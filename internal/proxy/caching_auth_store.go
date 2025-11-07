@@ -1,3 +1,7 @@
+// Copyright (C) 2025 Jan Wrobel <jan@wwwhisper.io>
+// This program is freely distributable under the terms of the
+// Simplified BSD License. See COPYING.
+
 // caching_auth_store provides implementation of the AuthStore which
 // wraps the real AuthStore and caches data to limit communication
 // with it.

@@ -1,3 +1,7 @@
+// Copyright (C) 2025 Jan Wrobel <jan@wwwhisper.io>
+// This program is freely distributable under the terms of the
+// Simplified BSD License. See COPYING.
+
 package main
 
 import (
